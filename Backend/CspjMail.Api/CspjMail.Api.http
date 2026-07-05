@@ -1,0 +1,6 @@
+@CspjMail.Api_HostAddress = http://localhost:5182
+
+GET {{CspjMail.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

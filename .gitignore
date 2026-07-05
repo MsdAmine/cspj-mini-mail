@@ -1,0 +1,54 @@
+# ==========================================
+# 1. Node.js / React (Frontend)
+# ==========================================
+**/node_modules/
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.pnpm-debug.log*
+
+# Vite / Build outputs
+**/dist/
+**/build/
+**/.local
+
+# Development environment variables
+**/.env
+**/.env.local
+**/.env.*.local
+
+# ==========================================
+# 2. .NET / ASP.NET Core (Backend)
+# ==========================================
+# Build outputs
+**/bin/
+**/obj/
+
+# Visual Studio / VS Code working directories
+**/.vs/
+**/.vscode/
+*.[Dd]erived
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+**/.idea/
+
+# OS generated files
+Thumbs.db
+EHthumbs.db
+.DS_Store
+
+# User Secrets & Local Configuration
+**/appsettings.Development.json
+**/appsettings.local.json
+**/secrets.json
+
+# ==========================================
+# 3. Database / SQL Server Local Artifacts
+# ==========================================
+*.mdf
+*.ldf
+*.sdf
