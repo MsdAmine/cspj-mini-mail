@@ -45,6 +45,7 @@ EHthumbs.db
 **/appsettings.Development.json
 **/appsettings.local.json
 **/secrets.json
+**/appsettings.json
 
 # ==========================================
 # 3. Database / SQL Server Local Artifacts
