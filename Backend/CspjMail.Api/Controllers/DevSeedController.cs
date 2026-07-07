@@ -23,9 +23,9 @@ namespace CspjMail.Api.Controllers
                 return BadRequest("Database already contains seed data.");
             }
 
-            // Create entities matching V2
-            var conseil = new Entreprise { Nom = "CSPJ (Conseil)", EstSousTraitant = false };
-            var association = new Entreprise { Nom = "Association des Magistrats Marocains", EstSousTraitant = true };
+            // Instantiating with the correct property name mapping
+            var conseil = new Entreprise { Nom = "CSPJ (Conseil)", EstAssociation = false };
+            var association = new Entreprise { Nom = "Association des Magistrats Marocains", EstAssociation = true };
 
             _context.Entreprises.AddRange(conseil, association);
             _context.SaveChanges();

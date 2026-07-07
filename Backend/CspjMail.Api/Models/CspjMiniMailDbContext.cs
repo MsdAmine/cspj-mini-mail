@@ -38,7 +38,11 @@ public partial class CspjMiniMailDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__Entrepri__3214EC074215BC75");
 
             entity.Property(e => e.DateCreation).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.EstSousTraitant).HasDefaultValue(true);
+    
+            // Explicitly configure EF Core to map to the renamed 'EstAssociation' database column
+            entity.Property(e => e.EstAssociation)
+                .HasColumnName("EstAssociation")
+                .HasDefaultValue(true);
         });
 
         modelBuilder.Entity<Message>(entity =>
