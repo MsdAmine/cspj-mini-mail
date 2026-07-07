@@ -18,23 +18,21 @@ namespace CspjMail.Api.Controllers
         [HttpPost("seed")]
         public IActionResult SeedDatabase()
         {
-            // Check if data already exists to prevent duplicate seeding
             if (_context.Entreprises.Any() || _context.Utilisateurs.Any())
             {
                 return BadRequest("Database already contains seed data.");
             }
 
-            // 1. Create Companies
-            var cspj = new Entreprise { Nom = "CSPJ (Interne)", EstSousTraitant = false };
-            var subCo = new Entreprise { Nom = "Alpha Tech (Sous-traitant)", EstSousTraitant = true };
+            // Create entities matching V2
+            var conseil = new Entreprise { Nom = "CSPJ (Conseil)", EstSousTraitant = false };
+            var association = new Entreprise { Nom = "Association des Magistrats Marocains", EstSousTraitant = true };
 
-            _context.Entreprises.AddRange(cspj, subCo);
-            _context.SaveChanges(); // Saves to get IDs
+            _context.Entreprises.AddRange(conseil, association);
+            _context.SaveChanges();
 
-            // 2. Create Users with Hashed Passwords
             var adminPasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!");
-            var employePasswordHash = BCrypt.Net.BCrypt.HashPassword("Employe123!");
-            var sousTraitantPasswordHash = BCrypt.Net.BCrypt.HashPassword("Sub123!");
+            var fonctionnairePasswordHash = BCrypt.Net.BCrypt.HashPassword("Fonctionnaire123!");
+            var associationPasswordHash = BCrypt.Net.BCrypt.HashPassword("Assoc123!");
 
             var admin = new Utilisateur
             {
@@ -43,36 +41,36 @@ namespace CspjMail.Api.Controllers
                 Nom = "El Alami",
                 Prenom = "Ahmed",
                 Role = "Administrateur",
-                EntrepriseId = cspj.Id,
+                EntrepriseId = conseil.Id,
                 Actif = true
             };
 
-            var employe = new Utilisateur
+            var fonctionnaire = new Utilisateur
             {
-                Email = "employe@cspj.ma",
-                MotDePasseHash = employePasswordHash,
+                Email = "fonctionnaire@cspj.ma",
+                MotDePasseHash = fonctionnairePasswordHash,
                 Nom = "Benjelloun",
                 Prenom = "Sanaa",
-                Role = "Employe",
-                EntrepriseId = cspj.Id,
+                Role = "Fonctionnaire",
+                EntrepriseId = conseil.Id,
                 Actif = true
             };
 
-            var sousTraitant = new Utilisateur
+            var assocUser = new Utilisateur
             {
-                Email = "contact@alphatech.ma",
-                MotDePasseHash = sousTraitantPasswordHash,
+                Email = "contact@association.ma",
+                MotDePasseHash = associationPasswordHash,
                 Nom = "Mansouri",
                 Prenom = "Youssef",
-                Role = "SousTraitant",
-                EntrepriseId = subCo.Id,
+                Role = "Association",
+                EntrepriseId = association.Id,
                 Actif = true
             };
 
-            _context.Utilisateurs.AddRange(admin, employe, sousTraitant);
+            _context.Utilisateurs.AddRange(admin, fonctionnaire, assocUser);
             _context.SaveChanges();
 
-            return Ok("Database successfully seeded with 2 companies and 3 test users (Passwords: Admin123!, Employe123!, Sub123!).");
+            return Ok("Database successfully seeded with new roles: Administrateur, Fonctionnaire, and Association.");
         }
     }
 }
