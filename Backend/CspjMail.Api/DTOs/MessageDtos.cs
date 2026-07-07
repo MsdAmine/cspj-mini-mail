@@ -34,4 +34,16 @@ namespace CspjMail.Api.DTOs
         public string ExpediteurNomComplet { get; set; } = null!;
         public string ExpediteurRole { get; set; } = null!;
     }
+
+    // Represents a single row in the Inbox / Sent / Archive lists
+    public class ThreadSummaryDto
+    {
+        public int ThreadId { get; set; } = default!;
+        public string Objet { get; set; } = null!;
+        public DateTime DerniereActivite { get; set; }
+        public string DernierMessageCorps { get; set; } = null!;
+        public string DernierExpediteurNom { get; set; } = null!;
+        public bool ADesMessagesNonLus { get; set; }
+        public bool EstArchive { get; set; }
+    }
 }
