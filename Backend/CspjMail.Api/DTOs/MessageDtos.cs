@@ -1,0 +1,37 @@
+namespace CspjMail.Api.DTOs
+{
+    // Payload used to start a brand new conversation thread
+    public class CreateThreadDto
+    {
+        public string Objet { get; set; } = null!;
+        public string Corps { get; set; } = null!;
+        public int DestinataireId { get; set; }
+    }
+
+    // Payload used to reply to an existing thread
+    public class ReplyMessageDto
+    {
+        public string Corps { get; set; } = null!;
+    }
+
+    // Data structure returned to the frontend representing a single thread conversation view
+    public class ThreadDetailsDto
+    {
+        public int ThreadId { get; set; }
+        public string Objet { get; set; } = null!;
+        public DateTime DateCreation { get; set; }
+        public bool EstArchive { get; set; }
+        public List<MessageDisplayDto> Messages { get; set; } = new();
+    }
+
+    public class MessageDisplayDto
+    {
+        public int MessageId { get; set; }
+        public string Corps { get; set; } = null!;
+        public DateTime DateEnvoi { get; set; }
+        public bool EstLu { get; set; }
+        public int ExpediteurId { get; set; }
+        public string ExpediteurNomComplet { get; set; } = null!;
+        public string ExpediteurRole { get; set; } = null!;
+    }
+}
