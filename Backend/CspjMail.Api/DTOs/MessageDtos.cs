@@ -46,4 +46,14 @@ namespace CspjMail.Api.DTOs
         public bool ADesMessagesNonLus { get; set; }
         public bool EstArchive { get; set; }
     }
+
+    // Represents a contact selectable when creating a new thread
+    public class ContactDto
+    {
+        public int Id { get; set; }
+        public string Email { get; set; } = null!;
+        public string NomComplet { get; set; } = null!;
+        public string Role { get; set; } = null!;
+        public string EntrepriseNom { get; set; } = null!;
+    }
 }

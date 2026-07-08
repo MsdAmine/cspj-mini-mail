@@ -154,9 +154,7 @@ namespace CspjMail.Api.Controllers
                     .ThenInclude(m => m.Expediteur)
                 .ToListAsync();
 
-            // Filter to threads where the user is a participant (either sent a message or received one)
             var inboxSummaries = threads
-                .Where(t => t.Messages.Any())
                 .Select(t => {
                     var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).First();
                     return new ThreadSummaryDto
@@ -208,7 +206,7 @@ namespace CspjMail.Api.Controllers
             return Ok(sentSummaries);
         }
 
-        // 6. PUT: api/messages/thread/{id}/archive (Toggle archiving state on a thread)
+        // 6. PUT: api/messages/thread/{id}/archive (Toggle archiving state)
         [HttpPut("thread/{threadId}/archive")]
         public async Task<IActionResult> ToggleArchiveThread(int threadId)
         {
@@ -251,6 +249,67 @@ namespace CspjMail.Api.Controllers
             .ToList();
 
             return Ok(archiveSummaries);
+        }
+
+        // 8. GET: api/messages/search?searchTerm=xyz (Search across thread objects or text bodies)
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchMessages([FromQuery] string searchTerm)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(searchTerm)) return BadRequest("Search term cannot be empty.");
+
+            var normalizedTerm = searchTerm.ToLower();
+
+            // Find matching threads involving or visible to the user
+            var matchingThreads = await _context.Threads
+                .Where(t => t.Objet.ToLower().Contains(normalizedTerm) || t.Messages.Any(m => m.Corps.ToLower().Contains(normalizedTerm)))
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.Expediteur)
+                .ToListAsync();
+
+            var results = matchingThreads.Select(t => {
+                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).First();
+                return new ThreadSummaryDto
+                {
+                    ThreadId = t.Id,
+                    Objet = t.Objet,
+                    DerniereActivite = lastMessage.DateEnvoi,
+                    DernierMessageCorps = lastMessage.Corps,
+                    DernierExpediteurNom = $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}",
+                    ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
+                    EstArchive = t.EstArchive
+                };
+            })
+            .OrderByDescending(s => s.DerniereActivite)
+            .ToList();
+
+            return Ok(results);
+        }
+
+        // 9. GET: api/messages/contacts (Get list of other users to populate composition dropdowns)
+        [HttpGet("contacts")]
+        public async Task<IActionResult> GetContactsList()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            // Pull active profiles excluding the logged-in individual
+            var contacts = await _context.Utilisateurs
+                .Where(u => u.Actif && u.Id != currentUserId)
+                .Include(u => u.Entreprise)
+                .Select(u => new ContactDto
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    NomComplet = $"{u.Prenom} {u.Nom}",
+                    Role = u.Role,
+                    EntrepriseNom = u.Entreprise.Nom
+                })
+                .ToListAsync();
+
+            return Ok(contacts);
         }
     }
 }
