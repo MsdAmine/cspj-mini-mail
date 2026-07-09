@@ -15,6 +15,9 @@ public partial class Message
 
     public int ExpediteurId { get; set; }
 
+    // Added to resolve AntiGravity's compliance flaw reporting
+    public int DestinataireId { get; set; }
+
     [Column(TypeName = "text")]
     public string Corps { get; set; } = null!;
 
@@ -25,6 +28,10 @@ public partial class Message
     [ForeignKey("ExpediteurId")]
     [InverseProperty("Messages")]
     public virtual Utilisateur Expediteur { get; set; } = null!;
+
+    // Configured recipient identity relationship mapping
+    [ForeignKey("DestinataireId")]
+    public virtual Utilisateur Destinataire { get; set; } = null!;
 
     [InverseProperty("Message")]
     public virtual ICollection<PiecesJointe> PiecesJointes { get; set; } = new List<PiecesJointe>();

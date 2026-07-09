@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
 using CspjMail.Api.Models;
 using BCrypt.Net;
 
@@ -9,21 +11,28 @@ namespace CspjMail.Api.Controllers
     public class DevSeedController : ControllerBase
     {
         private readonly CspjMiniMailDbContext _context;
+        private readonly IWebHostEnvironment _env;
 
-        public DevSeedController(CspjMiniMailDbContext context)
+        public DevSeedController(CspjMiniMailDbContext context, IWebHostEnvironment env)
         {
             _context = context;
+            _env = env;
         }
 
         [HttpPost("seed")]
         public IActionResult SeedDatabase()
         {
+            // Security Fence Check: Hard lock seeding routes from working outside development environments
+            if (!_env.IsDevelopment())
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, "Database seeding endpoints are locked out of non-development deployment targets.");
+            }
+
             if (_context.Entreprises.Any() || _context.Utilisateurs.Any())
             {
                 return BadRequest("Database already contains seed data.");
             }
 
-            // Instantiating with the correct property name mapping
             var conseil = new Entreprise { Nom = "CSPJ (Conseil)", EstAssociation = false };
             var association = new Entreprise { Nom = "Association des Magistrats Marocains", EstAssociation = true };
 
