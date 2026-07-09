@@ -56,4 +56,21 @@ namespace CspjMail.Api.DTOs
         public string Role { get; set; } = null!;
         public string EntrepriseNom { get; set; } = null!;
     }
+
+    public class CreateUserDto
+    {
+        public string Email { get; set; } = null!;
+        public string Password { get; set; } = null!;
+        public string Nom { get; set; } = null!;
+        public string Prenom { get; set; } = null!;
+        public string Role { get; set; } = null!; // Administrateur, Fonctionnaire, Association
+        public int EntrepriseId { get; set; }
+    }
+
+    public class AdminStatsDto
+    {
+        public int TotalUsers { get; set; }
+        public int TotalThreads { get; set; }
+        public int TotalMessagesSent { get; set; }
+    }
 }
