@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -12,17 +12,16 @@ export default function Login() {
     e.preventDefault();
     setError('');
     
-    if (!username.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim()) {
       setError('Veuillez remplir tous les champs.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // Appel de la méthode de connexion fictive du context
-      await login(username, password);
+      await login(email, password);
     } catch (err) {
-      setError(err || 'Une erreur est survenue lors de la connexion.');
+      setError(err.message || 'Une erreur est survenue lors de la connexion.');
     } finally {
       setIsSubmitting(false);
     }
@@ -55,13 +54,13 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Nom d'utilisateur (Username)
+              Adresse Email
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Ex: admin, aymen, asso_magistrats"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Ex: admin@cspj.ma"
               className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
               disabled={isSubmitting}
             />
@@ -104,14 +103,6 @@ export default function Login() {
             )}
           </button>
         </form>
-
-        {/* Note informative pour tes tests de rôles locaux */}
-        <div className="mt-6 pt-4 border-t border-slate-700/50 text-center">
-          <p className="text-xs text-slate-500">
-            💡 Astuce de test : Utilise un nom contenant <span className="text-blue-400 font-mono">"admin"</span> pour le rôle Admin, ou <span className="text-blue-400 font-mono">"asso"</span> pour le rôle Association.
-          </p>
-        </div>
-
       </div>
     </div>
   );
