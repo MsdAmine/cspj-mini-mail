@@ -55,7 +55,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView }) 
         </nav>
 
         {/* Bouton de Gestion des Comptes (Uniquement pour l'Admin) */}
-        {user?.role === "Admin" && (
+        {user?.role === "Administrateur" && (
           <div className="mt-6 pt-6 border-t border-slate-900">
             <button
               onClick={() => setIsAdminView(!isAdminView)}
