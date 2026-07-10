@@ -1,0 +1,118 @@
+import React, { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+
+export default function Login() {
+  const { login } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    
+    if (!username.trim() || !password.trim()) {
+      setError('Veuillez remplir tous les champs.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Appel de la méthode de connexion fictive du context
+      await login(username, password);
+    } catch (err) {
+      setError(err || 'Une erreur est survenue lors de la connexion.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="flex h-screen w-screen items-center justify-center bg-slate-900 font-sans antialiased text-slate-100">
+      <div className="w-full max-w-md p-8 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
+        
+        {/* En-tête / Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-flex p-3 bg-blue-600/10 rounded-full text-blue-500 mb-3">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">CSPJ MINI-MAIL</h1>
+          <p className="text-sm text-slate-400 mt-1">Plateforme de messagerie interne professionnelle</p>
+        </div>
+
+        {/* Message d'erreur */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm flex items-center gap-2">
+            <span>⚠️</span>
+            <span>{error}</span>
+          </div>
+        )}
+
+        {/* Formulaire */}
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              Nom d'utilisateur (Username)
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Ex: admin, aymen, asso_magistrats"
+              className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Mot de passe
+              </label>
+              <a href="#reset" className="text-xs text-blue-500 hover:underline">
+                Mot de passe oublié ?
+              </a>
+            </div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="w-full mt-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Connexion en cours...
+              </>
+            ) : (
+              'Se connecter'
+            )}
+          </button>
+        </form>
+
+        {/* Note informative pour tes tests de rôles locaux */}
+        <div className="mt-6 pt-4 border-t border-slate-700/50 text-center">
+          <p className="text-xs text-slate-500">
+            💡 Astuce de test : Utilise un nom contenant <span className="text-blue-400 font-mono">"admin"</span> pour le rôle Admin, ou <span className="text-blue-400 font-mono">"asso"</span> pour le rôle Association.
+          </p>
+        </div>
+
+      </div>
+    </div>
+  );
+}
