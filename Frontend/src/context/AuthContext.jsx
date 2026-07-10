@@ -96,8 +96,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async ({ prenom, nom, email }) => {
+    try {
+      const response = await api.put('/auth/profile', { prenom, nom, email });
+      const updated = response.data;
+
+      const updatedUser = {
+        ...user,
+        prenom: updated.prenom,
+        nom: updated.nom,
+        email: updated.email,
+      };
+
+      localStorage.setItem('cspj_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (error) {
+      const errorMessage = typeof error.response?.data === 'string'
+        ? error.response.data
+        : error.response?.data?.message || "Erreur lors de la mise à jour du profil.";
+      throw new Error(errorMessage);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, adminCreateUser }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, adminCreateUser, updateProfile }}>
       {!loading && children}
     </AuthContext.Provider>
   );

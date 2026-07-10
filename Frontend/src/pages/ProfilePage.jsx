@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProfilePage({ onBack }) {
-  const { user, logout } = useAuth();
+  const { user, logout, updateProfile } = useAuth();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editPrenom, setEditPrenom] = useState('');
+  const [editNom, setEditNom] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   const getEntrepriseName = (id) => {
     if (id === 1) return 'CSPJ — Conseil Supérieur du Pouvoir Judiciaire';
@@ -28,6 +35,60 @@ export default function ProfilePage({ onBack }) {
   const initials = user
     ? `${user.prenom?.charAt(0) ?? ''}${user.nom?.charAt(0) ?? ''}`
     : 'U';
+
+  const handleEditStart = () => {
+    setEditPrenom(user?.prenom ?? '');
+    setEditNom(user?.nom ?? '');
+    setEditEmail(user?.email ?? '');
+    setMessage({ type: '', text: '' });
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setMessage({ type: '', text: '' });
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!editPrenom.trim() || !editNom.trim() || !editEmail.trim()) {
+      setMessage({ type: 'error', text: 'Tous les champs sont obligatoires.' });
+      return;
+    }
+    setIsSaving(true);
+    setMessage({ type: '', text: '' });
+    try {
+      await updateProfile({ prenom: editPrenom, nom: editNom, email: editEmail });
+      setMessage({ type: 'success', text: 'Profil mis à jour avec succès.' });
+      setIsEditing(false);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Fields config — editable ones vs read-only
+  const fields = [
+    { label: 'Prénom',              value: user?.prenom,                     editable: true,  key: 'prenom' },
+    { label: 'Nom',                 value: user?.nom,                        editable: true,  key: 'nom' },
+    { label: 'Adresse e-mail',      value: user?.email,                      editable: true,  key: 'email' },
+    { label: 'Rôle système',        value: getRoleLabel(user?.role),         editable: false, key: 'role' },
+    { label: 'Structure',           value: getEntrepriseName(user?.entrepriseId), editable: false, key: 'structure' },
+  ];
+
+  const getEditValue = (key) => {
+    if (key === 'prenom') return editPrenom;
+    if (key === 'nom')    return editNom;
+    if (key === 'email')  return editEmail;
+    return '';
+  };
+
+  const handleEditChange = (key, val) => {
+    if (key === 'prenom') setEditPrenom(val);
+    if (key === 'nom')    setEditNom(val);
+    if (key === 'email')  setEditEmail(val);
+  };
 
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-y-auto" style={{ background: '#f4f6f9' }}>
@@ -63,28 +124,22 @@ export default function ProfilePage({ onBack }) {
 
       {/* Main content */}
       <main className="flex-1 flex justify-center px-6 py-10">
-        <div className="w-full max-w-3xl space-y-5">
+        <div className="w-full max-w-2xl space-y-5">
 
           {/* === Hero card === */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            {/* Dark gradient banner */}
             <div
               className="h-36 w-full relative overflow-hidden"
               style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #1e3a5f 100%)' }}
             >
-              {/* Decorative circles */}
               <div className="absolute -top-8 -right-8 w-48 h-48 rounded-full opacity-10 bg-blue-400 blur-2xl" />
               <div className="absolute bottom-0 left-1/3 w-64 h-20 rounded-full opacity-5 bg-indigo-300 blur-2xl" />
-
-              {/* CSPJ label watermark */}
               <span className="absolute top-5 right-6 text-[10px] font-bold tracking-[0.2em] uppercase text-slate-500 select-none">
                 CSPJ Mail — Espace Sécurisé
               </span>
             </div>
 
-            {/* Avatar + identity below banner */}
             <div className="px-8 pb-7 flex items-end gap-6 -mt-12 relative">
-              {/* Avatar circle */}
               <div
                 className="w-24 h-24 rounded-2xl flex items-center justify-center text-white text-2xl font-bold uppercase border-4 border-white shadow-lg shrink-0 select-none"
                 style={{ background: 'linear-gradient(135deg, #1e293b, #334155)' }}
@@ -92,7 +147,6 @@ export default function ProfilePage({ onBack }) {
                 {initials}
               </div>
 
-              {/* Name / email / badge */}
               <div className="pt-14 flex-1 flex items-end justify-between">
                 <div>
                   <h1 className="text-xl font-bold text-slate-900 leading-tight">{fullName}</h1>
@@ -105,28 +159,88 @@ export default function ProfilePage({ onBack }) {
             </div>
           </div>
 
-          {/* === Account details — full width === */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Informations du compte</h2>
-              <span className="text-[9px] font-semibold uppercase tracking-widest text-slate-300">Lecture seule</span>
+          {/* === Feedback message === */}
+          {message.text && (
+            <div className={`px-5 py-3.5 rounded-xl text-xs font-semibold border ${
+              message.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                : 'bg-rose-50 text-rose-800 border-rose-200'
+            }`}>
+              {message.text}
             </div>
+          )}
 
-            <div className="divide-y divide-slate-50">
-              {[
-                { label: 'Prénom', value: user?.prenom },
-                { label: 'Nom', value: user?.nom },
-                { label: 'Adresse e-mail', value: user?.email },
-                { label: 'Rôle système', value: getRoleLabel(user?.role) },
-                { label: 'Structure', value: getEntrepriseName(user?.entrepriseId) },
-              ].map((field) => (
-                <div key={field.label} className="px-6 py-4 grid grid-cols-3 items-center">
-                  <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{field.label}</span>
-                  <span className="col-span-2 text-sm font-semibold text-slate-800">{field.value || '—'}</span>
-                </div>
-              ))}
+          {/* === Account details card === */}
+          <form onSubmit={handleSave}>
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+              {/* Card header */}
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Informations du compte</h2>
+                {!isEditing ? (
+                  <button
+                    type="button"
+                    onClick={handleEditStart}
+                    className="text-[10px] font-bold uppercase tracking-widest text-blue-600 hover:text-blue-700 transition"
+                  >
+                    Modifier
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      disabled={isSaving}
+                      className="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-slate-600 transition"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="text-[10px] font-bold uppercase tracking-widest text-white bg-blue-600 hover:bg-blue-700 px-3 py-1.5 rounded-lg transition disabled:opacity-60"
+                    >
+                      {isSaving ? 'Enregistrement...' : 'Enregistrer'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Fields */}
+              <div className="divide-y divide-slate-50">
+                {fields.map((field) => (
+                  <div key={field.key} className="px-6 py-4 grid grid-cols-3 items-center gap-4">
+                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                      {field.label}
+                      {field.editable && <span className="ml-1 text-blue-400">•</span>}
+                    </span>
+
+                    {isEditing && field.editable ? (
+                      <input
+                        type={field.key === 'email' ? 'email' : 'text'}
+                        required
+                        value={getEditValue(field.key)}
+                        onChange={(e) => handleEditChange(field.key, e.target.value)}
+                        className="col-span-2 px-3.5 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                      />
+                    ) : (
+                      <span className="col-span-2 text-sm font-semibold text-slate-800">
+                        {field.value || '—'}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Read-only notice */}
+              <div className="px-6 py-3 bg-slate-50 border-t border-slate-100">
+                <p className="text-[9px] text-slate-400 leading-relaxed">
+                  Le rôle et la structure sont définis par l'administration CSPJ et ne peuvent pas être modifiés ici.
+                  Les champs marqués <span className="text-blue-400 font-bold">•</span> sont modifiables.
+                </p>
+              </div>
             </div>
-          </div>
+          </form>
 
         </div>
       </main>

@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -75,5 +76,41 @@ namespace CspjMail.Api.Controllers
                 Role = user.Role
             });
         }
+
+        [HttpPut("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto dto)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim, out int userId))
+                return Unauthorized();
+
+            var user = await _context.Utilisateurs.FindAsync(userId);
+            if (user == null) return NotFound("Utilisateur introuvable.");
+
+            // Check email uniqueness if changed
+            if (!string.Equals(user.Email, dto.Email.Trim(), StringComparison.OrdinalIgnoreCase))
+            {
+                bool emailTaken = await _context.Utilisateurs
+                    .AnyAsync(u => u.Email == dto.Email.Trim() && u.Id != userId);
+                if (emailTaken)
+                    return BadRequest("Cette adresse e-mail est déjà utilisée par un autre compte.");
+            }
+
+            user.Prenom = dto.Prenom.Trim();
+            user.Nom = dto.Nom.Trim();
+            user.Email = dto.Email.Trim().ToLower();
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                prenom = user.Prenom,
+                nom = user.Nom,
+                email = user.Email,
+                role = user.Role,
+                entrepriseId = user.EntrepriseId
+            });
+        }
     }
-}
+}
