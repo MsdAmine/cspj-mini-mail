@@ -11,6 +11,17 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:3000") // Default Vite and Create React App ports
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 // Register SQL Server Database Context
 builder.Services.AddDbContext<CspjMiniMailDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -53,6 +64,8 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+
+app.UseCors("AllowFrontend");
 
 // Authentication MUST come before Authorization
 app.UseAuthentication();
