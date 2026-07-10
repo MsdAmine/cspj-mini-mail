@@ -1,110 +1,125 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import api from '../services/api';
 
 const MailContext = createContext();
 
 export const MailProvider = ({ children }) => {
   const { user } = useAuth();
-  const [activeFolder, setActiveFolder] = useState('inbox'); // 'inbox' | 'sent' | 'archived'
+  const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
+  const [activeFolder, setActiveFolder] = useState('inbox'); // 'inbox' | 'sent' | 'archived'
   const [searchQuery, setSearchQuery] = useState('');
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  // Liste initiale calquée sur tes modèles C#
-  const [messages, setMessages] = useState([
-    {
-      id: 101,
-      senderId: 2,
-      senderName: "Nadia Bennani",
-      senderEmail: "n.bennani@cspj.ma",
-      receiverId: 5,
-      receiverName: "Association des Magistrats",
-      subject: "Dossiers de validation - Session Juillet",
-      body: "Bonjour,\n\nMerci de trouver ci-joint les pièces requises pour finaliser l'inscription des nouveaux magistrats.\n\nCordialement.",
-      dateEnvoi: "2026-07-09T14:30:00Z",
-      isRead: false,
-      isArchived: false,
-      piecesJointes: [{ id: 1, nomFichier: "communique_officiel.pdf", taille: "450 KB" }],
-      threads: [
-        {
-          id: 501,
-          messageId: 101,
-          senderName: "Association des Magistrats",
-          senderEmail: "contact@association-magistrats.ma",
-          body: "Bien reçu, nous traitons le dossier dès demain matin. Merci pour votre réactivité.",
-          dateReponse: "2026-07-09T15:10:00Z"
-        }
-      ]
-    },
-    {
-      id: 102,
-      senderId: 5,
-      senderName: "Association Justice & Progrès",
-      senderEmail: "contact@justice-progres.ma",
-      receiverId: 1,
-      receiverName: "Administration Centrale",
-      subject: "Demande d'assistance technique sur les comptes",
-      body: "Bonjour,\n\nCertains de nos membres ne reçoivent pas les notifications de l'application interne. Pouvez-vous vérifier le statut ?",
-      dateEnvoi: "2026-07-08T09:15:00Z",
-      isRead: true,
-      isArchived: false,
-      piecesJointes: [],
-      threads: []
-    }
-  ]);
-
-  // Action : Envoyer un nouveau message (Nouveau fil)
-  // Mis à jour pour accepter l'objet envoyé par ComposeModal
-  const sendNewMessage = ({ senderName, senderEmail, receiverEmail, subject, body }) => {
-    const newMsg = {
-      id: Date.now(),
-      senderId: user?.id || 1,
-      senderName: senderName || user?.username || "Moi",
-      senderEmail: senderEmail || user?.email || "moi@cspj.ma",
-      receiverId: 99, 
-      receiverName: receiverEmail.split('@')[0], // Extrait le nom avant le @ par défaut
-      receiverEmail: receiverEmail,
-      subject,
-      body,
-      dateEnvoi: new Date().toISOString(),
-      isRead: true,
-      isArchived: false,
-      piecesJointes: [],
-      threads: []
-    };
-    
-    setMessages(prev => [newMsg, ...prev]);
-  };
-
-  // Action : Ajouter un commentaire dans un Thread existant
-  const replyToThread = (messageId, body) => {
-    const newReply = {
-      id: Date.now(),
-      messageId: messageId,
-      senderName: user?.username || "Moi",
-      senderEmail: user?.email || "moi@cspj.ma",
-      body,
-      dateReponse: new Date().toISOString()
-    };
-
-    setMessages(prev => prev.map(msg => {
-      if (msg.id === messageId) {
-        return { ...msg, threads: [...msg.threads, newReply] };
+  // Load threads depending on folder / search query
+  const loadMailbox = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      let endpoint = '/messages/inbox';
+      if (searchQuery.trim()) {
+        endpoint = `/messages/search?searchTerm=${encodeURIComponent(searchQuery)}`;
+      } else if (activeFolder === 'sent') {
+        endpoint = '/messages/sent';
+      } else if (activeFolder === 'archived') {
+        endpoint = '/messages/archive';
       }
-      return msg;
-    }));
-
-    if (selectedMessage && selectedMessage.id === messageId) {
-      setSelectedMessage(prev => ({ ...prev, threads: [...prev.threads, newReply] }));
+      
+      const response = await api.get(endpoint);
+      setMessages(response.data);
+    } catch (err) {
+      console.error("Erreur lors du chargement des discussions :", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const toggleArchiveMessage = (id) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, isArchived: !m.isArchived } : m));
-    if (selectedMessage?.id === id) setSelectedMessage(null);
+  // Load contacts for composing messages
+  const loadContacts = async () => {
+    if (!user) return;
+    try {
+      const response = await api.get('/messages/contacts');
+      setContacts(response.data);
+    } catch (err) {
+      console.error("Erreur lors du chargement des contacts :", err);
+    }
   };
 
-  const markAsReadMessage = (id) => {
-    setMessages(prev => prev.map(m => m.id === id ? { ...m, isRead: true } : m));
+  useEffect(() => {
+    loadMailbox();
+    loadContacts();
+  }, [activeFolder, searchQuery, user]);
+
+  // View thread details (also marks messages as read on the backend)
+  const selectMessage = async (msg) => {
+    if (!msg) {
+      setSelectedMessage(null);
+      return;
+    }
+    const threadId = msg.threadId;
+    try {
+      const response = await api.get(`/messages/thread/${threadId}`);
+      setSelectedMessage(response.data);
+      
+      // Update unread flag locally in the list
+      setMessages(prev => prev.map(m => {
+        if (m.threadId === threadId) {
+          return { ...m, aDesMessagesNonLus: false };
+        }
+        return m;
+      }));
+    } catch (err) {
+      console.error("Erreur lors du chargement du fil de discussion :", err);
+    }
+  };
+
+  // Send a brand new message thread
+  const sendNewMessage = async ({ subject, body, receiverId }) => {
+    try {
+      await api.post('/messages/thread', {
+        objet: subject.trim(),
+        corps: body.trim(),
+        destinataireId: parseInt(receiverId, 10)
+      });
+      await loadMailbox();
+    } catch (err) {
+      const msg = err.response?.data || "Erreur lors de l'envoi du message.";
+      throw new Error(msg);
+    }
+  };
+
+  // Reply inside an existing conversation thread
+  const replyToThread = async (threadId, body) => {
+    try {
+      await api.post(`/messages/thread/${threadId}/reply`, {
+        corps: body.trim()
+      });
+      // Re-fetch thread details to display the reply
+      const response = await api.get(`/messages/thread/${threadId}`);
+      setSelectedMessage(response.data);
+      
+      // Refresh the threads list
+      await loadMailbox();
+    } catch (err) {
+      console.error("Erreur lors de la réponse au fil :", err);
+    }
+  };
+
+  // Archive / unarchive conversation thread
+  const toggleArchiveMessage = async (threadId) => {
+    try {
+      await api.put(`/messages/thread/${threadId}/archive`);
+      setSelectedMessage(null);
+      await loadMailbox();
+    } catch (err) {
+      console.error("Erreur lors du changement de statut d'archive :", err);
+    }
+  };
+
+  const markAsReadMessage = () => {
+    // Handled automatically on the backend upon fetching details
   };
 
   return (
@@ -113,13 +128,16 @@ export const MailProvider = ({ children }) => {
       activeFolder,
       setActiveFolder,
       selectedMessage,
-      setSelectedMessage,
+      setSelectedMessage: selectMessage, // Override with API load function
       searchQuery,
       setSearchQuery,
       sendNewMessage,
       replyToThread,
       toggleArchiveMessage,
-      markAsReadMessage
+      markAsReadMessage,
+      contacts,
+      loading,
+      refreshMailbox: loadMailbox
     }}>
       {children}
     </MailContext.Provider>

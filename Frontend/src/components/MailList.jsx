@@ -8,36 +8,12 @@ export default function MailList() {
     messages, 
     activeFolder, 
     selectedMessage, 
-    setSelectedMessage, 
-    searchQuery,
-    markAsReadMessage
+    setSelectedMessage,
+    loading
   } = useMail();
-
-  // 1. Filtrage selon le dossier sélectionné dans la Sidebar
-  const folderFilteredMessages = messages.filter(msg => {
-    if (activeFolder === 'archived') return msg.isArchived;
-    if (msg.isArchived) return false; // Ne pas afficher les archives dans Inbox/Sent
-
-    if (activeFolder === 'sent') {
-      return msg.senderEmail === user?.email;
-    }
-    // Par défaut: Inbox (Reçus par l'utilisateur ou adressés de manière globale)
-    return msg.senderEmail !== user?.email;
-  });
-
-  // 2. Filtrage selon la barre de recherche (Recherche par objet ou par nom)
-  const filteredMessages = folderFilteredMessages.filter(msg => {
-    const search = searchQuery.toLowerCase();
-    return (
-      msg.subject.toLowerCase().includes(search) ||
-      msg.senderName.toLowerCase().includes(search) ||
-      msg.body.toLowerCase().includes(search)
-    );
-  });
 
   const handleSelectMessage = (msg) => {
     setSelectedMessage(msg);
-    markAsReadMessage(msg.id);
   };
 
   return (
@@ -50,24 +26,32 @@ export default function MailList() {
           {activeFolder === 'archived' && 'Conversations archivées'}
         </span>
         <span className="text-xs text-slate-400 font-mono">
-          {filteredMessages.length} message(s)
+          {messages.length} discussion(s)
         </span>
       </div>
 
       {/* Liste défilante */}
       <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-        {filteredMessages.length === 0 ? (
+        {loading && messages.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-400">
-            Aucun message trouvé.
+            <svg className="animate-spin h-5 w-5 text-blue-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            Chargement...
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="p-8 text-center text-sm text-slate-400">
+            Aucune discussion trouvée.
           </div>
         ) : (
-          filteredMessages.map((msg) => {
-            const isSelected = selectedMessage?.id === msg.id;
-            const showUnreadDot = !msg.isRead && msg.senderEmail !== user?.email;
+          messages.map((msg) => {
+            const isSelected = selectedMessage?.threadId === msg.threadId;
+            const showUnreadDot = msg.aDesMessagesNonLus;
 
             return (
               <div
-                key={msg.id}
+                key={msg.threadId}
                 onClick={() => handleSelectMessage(msg)}
                 className={`p-4 cursor-pointer transition relative flex items-start space-x-3 ${
                   isSelected ? 'bg-blue-50/70 border-l-4 border-blue-600 pl-3' : 'hover:bg-slate-50'
@@ -82,34 +66,20 @@ export default function MailList() {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-1">
                     <h4 className={`text-sm truncate pr-4 ${showUnreadDot ? 'font-bold text-slate-900' : 'text-slate-700'}`}>
-                      {msg.senderEmail === user?.email ? `À: ${msg.receiverName}` : msg.senderName}
+                      {msg.dernierExpediteurNom}
                     </h4>
                     <span className="text-xxs text-slate-400 font-mono whitespace-nowrap">
-                      {new Date(msg.dateEnvoi).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                      {new Date(msg.derniereActivite).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
                   
                   <p className={`text-xs truncate mb-1 ${showUnreadDot ? 'font-semibold text-slate-900' : 'text-slate-600'}`}>
-                    {msg.subject}
+                    {msg.objet}
                   </p>
                   
                   <p className="text-xs text-slate-400 truncate">
-                    {msg.body}
+                    {msg.dernierMessageCorps}
                   </p>
-
-                  {/* Badges Fils de discussion & Pièces jointes */}
-                  <div className="flex items-center space-x-2 mt-2">
-                    {msg.threads?.length > 0 && (
-                      <span className="inline-flex items-center text-xxs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">
-                        💬 {msg.threads.length + 1}
-                      </span>
-                    )}
-                    {msg.piecesJointes?.length > 0 && (
-                      <span className="inline-flex items-center text-xxs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">
-                        📎 {msg.piecesJointes.length}
-                      </span>
-                    )}
-                  </div>
                 </div>
               </div>
             );

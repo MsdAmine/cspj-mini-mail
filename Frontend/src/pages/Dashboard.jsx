@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import MailList from '../components/MailList';
 import ComposeModal from '../components/ComposeModal';
-import ProfileModal from '../components/ProfileModal'; 
+import ProfilePage from './ProfilePage';
 
 export default function Dashboard() {
-  const { user, registerNewUser } = useAuth();
+  const { user, adminCreateUser } = useAuth();
   const { 
     searchQuery, 
     setSearchQuery, 
@@ -20,40 +21,79 @@ export default function Dashboard() {
   const [isProfileOpen, setIsProfileOpen] = useState(false); 
   const [replyBody, setReplyBody] = useState('');
   
+  // Navigation Admin
+  const [adminTab, setAdminTab] = useState('stats'); // 'stats' | 'create-user'
+  
   // États pour la création de compte (Admin)
-  const [isAdminView, setIsAdminView] = useState(false);
-  const [newUsername, setNewUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [isAdminView, setIsAdminView] = useState(user?.role === 'Administrateur');
+  const [newPrenom, setNewPrenom] = useState('');
+  const [newNom, setNewNom] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('Fonctionnaire'); 
+  const [newEntrepriseId, setNewEntrepriseId] = useState('1'); // Par défaut 1 (CSPJ Conseil)
   const [adminMessage, setAdminMessage] = useState({ type: '', text: '' });
 
-  // Fonction utilitaire pour formater joliment les noms d'utilisateurs (ex: admin_general -> Admin General)
-  const formatDisplayName = (name) => {
-    if (!name) return '';
-    return name
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (char) => char.toUpperCase());
+  // Statistiques Administrateur
+  const [stats, setStats] = useState({ totalUsers: 0, totalThreads: 0, totalMessagesSent: 0 });
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get('/admin/stats');
+      setStats(response.data);
+    } catch (err) {
+      console.error("Erreur lors de la récupération des statistiques :", err);
+    }
   };
 
-  const handleCreateAccount = (e) => {
+  useEffect(() => {
+    if (user?.role === 'Administrateur') {
+      setIsAdminView(true);
+    } else {
+      setIsAdminView(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (isAdminView && user?.role === 'Administrateur') {
+      fetchStats();
+    }
+  }, [isAdminView, user]);
+
+  const handleCreateAccount = async (e) => {
     e.preventDefault();
-    if (!newUsername || !newPassword) {
-      setAdminMessage({ type: 'error', text: 'Veuillez remplir l’identifiant et le mot de passe.' });
+    setAdminMessage({ type: '', text: '' });
+
+    if (!newPrenom.trim() || !newNom.trim() || !newEmail.trim() || !newPassword) {
+      setAdminMessage({ type: 'error', text: 'Veuillez remplir tous les champs obligatoires.' });
       return;
     }
+
     try {
-      registerNewUser({
-        username: newUsername,
+      await adminCreateUser({
+        prenom: newPrenom.trim(),
+        nom: newNom.trim(),
+        email: newEmail.trim().toLowerCase(),
         password: newPassword,
-        email: newEmail,
-        role: newRole
+        role: newRole,
+        entrepriseId: parseInt(newEntrepriseId, 10)
       });
-      setAdminMessage({ type: 'success', text: `Le compte "${formatDisplayName(newUsername)}" a été créé avec succès !` });
-      setNewUsername('');
-      setNewPassword('');
+
+      setAdminMessage({ 
+        type: 'success', 
+        text: `Le compte de ${newPrenom} ${newNom} (${newRole}) a été créé avec succès !` 
+      });
+
+      // Réinitialiser le formulaire
+      setNewPrenom('');
+      setNewNom('');
       setNewEmail('');
-      setNewRole('Fonctionnaire'); 
+      setNewPassword('');
+      setNewRole('Fonctionnaire');
+      setNewEntrepriseId('1');
+
+      // Recharger les statistiques
+      fetchStats();
     } catch (err) {
       setAdminMessage({ type: 'error', text: err.message });
     }
@@ -62,9 +102,24 @@ export default function Dashboard() {
   const handleReplySubmit = (e) => {
     e.preventDefault();
     if (!replyBody.trim()) return;
-    replyToThread(selectedMessage.id, replyBody);
+    replyToThread(selectedMessage.threadId, replyBody);
     setReplyBody('');
   };
+
+  if (isProfileOpen) {
+    return (
+      <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
+        <Sidebar 
+          onComposeOpen={() => setIsComposeOpen(true)} 
+          isAdminView={isAdminView}
+          setIsAdminView={(val) => { setIsAdminView(val); setAdminMessage({ type: '', text: '' }); }}
+          adminTab={adminTab}
+          setAdminTab={setAdminTab}
+        />
+        <ProfilePage onBack={() => setIsProfileOpen(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
@@ -73,6 +128,8 @@ export default function Dashboard() {
         onComposeOpen={() => setIsComposeOpen(true)} 
         isAdminView={isAdminView}
         setIsAdminView={(val) => { setIsAdminView(val); setAdminMessage({ type: '', text: '' }); }}
+        adminTab={adminTab}
+        setAdminTab={setAdminTab}
       />
 
       <div className="flex flex-col flex-1 min-w-0">
@@ -96,20 +153,20 @@ export default function Dashboard() {
             <div 
               onClick={() => setIsProfileOpen(true)}
               className="flex items-center space-x-3 cursor-pointer hover:bg-slate-50 px-3 py-1.5 rounded-xl border border-transparent hover:border-slate-200 transition duration-150 group"
-              title="Modifier mes informations personnelles"
+              title="Afficher mes informations personnelles"
             >
               <div className="text-right">
                 <p className="text-sm font-semibold text-slate-700 group-hover:text-blue-600 transition">
-                  {formatDisplayName(user?.username)}
+                  {user ? `${user.prenom} ${user.nom}` : ''}
                 </p>
-                <p className="text-xs text-amber-600 font-mono font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
+                <p className="text-[10px] text-amber-600 font-mono font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
                   {user?.role}
                 </p>
               </div>
 
-              {/* Petit avatar de profil circulaire */}
-              <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-semibold text-sm flex items-center justify-center border border-slate-800 shadow-sm group-hover:bg-blue-600 group-hover:border-blue-500 transition duration-150 uppercase">
-                {user?.username ? user.username.charAt(0) : 'U'}
+              {/* Avatar de profil circulaire */}
+              <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-semibold text-sm flex items-center justify-center border border-slate-800 shadow-sm group-hover:bg-blue-600 group-hover:border-blue-500 transition duration-150 uppercase font-mono">
+                {user?.prenom ? user.prenom.charAt(0) : 'U'}
               </div>
             </div>
           </div>
@@ -117,75 +174,180 @@ export default function Dashboard() {
 
         {/* Contenu alternatif (Gestion Admin ou Messagerie) */}
         {isAdminView ? (
-          <div className="flex-1 bg-slate-50 p-8 overflow-y-auto flex justify-center items-start">
-            <div className="w-full max-w-xl bg-white p-6 rounded-xl border border-slate-200 shadow-md">
-              <h2 className="text-xl font-bold text-slate-900 mb-2">Créer un nouveau compte utilisateur</h2>
-              <p className="text-slate-500 text-sm mb-6">Le compte créé sera instantanément actif sur la plateforme.</p>
-
-              {adminMessage.text && (
-                <div className={`p-3 rounded-lg text-sm mb-4 font-medium ${adminMessage.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`}>
-                  {adminMessage.text}
-                </div>
-              )}
-
-              <form onSubmit={handleCreateAccount} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Nom d'utilisateur (Username) *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
-                    placeholder="Ex: aymen_dev"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  />
+          <div className="flex-1 bg-slate-50 p-8 overflow-y-auto flex flex-col items-center">
+            {adminTab === 'stats' ? (
+              <div className="w-full max-w-4xl space-y-8 animate-fade-in">
+                {/* En-tête du tableau de bord */}
+                <div className="border-b border-slate-200 pb-5">
+                  <h2 className="text-lg font-bold text-slate-900">Tableau de bord administratif</h2>
+                  <p className="text-slate-500 text-xs mt-1">Données analytiques et statistiques globales d'activité sur le serveur de messagerie.</p>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Adresse Email Professionnelle</label>
-                  <input
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="Ex: aymen.l@cspj.ma (Optionnel)"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  />
+                {/* Grille des indicateurs de statistiques */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Carte : Utilisateurs */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-blue-600 transition hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Comptes Utilisateurs</p>
+                    <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.totalUsers}</p>
+                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">Profils enregistrés et habilités sur le réseau interne.</p>
+                  </div>
+
+                  {/* Carte : Discussions */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-indigo-600 transition hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Discussions Initiées</p>
+                    <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.totalThreads}</p>
+                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">Fils de discussion distincts créés par les utilisateurs.</p>
+                  </div>
+
+                  {/* Carte : Messages */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-slate-600 transition hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Messages Acheminés</p>
+                    <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.totalMessagesSent}</p>
+                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">Volume total de messages transmis de bout en bout.</p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Mot de passe provisoire *</label>
-                  <input
-                    type="password"
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  />
+                {/* Tableau des habilitations système */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 bg-slate-50 border-b border-slate-200/65">
+                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Matrice des habilitations d'accès</h3>
+                  </div>
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/50 border-b border-slate-200/60 text-slate-450 uppercase font-semibold">
+                        <th className="px-6 py-3">Rôle Système</th>
+                        <th className="px-6 py-3">Périmètre Applicatif</th>
+                        <th className="px-6 py-3">Statut Réseau</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 text-slate-600">
+                      <tr>
+                        <td className="px-6 py-3.5 font-semibold text-slate-800">Administrateur</td>
+                        <td className="px-6 py-3.5">Création et audit des comptes utilisateurs, consultation des statistiques de trafic.</td>
+                        <td className="px-6 py-3.5 text-emerald-600 font-medium">Actif</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-3.5 font-semibold text-slate-800">Fonctionnaire</td>
+                        <td className="px-6 py-3.5">Messagerie professionnelle interne, communication sécurisée inter-services.</td>
+                        <td className="px-6 py-3.5 text-emerald-600 font-medium">Actif</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-3.5 font-semibold text-slate-800">Association</td>
+                        <td className="px-6 py-3.5">Accès externe restreint, envoi et réception de messages avec les services habilités.</td>
+                        <td className="px-6 py-3.5 text-emerald-600 font-medium">Actif</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden animate-fade-in">
+                {/* En-tête de la fiche de création */}
+                <div className="px-6 py-5 bg-slate-50/50 border-b border-slate-200/60">
+                  <h2 className="text-base font-bold text-slate-900">Enregistrer un nouvel utilisateur</h2>
+                  <p className="text-slate-500 text-xs mt-1">Le compte créé sera actif et recevra automatiquement ses accès sécurisés.</p>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Rôle affecté</label>
-                  <select
-                    value={newRole}
-                    onChange={(e) => setNewRole(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  >
-                    <option value="Fonctionnaire">Fonctionnaire (Interne CSPJ)</option>
-                    <option value="Association">Association (Externe)</option>
-                  </select>
-                </div>
+                <div className="p-6">
+                  {adminMessage.text && (
+                    <div className={`p-4 rounded-xl text-xs font-semibold mb-5 ${
+                      adminMessage.type === 'success' 
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                        : 'bg-rose-50 text-rose-800 border border-rose-200'
+                    }`}>
+                      {adminMessage.text}
+                    </div>
+                  )}
 
-                <div className="pt-4">
-                  <button
-                    type="submit"
-                    className="w-full py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition shadow-sm"
-                  >
-                    ➕ Enregistrer et créer le compte
-                  </button>
+                  <form onSubmit={handleCreateAccount} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Prénom *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newPrenom}
+                          onChange={(e) => setNewPrenom(e.target.value)}
+                          placeholder="Ex: Sanaa"
+                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/30 hover:border-slate-350 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Nom *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newNom}
+                          onChange={(e) => setNewNom(e.target.value)}
+                          placeholder="Ex: Benjelloun"
+                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/30 hover:border-slate-350 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Adresse Email Professionnelle *</label>
+                      <input
+                        type="email"
+                        required
+                        value={newEmail}
+                        onChange={(e) => setNewEmail(e.target.value)}
+                        placeholder="Ex: s.benjelloun@cspj.ma"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/30 hover:border-slate-350 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Mot de passe provisoire *</label>
+                      <input
+                        type="password"
+                        required
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/30 hover:border-slate-350 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Rôle affecté</label>
+                        <select
+                          value={newRole}
+                          onChange={(e) => setNewRole(e.target.value)}
+                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
+                        >
+                          <option value="Fonctionnaire">Fonctionnaire</option>
+                          <option value="Association">Association</option>
+                          <option value="Administrateur">Administrateur</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Structure de rattachement</label>
+                        <select
+                          value={newEntrepriseId}
+                          onChange={(e) => setNewEntrepriseId(e.target.value)}
+                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
+                        >
+                          <option value="1">CSPJ (Conseil)</option>
+                          <option value="2">Association des Magistrats</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
+                      <button
+                        type="submit"
+                        className="w-full py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 active:scale-[0.99] transition duration-150 shadow-sm cursor-pointer"
+                      >
+                        Créer le compte utilisateur
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
-            </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="flex flex-1 min-h-0 divide-x divide-slate-200">
@@ -195,41 +357,47 @@ export default function Dashboard() {
             
             <div className="flex-1 bg-slate-50">
               {selectedMessage ? (
-                <div className="flex flex-col h-full bg-white">
+                <div className="flex flex-col h-full bg-white animate-fade-in">
                   <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-gray-50">
-                    <h2 className="text-lg font-semibold text-gray-800 truncate">{selectedMessage.subject}</h2>
+                    <h2 className="text-lg font-semibold text-gray-800 truncate">{selectedMessage.objet}</h2>
                     <button 
-                      onClick={() => toggleArchiveMessage(selectedMessage.id)}
-                      className="px-3 py-1.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 shadow-sm transition"
+                      onClick={() => toggleArchiveMessage(selectedMessage.threadId)}
+                      className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 shadow-sm transition"
                     >
-                      {selectedMessage.isArchived ? "Désarchiver" : "Archiver la discussion"}
+                      {selectedMessage.estArchive ? "Désarchiver" : "Archiver la discussion"}
                     </button>
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
-                    <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                          <span className="font-semibold text-gray-900">{selectedMessage.senderName}</span>
-                          <span className="text-xs text-gray-500 block">{selectedMessage.senderEmail}</span>
-                        </div>
-                        <span className="text-xs text-gray-400">{new Date(selectedMessage.dateEnvoi).toLocaleString()}</span>
-                      </div>
-                      <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed">{selectedMessage.body}</p>
-                    </div>
-
-                    {selectedMessage.threads?.map((reply) => (
-                      <div key={reply.id} className={`p-5 rounded-lg border shadow-sm ${reply.senderEmail === user?.email ? 'bg-blue-50/40 border-blue-200 ml-10' : 'bg-white border-gray-200 mr-10'}`}>
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <span className="font-semibold text-gray-900">{reply.senderName}</span>
-                            <span className="text-xs text-gray-500 block">{reply.senderEmail}</span>
+                    {selectedMessage.messages?.map((msg) => {
+                      const isOwnMessage = msg.expediteurId === user?.id;
+                      
+                      return (
+                        <div 
+                          key={msg.messageId} 
+                          className={`p-5 rounded-xl border shadow-sm max-w-[85%] ${
+                            isOwnMessage 
+                              ? 'bg-blue-50/50 border-blue-200 ml-auto' 
+                              : 'bg-white border-gray-200 mr-auto'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-2 gap-4">
+                            <div>
+                              <span className="font-semibold text-gray-900 text-sm">
+                                {isOwnMessage ? "Moi" : msg.expediteurNomComplet}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-500 block">
+                                {msg.expediteurRole}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              {new Date(msg.dateEnvoi).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                            </span>
                           </div>
-                          <span className="text-xs text-gray-400">{new Date(reply.dateReponse).toLocaleString()}</span>
+                          <p className="text-gray-750 whitespace-pre-line text-sm leading-relaxed">{msg.corps}</p>
                         </div>
-                        <p className="text-gray-700 whitespace-pre-line text-sm leading-relaxed">{reply.body}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   <div className="p-4 border-t border-gray-200 bg-white">
@@ -251,7 +419,6 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                  <span className="text-4xl mb-2">📥</span>
                   <p className="text-sm font-medium">Sélectionnez une discussion pour afficher le fil des messages.</p>
                 </div>
               )}
@@ -261,7 +428,6 @@ export default function Dashboard() {
       </div>
 
       {isComposeOpen && <ComposeModal onClose={() => setIsComposeOpen(false)} />}
-      {isProfileOpen && <ProfileModal onClose={() => setIsProfileOpen(false)} />}
     </div>
   );
 }
