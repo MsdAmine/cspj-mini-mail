@@ -103,6 +103,46 @@ namespace CspjMail.Api.Controllers
             return Ok(users);
         }
 
+        // 3.5 GET: api/admin/threads (Fetch recent discussions for dashboard)
+        [HttpGet("threads")]
+        public async Task<IActionResult> GetThreads()
+        {
+            var threads = await _context.Threads
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.Destinataire)
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.PiecesJointes)
+                .OrderByDescending(t => t.DateCreation)
+                .Take(50)
+                .ToListAsync();
+
+            var result = threads.Select(t => {
+                var firstMessage = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault();
+                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
+                var hasAttachment = t.Messages.Any(m => m.PiecesJointes.Any());
+                var attachmentName = t.Messages.SelectMany(m => m.PiecesJointes).Select(p => p.NomFichier).FirstOrDefault() ?? string.Empty;
+                
+                return new AdminThreadDto
+                {
+                    Id = t.Id,
+                    Objet = t.Objet,
+                    Expediteur = firstMessage != null ? $"{firstMessage.Expediteur.Prenom} {firstMessage.Expediteur.Nom}" : "Inconnu",
+                    ExpediteurEmail = firstMessage?.Expediteur?.Email ?? "inconnu@cspj.ma",
+                    Destinataire = firstMessage != null ? $"{firstMessage.Destinataire.Prenom} {firstMessage.Destinataire.Nom}" : "Inconnu",
+                    DestinataireEmail = firstMessage?.Destinataire?.Email ?? "inconnu@cspj.ma",
+                    Date = t.DateCreation,
+                    StatutLecture = lastMessage?.EstLu == true ? "Lu" : "Non lu",
+                    StatutAcheminement = t.EstArchive ? "Clôturé" : "En cours",
+                    HasAttachment = hasAttachment,
+                    PieceJointeNom = attachmentName
+                };
+            }).ToList();
+
+            return Ok(result);
+        }
+
         // 4. PUT: api/admin/users/{id}/status (Modify active status of a user)
         [HttpPut("users/{id}/status")]
         public async Task<IActionResult> UpdateUserStatus(int id, [FromBody] UpdateUserStatusDto dto)

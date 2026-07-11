@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLogs } from '../context/LogContext';
-import { mockUsers } from '../services/mockData';
 
 export default function ManageUsers() {
   const { user: currentUser } = useAuth();
   const { addLog } = useLogs();
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -22,23 +21,16 @@ export default function ManageUsers() {
     try {
       const response = await api.get('/admin/users');
       const apiUsers = response.data || [];
-      const mergedUsers = [...apiUsers];
-
-      mockUsers.forEach(mockUser => {
-        if (!mergedUsers.some(u => u.email.toLowerCase() === mockUser.email.toLowerCase())) {
-          mergedUsers.push(mockUser);
-        }
-      });
-      setUsers(mergedUsers);
+      setUsers(apiUsers);
     } catch (err) {
       console.error(err);
       const status = err.response?.status;
 
       if (!err.response) {
         // True network error — backend is down or unreachable
-        setUsers(mockUsers);
+        setUsers([]);
         setError(
-          "L'API de production n'a pas pu être contactée. Affichage des données de test (Mock Data)."
+          "L'API de production n'a pas pu être contactée."
         );
       } else if (status === 401 || status === 403) {
         // Auth error — interceptor will reload; show a transient message

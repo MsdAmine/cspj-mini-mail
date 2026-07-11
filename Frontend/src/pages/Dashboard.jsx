@@ -11,7 +11,7 @@ import ManageUsers from '../components/ManageUsers';
 import ManageLogs from '../components/ManageLogs';
 import TiptapEditor from '../components/TiptapEditor';
 import { Send } from 'lucide-react';
-import { mockThreads, mockUsers, mockLogs } from '../services/mockData';
+
 
 export default function Dashboard() {
   const { user, adminCreateUser } = useAuth();
@@ -46,24 +46,35 @@ export default function Dashboard() {
   const [threadStatusFilter, setThreadStatusFilter] = useState('ALL');
 
   // Statistiques Administrateur
-  const [stats, setStats] = useState({ totalUsers: mockUsers.length, totalThreads: mockThreads.length, totalMessagesSent: mockLogs.length });
+  const [stats, setStats] = useState({ totalUsers: 0, totalThreads: 0, totalMessagesSent: 0 });
+  const [threads, setThreads] = useState([]);
 
   const fetchStats = async () => {
     try {
       const response = await api.get('/admin/stats');
       const data = response.data || {};
       setStats({
-        totalUsers: data.totalUsers || mockUsers.length,
-        totalThreads: data.totalThreads || mockThreads.length,
-        totalMessagesSent: data.totalMessagesSent || mockLogs.length
+        totalUsers: data.totalUsers || 0,
+        totalThreads: data.totalThreads || 0,
+        totalMessagesSent: data.totalMessagesSent || 0
       });
     } catch (err) {
       console.error("Erreur lors de la récupération des statistiques :", err);
       setStats({
-        totalUsers: mockUsers.length,
-        totalThreads: mockThreads.length,
-        totalMessagesSent: mockLogs.length
+        totalUsers: 0,
+        totalThreads: 0,
+        totalMessagesSent: 0
       });
+    }
+  };
+
+  const fetchThreads = async () => {
+    try {
+      const response = await api.get('/admin/threads');
+      setThreads(response.data || []);
+    } catch (err) {
+      console.error("Erreur lors de la récupération des discussions :", err);
+      setThreads([]);
     }
   };
 
@@ -78,6 +89,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (isAdminView && user?.role === 'Administrateur') {
       fetchStats();
+      fetchThreads();
     }
   }, [isAdminView, user]);
 
@@ -134,7 +146,7 @@ export default function Dashboard() {
     setReplyBody('');
   };
 
-  const filteredThreads = mockThreads.filter(t => {
+  const filteredThreads = threads.filter(t => {
     const query = threadSearch.toLowerCase().trim();
     const matchesQuery = !query || 
       t.objet.toLowerCase().includes(query) ||
