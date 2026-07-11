@@ -12,7 +12,7 @@ export default function ManageUsers() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [deletingUser, setDeletingUser] = useState(null); // User to be deleted
+  const [deletingUser, setDeletingUser] = useState(null);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
 
   // Fetch users from backend
@@ -23,7 +23,7 @@ export default function ManageUsers() {
       const response = await api.get('/admin/users');
       const apiUsers = response.data || [];
       const mergedUsers = [...apiUsers];
-      
+
       mockUsers.forEach(mockUser => {
         if (!mergedUsers.some(u => u.email.toLowerCase() === mockUser.email.toLowerCase())) {
           mergedUsers.push(mockUser);
@@ -32,10 +32,24 @@ export default function ManageUsers() {
       setUsers(mergedUsers);
     } catch (err) {
       console.error(err);
-      setUsers(mockUsers);
-      setError(
-        "L'API de production n'a pas pu être contactée. Affichage des données de test (Mock Data)."
-      );
+      const status = err.response?.status;
+
+      if (!err.response) {
+        // True network error — backend is down or unreachable
+        setUsers(mockUsers);
+        setError(
+          "L'API de production n'a pas pu être contactée. Affichage des données de test (Mock Data)."
+        );
+      } else if (status === 401 || status === 403) {
+        // Auth error — interceptor will reload; show a transient message
+        setError("Session expirée. Reconnexion en cours...");
+      } else {
+        setError(
+          err.response?.data?.message ||
+          err.response?.data ||
+          "Une erreur serveur est survenue lors du chargement des utilisateurs."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -50,10 +64,10 @@ export default function ManageUsers() {
     setError('');
     setSuccess('');
     const newStatus = !userToUpdate.actif;
-    
+
     try {
       // Optimistic UI update
-      setUsers(prev => 
+      setUsers(prev =>
         prev.map(u => u.id === userToUpdate.id ? { ...u, actif: newStatus } : u)
       );
 
@@ -72,12 +86,12 @@ export default function ManageUsers() {
     } catch (err) {
       console.error(err);
       // Revert status on failure
-      setUsers(prev => 
+      setUsers(prev =>
         prev.map(u => u.id === userToUpdate.id ? { ...u, actif: userToUpdate.actif } : u)
       );
       setError(
-        err.response?.data?.message || 
-        err.response?.data || 
+        err.response?.data?.message ||
+        err.response?.data ||
         "Erreur lors de la mise à jour du statut."
       );
     }
@@ -106,8 +120,8 @@ export default function ManageUsers() {
     } catch (err) {
       console.error(err);
       setError(
-        err.response?.data?.message || 
-        err.response?.data || 
+        err.response?.data?.message ||
+        err.response?.data ||
         "Une erreur est survenue lors de la suppression de l'utilisateur."
       );
     } finally {
@@ -233,10 +247,10 @@ export default function ManageUsers() {
               <tbody className="divide-y divide-slate-100 text-slate-600">
                 {filteredUsers.map((u) => {
                   const isSelf = currentUser?.id === u.id;
-                  
+
                   return (
-                    <tr 
-                      key={u.id} 
+                    <tr
+                      key={u.id}
                       className={`hover:bg-slate-50/50 transition duration-150 ${isSelf ? 'bg-blue-50/15' : ''}`}
                     >
                       {/* Name / Firstname */}
@@ -273,8 +287,8 @@ export default function ManageUsers() {
                       {/* Role Badge */}
                       <td className="px-6 py-4.5">
                         <span className={`inline-block px-2.5 py-1 text-[10px] font-bold rounded-lg border uppercase tracking-wider font-mono ${
-                          u.role === 'Administrateur' 
-                            ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                          u.role === 'Administrateur'
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
                             : u.role === 'Fonctionnaire'
                             ? 'bg-blue-50 text-blue-700 border-blue-200'
                             : 'bg-amber-50 text-amber-800 border-amber-200'
@@ -290,7 +304,7 @@ export default function ManageUsers() {
                             type="button"
                             onClick={() => handleToggleStatus(u)}
                             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 ${
-                              u.actif ? 'bg-emerald-500' : 'bg-slate-350'
+                              u.actif ? 'bg-emerald-500' : 'bg-slate-300'
                             }`}
                             aria-checked={u.actif}
                             title={u.actif ? "Désactiver le compte" : "Activer le compte"}
@@ -333,7 +347,7 @@ export default function ManageUsers() {
       {deletingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden m-4">
-            
+
             {/* Modal Header */}
             <div className="bg-rose-600 text-white px-5 py-4 flex items-center justify-between">
               <h3 className="font-bold tracking-wide text-sm uppercase flex items-center gap-2">
@@ -342,7 +356,7 @@ export default function ManageUsers() {
                 </svg>
                 Confirmation de suppression
               </h3>
-              <button 
+              <button
                 onClick={() => setDeletingUser(null)}
                 className="text-white hover:text-slate-200 transition text-lg outline-none cursor-pointer"
                 disabled={isDeleteLoading}
@@ -356,7 +370,7 @@ export default function ManageUsers() {
               <p className="text-sm text-slate-700 font-medium leading-relaxed">
                 Êtes-vous absolument sûr de vouloir supprimer définitivement le compte de <strong>{deletingUser.prenom} {deletingUser.nom}</strong> ?
               </p>
-              
+
               <div className="p-3.5 bg-rose-50 text-rose-900 border border-rose-100 rounded-lg text-xs leading-relaxed space-y-2">
                 <p className="font-bold uppercase tracking-wider flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
