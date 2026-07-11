@@ -1,6 +1,7 @@
 import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MailProvider } from './context/MailContext';
+import { LogProvider } from './context/LogContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 
@@ -19,11 +20,13 @@ function RootApp() {
   );
 }
 
-// Le point d'entrée enveloppé dans le fournisseur d'authentification global
+// Le point d'entrée enveloppé dans les fournisseurs globaux
 export default function App() {
   return (
     <AuthProvider>
-      <RootApp />
+      <LogProvider>
+        <RootApp />
+      </LogProvider>
     </AuthProvider>
   );
 }

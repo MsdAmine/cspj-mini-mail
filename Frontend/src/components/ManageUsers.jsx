@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useLogs } from '../context/LogContext';
+import { mockUsers } from '../services/mockData';
 
 export default function ManageUsers() {
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState([]);
+  const { addLog } = useLogs();
+  const [users, setUsers] = useState(mockUsers);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -18,13 +21,20 @@ export default function ManageUsers() {
     setError('');
     try {
       const response = await api.get('/admin/users');
-      setUsers(response.data);
+      const apiUsers = response.data || [];
+      const mergedUsers = [...apiUsers];
+      
+      mockUsers.forEach(mockUser => {
+        if (!mergedUsers.some(u => u.email.toLowerCase() === mockUser.email.toLowerCase())) {
+          mergedUsers.push(mockUser);
+        }
+      });
+      setUsers(mergedUsers);
     } catch (err) {
       console.error(err);
+      setUsers(mockUsers);
       setError(
-        err.response?.data?.message || 
-        err.response?.data || 
-        "Impossible de charger la liste des utilisateurs."
+        "L'API de production n'a pas pu être contactée. Affichage des données de test (Mock Data)."
       );
     } finally {
       setLoading(false);
@@ -48,8 +58,15 @@ export default function ManageUsers() {
       );
 
       await api.put(`/admin/users/${userToUpdate.id}/status`, { actif: newStatus });
+      const statusLabel = newStatus ? 'Actif' : 'Inactif';
+      const prevLabel = newStatus ? 'Inactif' : 'Actif';
+      addLog(
+        'TOGGLE_USER_STATUS',
+        `L'administrateur a modifié le statut du compte ${userToUpdate.email} de '${prevLabel}' à '${statusLabel}'.`,
+        currentUser?.email
+      );
       setSuccess(`Le statut de ${userToUpdate.prenom} ${userToUpdate.nom} a été mis à jour.`);
-      
+
       // Auto clear success message after 3 seconds
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -75,10 +92,15 @@ export default function ManageUsers() {
 
     try {
       await api.delete(`/admin/users/${deletingUser.id}`);
+      addLog(
+        'DELETE_USER',
+        `L'administrateur a définitivement supprimé le compte ${deletingUser.email} (${deletingUser.prenom} ${deletingUser.nom}) du système.`,
+        currentUser?.email
+      );
       setSuccess(`L'utilisateur ${deletingUser.prenom} ${deletingUser.nom} a été supprimé avec succès.`);
       setUsers(prev => prev.filter(u => u.id !== deletingUser.id));
       setDeletingUser(null);
-      
+
       // Auto clear success message
       setTimeout(() => setSuccess(''), 4000);
     } catch (err) {

@@ -90,6 +90,17 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
             </button>
 
             <button
+              onClick={() => setAdminTab('audit-logs')}
+              className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${
+                adminTab === 'audit-logs'
+                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-l-4 border-blue-500'
+                  : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200'
+              }`}
+            >
+              <span>Journal d'Audit</span>
+            </button>
+
+            <button
               onClick={() => setAdminTab('create-user')}
               className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${
                 adminTab === 'create-user'

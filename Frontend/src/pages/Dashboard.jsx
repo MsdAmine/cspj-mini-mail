@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
+import { useLogs } from '../context/LogContext';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import MailList from '../components/MailList';
 import ComposeModal from '../components/ComposeModal';
 import ProfilePage from './ProfilePage';
 import ManageUsers from '../components/ManageUsers';
+import ManageLogs from '../components/ManageLogs';
 import TiptapEditor from '../components/TiptapEditor';
 import { Send } from 'lucide-react';
+import { mockThreads, mockUsers, mockLogs } from '../services/mockData';
 
 export default function Dashboard() {
   const { user, adminCreateUser } = useAuth();
+  const { addLog } = useLogs();
   const { 
     searchQuery, 
     setSearchQuery, 
@@ -37,15 +41,29 @@ export default function Dashboard() {
   const [newEntrepriseId, setNewEntrepriseId] = useState('1'); // Par défaut 1 (CSPJ Conseil)
   const [adminMessage, setAdminMessage] = useState({ type: '', text: '' });
 
+  // Suivi des discussions (Mock Data)
+  const [threadSearch, setThreadSearch] = useState('');
+  const [threadStatusFilter, setThreadStatusFilter] = useState('ALL');
+
   // Statistiques Administrateur
-  const [stats, setStats] = useState({ totalUsers: 0, totalThreads: 0, totalMessagesSent: 0 });
+  const [stats, setStats] = useState({ totalUsers: mockUsers.length, totalThreads: mockThreads.length, totalMessagesSent: mockLogs.length });
 
   const fetchStats = async () => {
     try {
       const response = await api.get('/admin/stats');
-      setStats(response.data);
+      const data = response.data || {};
+      setStats({
+        totalUsers: data.totalUsers || mockUsers.length,
+        totalThreads: data.totalThreads || mockThreads.length,
+        totalMessagesSent: data.totalMessagesSent || mockLogs.length
+      });
     } catch (err) {
       console.error("Erreur lors de la récupération des statistiques :", err);
+      setStats({
+        totalUsers: mockUsers.length,
+        totalThreads: mockThreads.length,
+        totalMessagesSent: mockLogs.length
+      });
     }
   };
 
@@ -87,6 +105,13 @@ export default function Dashboard() {
         text: `Le compte de ${newPrenom} ${newNom} (${newRole}) a été créé avec succès !` 
       });
 
+      // Enregistrer dans le journal d'audit
+      addLog(
+        'CREATE_USER',
+        `L'administrateur a créé un nouveau compte utilisateur pour ${newPrenom} ${newNom} (${newEmail.trim().toLowerCase()}) avec le rôle ${newRole}.`,
+        user?.email
+      );
+
       // Réinitialiser le formulaire
       setNewPrenom('');
       setNewNom('');
@@ -108,6 +133,22 @@ export default function Dashboard() {
     replyToThread(selectedMessage.threadId, replyBody);
     setReplyBody('');
   };
+
+  const filteredThreads = mockThreads.filter(t => {
+    const query = threadSearch.toLowerCase().trim();
+    const matchesQuery = !query || 
+      t.objet.toLowerCase().includes(query) ||
+      t.expediteur.toLowerCase().includes(query) ||
+      t.destinataire.toLowerCase().includes(query) ||
+      t.expediteurEmail.toLowerCase().includes(query) ||
+      t.destinataireEmail.toLowerCase().includes(query);
+
+    let matchesStatus = true;
+    if (threadStatusFilter === 'EN_COURS') matchesStatus = t.statutAcheminement === 'En cours';
+    else if (threadStatusFilter === 'CLOTURE') matchesStatus = t.statutAcheminement === 'Clôturé';
+
+    return matchesQuery && matchesStatus;
+  });
 
   if (isProfileOpen) {
     return (
@@ -210,6 +251,100 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Tableau de suivi des discussions */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-4 p-6">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900">Suivi des Discussions / Échanges</h3>
+                      <p className="text-slate-500 text-[11px] mt-0.5">Dernières conversations surveillées sur la plateforme (Juillet 2026).</p>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Rechercher sujet, expéditeur..."
+                        value={threadSearch}
+                        onChange={(e) => setThreadSearch(e.target.value)}
+                        className="px-3 py-1.5 border border-slate-250 rounded-lg text-xs outline-none focus:border-blue-600 w-48 md:w-56"
+                      />
+                      <select
+                        value={threadStatusFilter}
+                        onChange={(e) => setThreadStatusFilter(e.target.value)}
+                        className="px-3 py-1.5 border border-slate-250 rounded-lg text-xs outline-none bg-white cursor-pointer w-32"
+                      >
+                        <option value="ALL">Tous les statuts</option>
+                        <option value="EN_COURS">En cours</option>
+                        <option value="CLOTURE">Clôturés</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {filteredThreads.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-xs">
+                      Aucune discussion ne correspond aux critères de recherche.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-wider">
+                            <th className="px-4 py-3">Sujet / Objet</th>
+                            <th className="px-4 py-3">Expéditeur</th>
+                            <th className="px-4 py-3">Destinataire</th>
+                            <th className="px-4 py-3 text-center">Pièce Jointe</th>
+                            <th className="px-4 py-3 text-center">Lecture</th>
+                            <th className="px-4 py-3 text-center">Acheminement</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-slate-600">
+                          {filteredThreads.map((t) => (
+                            <tr key={t.id} className="hover:bg-slate-50/50 transition">
+                              <td className="px-4 py-3.5 font-semibold text-slate-800 max-w-xs truncate" title={t.objet}>
+                                {t.objet}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <div className="font-medium text-slate-850">{t.expediteur}</div>
+                                <div className="text-[10px] text-slate-400 font-mono">{t.expediteurEmail}</div>
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <div className="font-medium text-slate-850">{t.destinataire}</div>
+                                <div className="text-[10px] text-slate-400 font-mono">{t.destinataireEmail}</div>
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                {t.hasAttachment ? (
+                                  <span className="inline-flex items-center text-blue-600 bg-blue-50 border border-blue-100 px-2 py-0.5 rounded text-[10px] font-medium" title={t.pieceJointeNom}>
+                                    📎 {t.pieceJointeNom}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-350 text-[10px]">-</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                  t.statutLecture === 'Lu' 
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200 animate-pulse'
+                                }`}>
+                                  {t.statutLecture}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-lg border uppercase tracking-wider font-mono ${
+                                  t.statutAcheminement === 'En cours'
+                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    : 'bg-slate-100 text-slate-600 border-slate-300'
+                                }`}>
+                                  {t.statutAcheminement}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
                 {/* Tableau des habilitations système */}
                 <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
                   <div className="px-6 py-4 bg-slate-50 border-b border-slate-200/65">
@@ -245,6 +380,8 @@ export default function Dashboard() {
               </div>
             ) : adminTab === 'manage-users' ? (
               <ManageUsers />
+            ) : adminTab === 'audit-logs' ? (
+              <ManageLogs />
             ) : (
               <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden animate-fade-in">
                 {/* En-tête de la fiche de création */}

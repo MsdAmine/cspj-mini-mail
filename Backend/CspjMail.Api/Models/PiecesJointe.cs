@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -21,11 +21,7 @@ public partial class PiecesJointe
     [Unicode(false)]
     public string CheminFichier { get; set; } = null!;
 
-    [StringLength(100)]
-    [Unicode(false)]
-    public string TypeContenu { get; set; } = null!;
-
-    public int TailleOctets { get; set; }
+    public int TailleFichier { get; set; }
 
     public DateTime DateTeleversement { get; set; }
 
