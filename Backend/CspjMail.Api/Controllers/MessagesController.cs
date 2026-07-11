@@ -137,12 +137,34 @@ namespace CspjMail.Api.Controllers
             }
             await _context.SaveChangesAsync();
 
+            // Get all unique participant IDs in the thread
+            var participantIds = thread.Messages
+                .SelectMany(m => new[] { m.ExpediteurId, m.DestinataireId })
+                .Distinct()
+                .Where(id => id != currentUserId) // Exclude current user from recipients
+                .ToList();
+
+            // Fetch recipient details
+            var recipients = await _context.Utilisateurs
+                .Where(u => participantIds.Contains(u.Id))
+                .Include(u => u.Entreprise)
+                .Select(u => new ContactDto
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    NomComplet = $"{u.Prenom} {u.Nom}",
+                    Role = u.Role,
+                    EntrepriseNom = u.Entreprise.Nom
+                })
+                .ToListAsync();
+
             var response = new ThreadDetailsDto
             {
                 ThreadId = thread.Id,
                 Objet = thread.Objet,
                 DateCreation = thread.DateCreation,
                 EstArchive = thread.EstArchive,
+                Destinataires = recipients,
                 Messages = thread.Messages
                     .OrderBy(m => m.DateEnvoi)
                     .Select(m => new MessageDisplayDto

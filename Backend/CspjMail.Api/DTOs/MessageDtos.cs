@@ -22,6 +22,7 @@ namespace CspjMail.Api.DTOs
         public DateTime DateCreation { get; set; }
         public bool EstArchive { get; set; }
         public List<MessageDisplayDto> Messages { get; set; } = new();
+        public List<ContactDto> Destinataires { get; set; } = new();
     }
 
     public class MessageDisplayDto

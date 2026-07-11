@@ -7,6 +7,8 @@ import MailList from '../components/MailList';
 import ComposeModal from '../components/ComposeModal';
 import ProfilePage from './ProfilePage';
 import ManageUsers from '../components/ManageUsers';
+import TiptapEditor from '../components/TiptapEditor';
+import { Send } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, adminCreateUser } = useAuth();
@@ -361,59 +363,117 @@ export default function Dashboard() {
             <div className="flex-1 bg-slate-50">
               {selectedMessage ? (
                 <div className="flex flex-col h-full bg-white animate-fade-in">
-                  <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 bg-gray-50">
-                    <h2 className="text-lg font-semibold text-gray-800 truncate">{selectedMessage.objet}</h2>
-                    <button 
-                      onClick={() => toggleArchiveMessage(selectedMessage.threadId)}
-                      className="px-3 py-1.5 text-xs font-semibold text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50 shadow-sm transition"
-                    >
-                      {selectedMessage.estArchive ? "Désarchiver" : "Archiver la discussion"}
-                    </button>
+                  {/* Header principal - Objet et participants */}
+                  <div className="px-6 py-5 border-b border-slate-200 bg-white">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-xl font-semibold text-slate-800 truncate mb-2">{selectedMessage.objet}</h2>
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <span className="font-medium">De:</span>
+                          <span className="text-slate-700">
+                            {selectedMessage.messages?.[0]?.expediteurNomComplet || 'Inconnu'} 
+                            <span className="text-xs font-mono text-slate-500 ml-1">({selectedMessage.messages?.[0]?.expediteurRole || ''})</span>
+                          </span>
+                          <span className="text-slate-400">à</span>
+                          <span className="text-slate-700">
+                            {selectedMessage.destinataires?.map(d => d.nomComplet).join(', ') || 'Destinataires'}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => toggleArchiveMessage(selectedMessage.threadId)}
+                        className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 shadow-sm transition flex items-center gap-2 flex-shrink-0"
+                      >
+                        {selectedMessage.estArchive ? "Désarchiver" : "Archiver la discussion"}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
-                    {selectedMessage.messages?.map((msg) => {
+                  {/* Fil de discussion - Style Outlook */}
+                  <div className="flex-1 overflow-y-auto bg-white">
+                    {selectedMessage.messages?.map((msg, index) => {
                       const isOwnMessage = msg.expediteurId === user?.id;
+                      const initials = msg.expediteurNomComplet
+                        ?.split(' ')
+                        .map(n => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2) || '??';
                       
                       return (
                         <div 
                           key={msg.messageId} 
-                          className={`p-5 rounded-xl border shadow-sm max-w-[85%] ${
-                            isOwnMessage 
-                              ? 'bg-blue-50/50 border-blue-200 ml-auto' 
-                              : 'bg-white border-gray-200 mr-auto'
-                          }`}
+                          className={`border-b border-slate-200 ${index === 0 ? 'border-t' : ''}`}
                         >
-                          <div className="flex justify-between items-start mb-2 gap-4">
-                            <div>
-                              <span className="font-semibold text-gray-900 text-sm">
-                                {isOwnMessage ? "Moi" : msg.expediteurNomComplet}
-                              </span>
-                              <span className="text-[10px] font-mono text-slate-500 block">
-                                {msg.expediteurRole}
+                          <div className="px-6 py-4">
+                            {/* En-tête du message */}
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                {/* Avatar/Initiales */}
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold uppercase font-mono ${
+                                  isOwnMessage 
+                                    ? 'bg-blue-600 text-white' 
+                                    : 'bg-slate-200 text-slate-700'
+                                }`}>
+                                  {isOwnMessage ? user?.prenom?.charAt(0) + user?.nom?.charAt(0) : initials}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-semibold text-slate-900 text-sm">
+                                      {isOwnMessage ? "Moi" : msg.expediteurNomComplet}
+                                    </span>
+                                    {/* Badge rôle */}
+                                    <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded ${
+                                      msg.expediteurRole === 'Administrateur' 
+                                        ? 'bg-amber-100 text-amber-700 border border-amber-200' 
+                                        : msg.expediteurRole === 'Fonctionnaire'
+                                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                    }`}>
+                                      {msg.expediteurRole}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="text-xs text-slate-500 font-mono">
+                                {new Date(msg.dateEnvoi).toLocaleString('fr-FR', { 
+                                  day: '2-digit', 
+                                  month: '2-digit', 
+                                  year: 'numeric',
+                                  hour: '2-digit', 
+                                  minute: '2-digit' 
+                                })}
                               </span>
                             </div>
-                            <span className="text-[10px] text-gray-400 font-mono">
-                              {new Date(msg.dateEnvoi).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
-                            </span>
+                            {/* Corps du message - Support HTML */}
+                            <div className="pl-11">
+                              <div 
+                                className="text-slate-700 text-sm leading-relaxed prose prose-sm max-w-none"
+                                dangerouslySetInnerHTML={{ __html: msg.corps }}
+                              />
+                            </div>
                           </div>
-                          <p className="text-gray-750 whitespace-pre-line text-sm leading-relaxed">{msg.corps}</p>
                         </div>
                       );
                     })}
                   </div>
 
-                  <div className="p-4 border-t border-gray-200 bg-white">
+                  {/* Zone de réponse - Mini éditeur de mail */}
+                  <div className="p-4 border-t border-slate-200 bg-slate-50">
                     <form onSubmit={handleReplySubmit} className="space-y-3">
-                      <textarea
-                        rows="3"
-                        value={replyBody}
-                        onChange={(e) => setReplyBody(e.target.value)}
-                        placeholder="Répondre à cette conversation..."
-                        className="w-full p-3 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none outline-none"
+                      {/* Éditeur de texte riche */}
+                      <TiptapEditor 
+                        content={replyBody} 
+                        onChange={setReplyBody} 
+                        placeholder="Écrivez votre réponse..."
                       />
+                      {/* Bouton d'envoi */}
                       <div className="flex justify-end">
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition shadow-sm">
+                        <button 
+                          type="submit" 
+                          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
+                        >
+                          <Send size={16} />
                           Répondre au fil
                         </button>
                       </div>
