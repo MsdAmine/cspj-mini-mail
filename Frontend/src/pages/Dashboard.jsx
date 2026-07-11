@@ -6,6 +6,7 @@ import Sidebar from '../components/Sidebar';
 import MailList from '../components/MailList';
 import ComposeModal from '../components/ComposeModal';
 import ProfilePage from './ProfilePage';
+import ManageUsers from '../components/ManageUsers';
 
 export default function Dashboard() {
   const { user, adminCreateUser } = useAuth();
@@ -240,6 +241,8 @@ export default function Dashboard() {
                   </table>
                 </div>
               </div>
+            ) : adminTab === 'manage-users' ? (
+              <ManageUsers />
             ) : (
               <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden animate-fade-in">
                 {/* En-tête de la fiche de création */}

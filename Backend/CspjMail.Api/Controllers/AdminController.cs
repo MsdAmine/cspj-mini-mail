@@ -78,5 +78,118 @@ namespace CspjMail.Api.Controllers
 
             return Ok(stats);
         }
+
+        // 3. GET: api/admin/users (Fetch all registered system users)
+        [HttpGet("users")]
+        public async Task<IActionResult> GetUsers()
+        {
+            var users = await _context.Utilisateurs
+                .Include(u => u.Entreprise)
+                .OrderByDescending(u => u.DateCreation)
+                .Select(u => new UserDetailsDto
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    Nom = u.Nom,
+                    Prenom = u.Prenom,
+                    Role = u.Role,
+                    EntrepriseId = u.EntrepriseId,
+                    EntrepriseNom = u.Entreprise.Nom,
+                    Actif = u.Actif,
+                    DateCreation = u.DateCreation
+                })
+                .ToListAsync();
+
+            return Ok(users);
+        }
+
+        // 4. PUT: api/admin/users/{id}/status (Modify active status of a user)
+        [HttpPut("users/{id}/status")]
+        public async Task<IActionResult> UpdateUserStatus(int id, [FromBody] UpdateUserStatusDto dto)
+        {
+            var user = await _context.Utilisateurs.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            user.Actif = dto.Actif;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = $"User status updated successfully to {(user.Actif ? "Active" : "Inactive")}." });
+        }
+
+        // 5. DELETE: api/admin/users/{id} (Securely delete user and their associated data)
+        [HttpDelete("users/{id}")]
+        public async Task<IActionResult> DeleteUser(int id)
+        {
+            var user = await _context.Utilisateurs.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Optional safety: Prevent admin from deleting themselves
+            var currentUserIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (currentUserIdClaim != null && int.TryParse(currentUserIdClaim, out int currentUserId) && currentUserId == id)
+            {
+                return BadRequest("You cannot delete your own administrator account.");
+            }
+
+            // Begin transaction to ensure atomic deletion of all relational data
+            using (var transaction = await _context.Database.BeginTransactionAsync())
+            {
+                try
+                {
+                    // 1. Find all messages where this user is sender or recipient
+                    var relatedMessages = await _context.Messages
+                        .Where(m => m.ExpediteurId == id || m.DestinataireId == id)
+                        .ToListAsync();
+
+                    var messageIds = relatedMessages.Select(m => m.Id).ToList();
+
+                    // 2. Remove all attachments for these messages
+                    if (messageIds.Any())
+                    {
+                        var attachments = await _context.PiecesJointes
+                            .Where(pj => messageIds.Contains(pj.MessageId))
+                            .ToListAsync();
+                        _context.PiecesJointes.RemoveRange(attachments);
+                    }
+
+                    // 3. Remove all these messages
+                    _context.Messages.RemoveRange(relatedMessages);
+                    await _context.SaveChangesAsync();
+
+                    // 4. Clean up any threads that now have no messages left
+                    var threadIds = relatedMessages.Select(m => m.ThreadId).Distinct().ToList();
+                    foreach (var threadId in threadIds)
+                    {
+                        var hasMessages = await _context.Messages.AnyAsync(m => m.ThreadId == threadId);
+                        if (!hasMessages)
+                        {
+                            var thread = await _context.Threads.FindAsync(threadId);
+                            if (thread != null)
+                            {
+                                _context.Threads.Remove(thread);
+                            }
+                        }
+                    }
+                    await _context.SaveChangesAsync();
+
+                    // 5. Finally, remove the user
+                    _context.Utilisateurs.Remove(user);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+                    return Ok(new { Message = "User and all associated messages/data deleted successfully." });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(StatusCodes.Status500InternalServerError, $"An error occurred during deletion: {ex.Message}");
+                }
+            }
+        }
     }
 }

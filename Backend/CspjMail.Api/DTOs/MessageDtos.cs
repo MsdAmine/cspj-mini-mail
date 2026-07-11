@@ -73,4 +73,22 @@ namespace CspjMail.Api.DTOs
         public int TotalThreads { get; set; }
         public int TotalMessagesSent { get; set; }
     }
+
+    public class UserDetailsDto
+    {
+        public int Id { get; set; }
+        public string Email { get; set; } = null!;
+        public string Nom { get; set; } = null!;
+        public string Prenom { get; set; } = null!;
+        public string Role { get; set; } = null!;
+        public int EntrepriseId { get; set; }
+        public string EntrepriseNom { get; set; } = null!;
+        public bool Actif { get; set; }
+        public DateTime DateCreation { get; set; }
+    }
+
+    public class UpdateUserStatusDto
+    {
+        public bool Actif { get; set; }
+    }
 }
