@@ -92,4 +92,19 @@ namespace CspjMail.Api.DTOs
     {
         public bool Actif { get; set; }
     }
+
+    public class AdminThreadDto
+    {
+        public int Id { get; set; }
+        public string Objet { get; set; } = null!;
+        public string Expediteur { get; set; } = null!;
+        public string ExpediteurEmail { get; set; } = null!;
+        public string Destinataire { get; set; } = null!;
+        public string DestinataireEmail { get; set; } = null!;
+        public DateTime Date { get; set; }
+        public string StatutLecture { get; set; } = null!;
+        public string StatutAcheminement { get; set; } = null!;
+        public bool HasAttachment { get; set; }
+        public string PieceJointeNom { get; set; } = string.Empty;
+    }
 }
