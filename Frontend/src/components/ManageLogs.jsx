@@ -1,27 +1,42 @@
-import React, { useState } from 'react';
-import { useLogs } from '../context/LogContext';
+import React, { useState, useEffect } from 'react';
+import api from '../services/api';
 
 export default function ManageLogs() {
-  const { logs } = useLogs();
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedActionType, setSelectedActionType] = useState('ALL');
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const response = await api.get('/admin/audit-logs');
+        setLogs(response.data || []);
+      } catch (err) {
+        console.error("Erreur lors de la récupération des logs d'audit :", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, []);
 
 
   // Filter logs based on search and action type
   const filteredLogs = logs.filter(log => {
     const query = searchQuery.toLowerCase().trim();
     const matchesQuery = !query || 
-      log.userEmail.toLowerCase().includes(query) ||
-      log.description.toLowerCase().includes(query) ||
-      log.actionType.toLowerCase().includes(query);
+      log.utilisateur?.toLowerCase().includes(query) ||
+      log.description?.toLowerCase().includes(query) ||
+      log.typeAction?.toLowerCase().includes(query);
 
-    const matchesAction = selectedActionType === 'ALL' || log.actionType === selectedActionType;
+    const matchesAction = selectedActionType === 'ALL' || log.typeAction === selectedActionType;
 
     return matchesQuery && matchesAction;
   });
 
   // Get unique action types for filter dropdown
-  const actionTypes = ['ALL', ...new Set(logs.map(log => log.actionType))];
+  const actionTypes = ['ALL', ...new Set(logs.map(log => log.typeAction))];
 
   const formatTimestamp = (dateString) => {
     try {
@@ -140,19 +155,19 @@ export default function ManageLogs() {
                   <tr key={log.id} className="hover:bg-slate-50/50 transition duration-150">
                     {/* Timestamp */}
                     <td className="px-6 py-4 font-mono font-medium text-slate-500 whitespace-nowrap">
-                      {formatTimestamp(log.timestamp)}
+                      {formatTimestamp(log.dateHeure)}
                     </td>
 
                     {/* Action Type Badge */}
                     <td className="px-6 py-4">
-                      <span className={`inline-block px-2.5 py-1 text-[10px] font-bold rounded-lg border uppercase tracking-wider font-mono ${getActionBadgeColor(log.actionType)}`}>
-                        {log.actionType}
+                      <span className={`inline-block px-2.5 py-1 text-[10px] font-bold rounded-lg border uppercase tracking-wider font-mono ${getActionBadgeColor(log.typeAction)}`}>
+                        {log.typeAction}
                       </span>
                     </td>
 
                     {/* User Email */}
                     <td className="px-6 py-4 font-medium text-slate-700 whitespace-nowrap">
-                      {log.userEmail}
+                      {log.utilisateur}
                     </td>
 
                     {/* Description */}
