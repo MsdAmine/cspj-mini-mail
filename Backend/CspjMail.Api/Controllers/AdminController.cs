@@ -143,6 +143,43 @@ namespace CspjMail.Api.Controllers
             return Ok(result);
         }
 
+        // 3.6 GET: api/admin/audit-logs (Fetch audit logs)
+        [HttpGet("audit-logs")]
+        public async Task<IActionResult> GetAuditLogs()
+        {
+            var logs = await _context.AuditLogs
+                .OrderByDescending(a => a.DateHeure)
+                .Select(a => new AuditLogDto
+                {
+                    Id = a.Id,
+                    DateHeure = a.DateHeure,
+                    TypeAction = a.TypeAction,
+                    Utilisateur = a.Utilisateur,
+                    Description = a.Description
+                })
+                .ToListAsync();
+
+            return Ok(logs);
+        }
+
+        // 3.7 POST: api/admin/audit-logs (Persist a new audit log entry from the frontend)
+        [HttpPost("audit-logs")]
+        public async Task<IActionResult> CreateAuditLog([FromBody] AuditLogDto dto)
+        {
+            var entry = new AuditLog
+            {
+                DateHeure = DateTime.Now,
+                TypeAction = dto.TypeAction,
+                Utilisateur = dto.Utilisateur,
+                Description = dto.Description
+            };
+
+            _context.AuditLogs.Add(entry);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { entry.Id, entry.DateHeure });
+        }
+
         // 4. PUT: api/admin/users/{id}/status (Modify active status of a user)
         [HttpPut("users/{id}/status")]
         public async Task<IActionResult> UpdateUserStatus(int id, [FromBody] UpdateUserStatusDto dto)

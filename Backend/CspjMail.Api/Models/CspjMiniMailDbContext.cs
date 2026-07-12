@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +20,7 @@ public partial class CspjMiniMailDbContext : DbContext
     public virtual DbSet<PiecesJointe> PiecesJointes { get; set; }
     public virtual DbSet<Thread> Threads { get; set; }
     public virtual DbSet<Utilisateur> Utilisateurs { get; set; }
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -32,6 +33,12 @@ public partial class CspjMiniMailDbContext : DbContext
             entity.HasKey(e => e.Id).HasName("PK__Entrepri__3214EC074215BC75");
             entity.Property(e => e.DateCreation).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.EstAssociation).HasColumnName("EstAssociation").HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DateHeure).HasDefaultValueSql("(getdate())");
         });
 
         modelBuilder.Entity<Message>(entity =>

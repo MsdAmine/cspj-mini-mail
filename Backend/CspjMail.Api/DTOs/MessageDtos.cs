@@ -107,4 +107,13 @@ namespace CspjMail.Api.DTOs
         public bool HasAttachment { get; set; }
         public string PieceJointeNom { get; set; } = string.Empty;
     }
+
+    public class AuditLogDto
+    {
+        public int Id { get; set; }
+        public DateTime DateHeure { get; set; }
+        public string TypeAction { get; set; } = null!;
+        public string Utilisateur { get; set; } = null!;
+        public string Description { get; set; } = null!;
+    }
 }
