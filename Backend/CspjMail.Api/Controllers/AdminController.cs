@@ -107,38 +107,32 @@ namespace CspjMail.Api.Controllers
         [HttpGet("threads")]
         public async Task<IActionResult> GetThreads()
         {
-            var threads = await _context.Threads
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.Expediteur)
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.Destinataire)
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.PiecesJointes)
+            var result = await _context.Threads
                 .OrderByDescending(t => t.DateCreation)
                 .Take(50)
-                .ToListAsync();
-
-            var result = threads.Select(t => {
-                var firstMessage = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault();
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
-                var hasAttachment = t.Messages.Any(m => m.PiecesJointes.Any());
-                var attachmentName = t.Messages.SelectMany(m => m.PiecesJointes).Select(p => p.NomFichier).FirstOrDefault() ?? string.Empty;
-                
-                return new AdminThreadDto
+                .Select(t => new AdminThreadDto
                 {
                     Id = t.Id,
                     Objet = t.Objet,
-                    Expediteur = firstMessage != null ? $"{firstMessage.Expediteur.Prenom} {firstMessage.Expediteur.Nom}" : "Inconnu",
-                    ExpediteurEmail = firstMessage?.Expediteur?.Email ?? "inconnu@cspj.ma",
-                    Destinataire = firstMessage != null ? $"{firstMessage.Destinataire.Prenom} {firstMessage.Destinataire.Nom}" : "Inconnu",
-                    DestinataireEmail = firstMessage?.Destinataire?.Email ?? "inconnu@cspj.ma",
+                    Expediteur = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault() != null 
+                        ? t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Expediteur.Prenom + " " + t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Expediteur.Nom 
+                        : "Inconnu",
+                    ExpediteurEmail = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault() != null 
+                        ? t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Expediteur.Email 
+                        : "inconnu@cspj.ma",
+                    Destinataire = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault() != null 
+                        ? t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Destinataire.Prenom + " " + t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Destinataire.Nom 
+                        : "Inconnu",
+                    DestinataireEmail = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault() != null 
+                        ? t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Destinataire.Email 
+                        : "inconnu@cspj.ma",
                     Date = t.DateCreation,
-                    StatutLecture = lastMessage?.EstLu == true ? "Lu" : "Non lu",
+                    StatutLecture = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null && t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault().EstLu ? "Lu" : "Non lu",
                     StatutAcheminement = t.EstArchive ? "Clôturé" : "En cours",
-                    HasAttachment = hasAttachment,
-                    PieceJointeNom = attachmentName
-                };
-            }).ToList();
+                    HasAttachment = t.Messages.Any(m => m.PiecesJointes.Any()),
+                    PieceJointeNom = t.Messages.SelectMany(m => m.PiecesJointes).Select(p => p.NomFichier).FirstOrDefault() ?? string.Empty
+                })
+                .ToListAsync();
 
             return Ok(result);
         }

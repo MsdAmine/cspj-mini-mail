@@ -103,7 +103,7 @@ export default function Dashboard() {
     }
 
     try {
-      await adminCreateUser({
+      await api.post('/admin/users', {
         prenom: newPrenom.trim(),
         nom: newNom.trim(),
         email: newEmail.trim().toLowerCase(),
@@ -117,12 +117,12 @@ export default function Dashboard() {
         text: `Le compte de ${newPrenom} ${newNom} (${newRole}) a été créé avec succès !` 
       });
 
-      // Enregistrer dans le journal d'audit
-      addLog(
-        'CREATE_USER',
-        `L'administrateur a créé un nouveau compte utilisateur pour ${newPrenom} ${newNom} (${newEmail.trim().toLowerCase()}) avec le rôle ${newRole}.`,
-        user?.email
-      );
+      // Enregistrer dans le journal d'audit en backend
+      await api.post('/admin/audit-logs', {
+        typeAction: 'CREATE_USER',
+        utilisateur: user?.email || 'admin',
+        description: `Création du compte utilisateur pour ${newPrenom} ${newNom} (${newEmail.trim().toLowerCase()}) avec le rôle ${newRole}.`
+      });
 
       // Réinitialiser le formulaire
       setNewPrenom('');
@@ -135,7 +135,10 @@ export default function Dashboard() {
       // Recharger les statistiques
       fetchStats();
     } catch (err) {
-      setAdminMessage({ type: 'error', text: err.message });
+      const errorMessage = typeof err.response?.data === 'string' 
+        ? err.response.data 
+        : err.response?.data?.message || err.message || "Erreur lors de la création du compte.";
+      setAdminMessage({ type: 'error', text: errorMessage });
     }
   };
 
