@@ -58,6 +58,19 @@ namespace CspjMail.Api.Controllers
             _context.Messages.Add(initialMessage);
             await _context.SaveChangesAsync();
 
+            var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
+            var senderEmail = currentUser?.Email ?? "Inconnu";
+            
+            var auditLog = new AuditLog
+            {
+                DateHeure = DateTime.UtcNow,
+                TypeAction = "SEND_MESSAGE",
+                Utilisateur = senderEmail,
+                Description = $"Nouvelle discussion initiée : {dto.Objet}"
+            };
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+
             return Ok(new { ThreadId = newThread.Id, Message = "Thread created successfully." });
         }
 
@@ -104,6 +117,19 @@ namespace CspjMail.Api.Controllers
             };
 
             _context.Messages.Add(replyMessage);
+            await _context.SaveChangesAsync();
+
+            var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
+            var senderEmail = currentUser?.Email ?? "Inconnu";
+
+            var auditLog = new AuditLog
+            {
+                DateHeure = DateTime.UtcNow,
+                TypeAction = "REPLY_MESSAGE",
+                Utilisateur = senderEmail,
+                Description = $"Réponse envoyée dans la discussion ID {threadId}"
+            };
+            _context.AuditLogs.Add(auditLog);
             await _context.SaveChangesAsync();
 
             return Ok(new { MessageId = replyMessage.Id, Message = "Reply successfully sent." });
