@@ -78,7 +78,7 @@ export default function MailList() {
                   </p>
                   
                   <p className="text-xs text-slate-400 truncate">
-                    {msg.dernierMessageCorps}
+                    {msg.dernierMessageCorps ? msg.dernierMessageCorps.replace(/<[^>]*>?/gm, '') : ''}
                   </p>
                 </div>
               </div>

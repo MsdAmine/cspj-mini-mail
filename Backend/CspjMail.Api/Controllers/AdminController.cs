@@ -79,6 +79,16 @@ namespace CspjMail.Api.Controllers
             return Ok(stats);
         }
 
+        // 2.5 GET: api/admin/entreprises (Fetch structures)
+        [HttpGet("entreprises")]
+        public async Task<IActionResult> GetEntreprises()
+        {
+            var entreprises = await _context.Entreprises
+                .Select(e => new { id = e.Id, nom = e.Nom })
+                .ToListAsync();
+            return Ok(entreprises);
+        }
+
         // 3. GET: api/admin/users (Fetch all registered system users)
         [HttpGet("users")]
         public async Task<IActionResult> GetUsers()
