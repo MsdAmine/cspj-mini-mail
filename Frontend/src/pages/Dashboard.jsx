@@ -48,6 +48,19 @@ export default function Dashboard() {
   // Statistiques Administrateur
   const [stats, setStats] = useState({ totalUsers: 0, totalThreads: 0, totalMessagesSent: 0 });
   const [threads, setThreads] = useState([]);
+  const [entreprises, setEntreprises] = useState([]);
+
+  const fetchEntreprises = async () => {
+    try {
+      const response = await api.get('/admin/entreprises');
+      setEntreprises(response.data || []);
+      if (response.data && response.data.length > 0) {
+        setNewEntrepriseId(response.data[0].id.toString());
+      }
+    } catch (err) {
+      console.error("Erreur lors de la récupération des entreprises :", err);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -90,6 +103,7 @@ export default function Dashboard() {
     if (isAdminView && user?.role === 'Administrateur') {
       fetchStats();
       fetchThreads();
+      fetchEntreprises();
     }
   }, [isAdminView, user]);
 
@@ -487,8 +501,9 @@ export default function Dashboard() {
                           onChange={(e) => setNewEntrepriseId(e.target.value)}
                           className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
                         >
-                          <option value="1">CSPJ (Conseil)</option>
-                          <option value="2">Association des Magistrats</option>
+                          {entreprises.map(e => (
+                            <option key={e.id} value={e.id.toString()}>{e.nom}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
