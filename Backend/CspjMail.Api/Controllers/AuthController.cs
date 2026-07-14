@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using CspjMail.Api.Models;
 using CspjMail.Api.DTOs;
+using CspjMail.Api.Services;
 using BCrypt.Net;
 
 namespace CspjMail.Api.Controllers
@@ -17,11 +18,13 @@ namespace CspjMail.Api.Controllers
     {
         private readonly CspjMiniMailDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IEmailService _emailService;
 
-        public AuthController(CspjMiniMailDbContext context, IConfiguration configuration)
+        public AuthController(CspjMiniMailDbContext context, IConfiguration configuration, IEmailService emailService)
         {
             _context = context;
             _configuration = configuration;
+            _emailService = emailService;
         }
 
         [HttpPost("login")]
@@ -48,8 +51,8 @@ namespace CspjMail.Api.Controllers
             user.TwoFactorExpiry = DateTime.UtcNow.AddMinutes(5);
             await _context.SaveChangesAsync();
 
-            // Mock send email
-            Console.WriteLine($"[MOCK EMAIL] Sending 2FA code {code} to {user.Email}");
+            // Send real email via MailKit
+            await _emailService.SendTwoFactorCodeAsync(user.Email, code);
 
             return Ok(new
             {
