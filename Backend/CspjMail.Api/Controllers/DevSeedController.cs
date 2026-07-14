@@ -45,7 +45,7 @@ namespace CspjMail.Api.Controllers
 
             var admin = new Utilisateur
             {
-                Email = "admin@cspj.ma",
+                Email = "msdamine0205@gmail.com",
                 MotDePasseHash = adminPasswordHash,
                 Nom = "El Alami",
                 Prenom = "Ahmed",
