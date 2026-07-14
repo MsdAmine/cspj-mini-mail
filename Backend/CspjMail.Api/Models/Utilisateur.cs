@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -44,4 +44,10 @@ public partial class Utilisateur
 
     [InverseProperty("Expediteur")]
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+
+    [StringLength(6)]
+    [Unicode(false)]
+    public string? TwoFactorCode { get; set; }
+
+    public DateTime? TwoFactorExpiry { get; set; }
 }

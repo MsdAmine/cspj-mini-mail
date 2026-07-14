@@ -42,6 +42,44 @@ namespace CspjMail.Api.Controllers
                 return Unauthorized("Invalid password.");
             }
 
+            // Generate 2FA Code
+            var code = new Random().Next(100000, 999999).ToString();
+            user.TwoFactorCode = code;
+            user.TwoFactorExpiry = DateTime.UtcNow.AddMinutes(5);
+            await _context.SaveChangesAsync();
+
+            // Mock send email
+            Console.WriteLine($"[MOCK EMAIL] Sending 2FA code {code} to {user.Email}");
+
+            return Ok(new
+            {
+                RequiresTwoFactor = true,
+                Email = user.Email
+            });
+        }
+
+        [HttpPost("verify-2fa")]
+        public async Task<IActionResult> VerifyTwoFactor([FromBody] VerifyTwoFactorDto dto)
+        {
+            var user = await _context.Utilisateurs
+                .Include(u => u.Entreprise)
+                .FirstOrDefaultAsync(u => u.Email == dto.Email);
+
+            if (user == null || !user.Actif)
+            {
+                return Unauthorized("Invalid email or account is inactive.");
+            }
+
+            if (user.TwoFactorCode != dto.Code || user.TwoFactorExpiry < DateTime.UtcNow)
+            {
+                return Unauthorized("Invalid or expired 2FA code.");
+            }
+
+            // Clear 2FA
+            user.TwoFactorCode = null;
+            user.TwoFactorExpiry = null;
+            await _context.SaveChangesAsync();
+
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtSettings = _configuration.GetSection("Jwt");
             var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
