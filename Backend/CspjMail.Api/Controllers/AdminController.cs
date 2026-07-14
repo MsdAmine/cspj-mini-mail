@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using CspjMail.Api.Models;
 using CspjMail.Api.DTOs;
 using BCrypt.Net;
+using CspjMail.Api.Services;
 
 namespace CspjMail.Api.Controllers
 {
@@ -13,10 +14,14 @@ namespace CspjMail.Api.Controllers
     public class AdminController : ControllerBase
     {
         private readonly CspjMiniMailDbContext _context;
+        private readonly IEmailService _emailService;
+        private readonly ILogger<AdminController> _logger;
 
-        public AdminController(CspjMiniMailDbContext context)
+        public AdminController(CspjMiniMailDbContext context, IEmailService emailService, ILogger<AdminController> logger)
         {
             _context = context;
+            _emailService = emailService;
+            _logger = logger;
         }
 
         // 1. POST: api/admin/users (Create a new platform user)
@@ -57,6 +62,34 @@ namespace CspjMail.Api.Controllers
 
             _context.Utilisateurs.Add(newUser);
             await _context.SaveChangesAsync();
+
+            // Dispatch Welcome Email
+            try
+            {
+                string subject = "Bienvenue sur CSPJ Mail";
+                string htmlBody = $@"
+                    <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+                        <h2>Bienvenue sur CSPJ Mail</h2>
+                        <p>Bonjour {dto.Prenom} {dto.Nom},</p>
+                        <p>Un administrateur a créé un compte pour vous sur la plateforme CSPJ Mail.</p>
+                        <p>Voici vos identifiants de connexion :</p>
+                        <ul>
+                            <li><strong>Adresse E-mail :</strong> {dto.Email}</li>
+                            <li><strong>Mot de passe provisoire :</strong> {dto.Password}</li>
+                        </ul>
+                        <p>Lors de votre première connexion, un code à 6 chiffres (2FA) sera envoyé à cette même adresse e-mail pour confirmer votre identité.</p>
+                        <br/>
+                        <p>Cordialement,<br/>L'équipe CSPJ Mail</p>
+                    </div>";
+
+                await _emailService.SendEmailAsync(dto.Email, subject, htmlBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send welcome email to {Email}", dto.Email);
+                // Do not return an error since the user was already created successfully.
+                // We just log it so the admin can see it in server logs if needed.
+            }
 
             return Ok(new { UserId = newUser.Id, Message = $"User account for {dto.Prenom} {dto.Nom} created successfully." });
         }

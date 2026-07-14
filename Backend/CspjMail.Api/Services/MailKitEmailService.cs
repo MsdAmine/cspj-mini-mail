@@ -61,5 +61,40 @@ namespace CspjMail.Api.Services
                 throw;
             }
         }
+        public async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
+        {
+            try
+            {
+                var message = new MimeMessage();
+                message.From.Add(new MailboxAddress(_smtpSettings.SenderName, _smtpSettings.SenderEmail));
+                message.To.Add(new MailboxAddress("", toEmail));
+                message.Subject = subject;
+
+                var bodyBuilder = new BodyBuilder
+                {
+                    HtmlBody = htmlBody
+                };
+
+                message.Body = bodyBuilder.ToMessageBody();
+
+                using var client = new SmtpClient();
+                await client.ConnectAsync(_smtpSettings.Server, _smtpSettings.Port, SecureSocketOptions.StartTls);
+                
+                if (!string.IsNullOrEmpty(_smtpSettings.Username))
+                {
+                    await client.AuthenticateAsync(_smtpSettings.Username, _smtpSettings.Password);
+                }
+
+                await client.SendAsync(message);
+                await client.DisconnectAsync(true);
+
+                _logger.LogInformation("Email sent successfully to {Email} with subject {Subject}", toEmail, subject);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while sending email to {Email}", toEmail);
+                throw;
+            }
+        }
     }
 }
