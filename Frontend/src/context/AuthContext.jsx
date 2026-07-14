@@ -47,7 +47,10 @@ export const AuthProvider = ({ children }) => {
         password: password
       });
 
-      // The backend returns: { token, email, nom, prenom, role }
+      if (response.data.requiresTwoFactor) {
+        return { requiresTwoFactor: true, email: response.data.email };
+      }
+
       const { token, email: userEmail, nom, prenom, role } = response.data;
       
       const decoded = parseJwt(token);
@@ -74,6 +77,37 @@ export const AuthProvider = ({ children }) => {
         throw new Error("Identifiant ou mot de passe incorrect.");
       }
       throw new Error(error.response?.data || "Erreur de connexion au serveur.");
+    }
+  };
+
+  const verifyTwoFactor = async (email, code) => {
+    try {
+      const response = await api.post('/auth/verify-2fa', { email, code });
+      const { token, email: userEmail, nom, prenom, role } = response.data;
+      
+      const decoded = parseJwt(token);
+      const userId = decoded ? parseInt(decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"], 10) : null;
+      const entrepriseId = decoded ? parseInt(decoded["EntrepriseId"], 10) : null;
+
+      const userProfile = {
+        id: userId,
+        email: userEmail,
+        nom,
+        prenom,
+        role,
+        entrepriseId
+      };
+
+      localStorage.setItem('cspj_token', token);
+      localStorage.setItem('cspj_user', JSON.stringify(userProfile));
+      
+      setUser(userProfile);
+      return userProfile;
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        throw new Error("Code de vérification invalide ou expiré.");
+      }
+      throw new Error(error.response?.data || "Erreur lors de la vérification 2FA.");
     }
   };
 
@@ -120,7 +154,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading, adminCreateUser, updateProfile }}>
+    <AuthContext.Provider value={{ user, login, verifyTwoFactor, logout, loading, adminCreateUser, updateProfile }}>
       {!loading && children}
     </AuthContext.Provider>
   );

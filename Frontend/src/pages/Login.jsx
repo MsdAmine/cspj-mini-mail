@@ -2,28 +2,50 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, verifyTwoFactor } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [showTwoFactor, setShowTwoFactor] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     
-    if (!email.trim() || !password.trim()) {
-      setError('Veuillez remplir tous les champs.');
-      return;
-    }
+    if (!showTwoFactor) {
+      if (!email.trim() || !password.trim()) {
+        setError('Veuillez remplir tous les champs.');
+        return;
+      }
 
-    setIsSubmitting(true);
-    try {
-      await login(email, password);
-    } catch (err) {
-      setError(err.message || 'Une erreur est survenue lors de la connexion.');
-    } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(true);
+      try {
+        const result = await login(email, password);
+        if (result && result.requiresTwoFactor) {
+          setShowTwoFactor(true);
+        }
+      } catch (err) {
+        setError(err.message || 'Une erreur est survenue lors de la connexion.');
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      if (!twoFactorCode.trim()) {
+        setError('Veuillez saisir le code de vérification.');
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        await verifyTwoFactor(email, twoFactorCode);
+      } catch (err) {
+        setError(err.message || 'Code de vérification invalide.');
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -52,38 +74,60 @@ export default function Login() {
 
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Adresse Email
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Ex: admin@cspj.ma"
-              className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-              disabled={isSubmitting}
-            />
-          </div>
+          {!showTwoFactor ? (
+            <>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                  Adresse Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Ex: admin@cspj.ma"
+                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+                  disabled={isSubmitting}
+                />
+              </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Mot de passe
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Mot de passe
+                  </label>
+                  <a href="#reset" className="text-xs text-blue-500 hover:underline">
+                    Mot de passe oublié ?
+                  </a>
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+                  disabled={isSubmitting}
+                />
+              </div>
+            </>
+          ) : (
+            <div>
+              <p className="text-sm text-slate-300 mb-4 text-center">
+                Un code de vérification a été envoyé à <strong>{email}</strong>.
+              </p>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Code à 6 chiffres
               </label>
-              <a href="#reset" className="text-xs text-blue-500 hover:underline">
-                Mot de passe oublié ?
-              </a>
+              <input
+                type="text"
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value)}
+                placeholder="123456"
+                maxLength={6}
+                className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-center tracking-[0.5em] text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+                disabled={isSubmitting}
+              />
             </div>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-              disabled={isSubmitting}
-            />
-          </div>
+          )}
 
           <button
             type="submit"
@@ -96,10 +140,10 @@ export default function Login() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                Connexion en cours...
+                {showTwoFactor ? 'Vérification...' : 'Connexion en cours...'}
               </>
             ) : (
-              'Se connecter'
+              showTwoFactor ? 'Vérifier' : 'Se connecter'
             )}
           </button>
         </form>
