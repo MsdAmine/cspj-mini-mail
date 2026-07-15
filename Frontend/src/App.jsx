@@ -38,9 +38,8 @@ function RootApp() {
     return (
       <ResetPassword
         onBack={() => {
-          // Clean URL then go back to login
-          window.history.replaceState({}, '', '/');
-          setView('login');
+          // Force a full page reload to the root login page
+          window.location.href = '/';
         }}
         queryString={window.location.search}
       />
