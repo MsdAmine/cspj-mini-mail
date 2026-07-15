@@ -1,26 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MailProvider } from './context/MailContext';
 import { LogProvider } from './context/LogContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
-// Composant de routage interne
+/**
+ * Lightweight client-side "router" — no react-router needed.
+ * Supported views: 'login' | 'forgot-password' | 'reset-password'
+ */
 function RootApp() {
   const { user } = useAuth();
+  const [view, setView] = useState('login');
 
-  // Si l'utilisateur est connecté, on le bascule sur l'application de messagerie,
-  // sinon on affiche l'écran de connexion.
-  return user ? (
-    <MailProvider>
-      <Dashboard />
-    </MailProvider>
-  ) : (
-    <Login />
-  );
+  // On mount, check if the URL path indicates a reset-password deep link
+  useEffect(() => {
+    if (window.location.pathname === '/reset-password') {
+      setView('reset-password');
+    }
+  }, []);
+
+  if (user) {
+    return (
+      <MailProvider>
+        <Dashboard />
+      </MailProvider>
+    );
+  }
+
+  if (view === 'forgot-password') {
+    return <ForgotPassword onBack={() => setView('login')} />;
+  }
+
+  if (view === 'reset-password') {
+    return (
+      <ResetPassword
+        onBack={() => {
+          // Clean URL then go back to login
+          window.history.replaceState({}, '', '/');
+          setView('login');
+        }}
+        queryString={window.location.search}
+      />
+    );
+  }
+
+  return <Login onForgotPassword={() => setView('forgot-password')} />;
 }
 
-// Le point d'entrée enveloppé dans les fournisseurs globaux
 export default function App() {
   return (
     <AuthProvider>

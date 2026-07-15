@@ -50,4 +50,10 @@ public partial class Utilisateur
     public string? TwoFactorCode { get; set; }
 
     public DateTime? TwoFactorExpiry { get; set; }
+
+    [StringLength(256)]
+    [Unicode(false)]
+    public string? PasswordResetToken { get; set; }
+
+    public DateTime? ResetTokenExpiry { get; set; }
 }
