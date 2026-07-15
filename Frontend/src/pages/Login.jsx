@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-export default function Login() {
+export default function Login({ onForgotPassword }) {
   const { login, verifyTwoFactor } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -95,9 +95,13 @@ export default function Login() {
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Mot de passe
                   </label>
-                  <a href="#reset" className="text-xs text-blue-500 hover:underline">
+                  <button
+                    type="button"
+                    onClick={onForgotPassword}
+                    className="text-xs text-blue-500 hover:text-blue-400 hover:underline transition"
+                  >
                     Mot de passe oublié ?
-                  </a>
+                  </button>
                 </div>
                 <input
                   type="password"
