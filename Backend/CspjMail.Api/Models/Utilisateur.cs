@@ -56,4 +56,6 @@ public partial class Utilisateur
     public string? PasswordResetToken { get; set; }
 
     public DateTime? ResetTokenExpiry { get; set; }
+
+    public bool IsDeleted { get; set; }
 }

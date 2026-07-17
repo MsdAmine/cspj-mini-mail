@@ -98,7 +98,7 @@ namespace CspjMail.Api.Controllers
         [HttpGet("stats")]
         public async Task<IActionResult> GetSystemStats()
         {
-            var totalUsers = await _context.Utilisateurs.CountAsync();
+            var totalUsers = await _context.Utilisateurs.CountAsync(u => !u.IsDeleted);
             var totalThreads = await _context.Threads.CountAsync();
             var totalMessages = await _context.Messages.CountAsync();
 
@@ -127,6 +127,7 @@ namespace CspjMail.Api.Controllers
         public async Task<IActionResult> GetUsers()
         {
             var users = await _context.Utilisateurs
+                .Where(u => !u.IsDeleted)
                 .Include(u => u.Entreprise)
                 .OrderByDescending(u => u.DateCreation)
                 .Select(u => new UserDetailsDto
@@ -250,59 +251,23 @@ namespace CspjMail.Api.Controllers
                 return BadRequest("You cannot delete your own administrator account.");
             }
 
-            // Begin transaction to ensure atomic deletion of all relational data
-            using (var transaction = await _context.Database.BeginTransactionAsync())
+            // OPTION A: Soft Delete pattern to avoid constraint violations on related transactional data
+            try
             {
-                try
-                {
-                    // 1. Find all messages where this user is sender or recipient
-                    var relatedMessages = await _context.Messages
-                        .Where(m => m.ExpediteurId == id || m.DestinataireId == id)
-                        .ToListAsync();
-
-                    var messageIds = relatedMessages.Select(m => m.Id).ToList();
-
-                    // 2. Remove all attachments for these messages
-                    if (messageIds.Any())
-                    {
-                        var attachments = await _context.PiecesJointes
-                            .Where(pj => messageIds.Contains(pj.MessageId))
-                            .ToListAsync();
-                        _context.PiecesJointes.RemoveRange(attachments);
-                    }
-
-                    // 3. Remove all these messages
-                    _context.Messages.RemoveRange(relatedMessages);
-                    await _context.SaveChangesAsync();
-
-                    // 4. Clean up any threads that now have no messages left
-                    var threadIds = relatedMessages.Select(m => m.ThreadId).Distinct().ToList();
-                    foreach (var threadId in threadIds)
-                    {
-                        var hasMessages = await _context.Messages.AnyAsync(m => m.ThreadId == threadId);
-                        if (!hasMessages)
-                        {
-                            var thread = await _context.Threads.FindAsync(threadId);
-                            if (thread != null)
-                            {
-                                _context.Threads.Remove(thread);
-                            }
-                        }
-                    }
-                    await _context.SaveChangesAsync();
-
-                    // 5. Finally, remove the user
-                    _context.Utilisateurs.Remove(user);
-                    await _context.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-                    return Ok(new { Message = "User and all associated messages/data deleted successfully." });
-                }
-                catch (Exception ex)
-                {
-                    await transaction.RollbackAsync();
-                    return StatusCode(StatusCodes.Status500InternalServerError, $"An error occurred during deletion: {ex.Message}");
-                }
+                user.IsDeleted = true;
+                user.Actif = false;
+                await _context.SaveChangesAsync();
+                
+                return Ok(new { Message = "User deleted successfully." });
+            }
+            catch (DbUpdateException ex)
+            {
+                // Parse inner exception and return detailed error if any constraints are violated
+                return BadRequest("Impossible de supprimer cet utilisateur car il est lié à des messages ou des données d'audit actifs.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, $"An error occurred during deletion: {ex.Message}");
             }
         }
     }
