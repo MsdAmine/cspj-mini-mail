@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+
 namespace CspjMail.Api.DTOs
 {
     // Payload used to start a brand new conversation thread
@@ -6,12 +8,14 @@ namespace CspjMail.Api.DTOs
         public string Objet { get; set; } = null!;
         public string Corps { get; set; } = null!;
         public int DestinataireId { get; set; }
+        public List<IFormFile>? Attachments { get; set; }
     }
 
     // Payload used to reply to an existing thread
     public class ReplyMessageDto
     {
         public string Corps { get; set; } = null!;
+        public List<IFormFile>? Attachments { get; set; }
     }
 
     // Data structure returned to the frontend representing a single thread conversation view

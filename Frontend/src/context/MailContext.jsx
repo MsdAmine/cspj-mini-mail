@@ -76,12 +76,19 @@ export const MailProvider = ({ children }) => {
   };
 
   // Send a brand new message thread
-  const sendNewMessage = async ({ subject, body, receiverId }) => {
+  const sendNewMessage = async ({ subject, body, receiverId, attachments }) => {
     try {
-      await api.post('/messages/thread', {
-        objet: subject.trim(),
-        corps: body.trim(),
-        destinataireId: parseInt(receiverId, 10)
+      const formData = new FormData();
+      formData.append('objet', subject.trim());
+      formData.append('corps', body.trim());
+      formData.append('destinataireId', parseInt(receiverId, 10));
+      
+      if (attachments && attachments.length > 0) {
+        attachments.forEach(file => formData.append('attachments', file));
+      }
+
+      await api.post('/messages/thread', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       await loadMailbox();
     } catch (err) {
@@ -91,10 +98,17 @@ export const MailProvider = ({ children }) => {
   };
 
   // Reply inside an existing conversation thread
-  const replyToThread = async (threadId, body) => {
+  const replyToThread = async (threadId, body, attachments = []) => {
     try {
-      await api.post(`/messages/thread/${threadId}/reply`, {
-        corps: body.trim()
+      const formData = new FormData();
+      formData.append('corps', body.trim());
+      
+      if (attachments && attachments.length > 0) {
+        attachments.forEach(file => formData.append('attachments', file));
+      }
+
+      await api.post(`/messages/thread/${threadId}/reply`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
       // Re-fetch thread details to display the reply
       const response = await api.get(`/messages/thread/${threadId}`);

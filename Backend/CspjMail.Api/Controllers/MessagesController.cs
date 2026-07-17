@@ -20,8 +20,9 @@ namespace CspjMail.Api.Controllers
         }
 
         // 1. POST: api/messages/thread (Start a new conversation securely preserving recipient)
+        // 1. POST: api/messages/thread (Start a new conversation securely preserving recipient)
         [HttpPost("thread")]
-        public async Task<IActionResult> StartThread([FromBody] CreateThreadDto dto)
+        public async Task<IActionResult> StartThread([FromForm] CreateThreadDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
@@ -58,6 +59,37 @@ namespace CspjMail.Api.Controllers
             _context.Messages.Add(initialMessage);
             await _context.SaveChangesAsync();
 
+            // Process Attachments
+            if (dto.Attachments != null && dto.Attachments.Any())
+            {
+                var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
+
+                foreach (var file in dto.Attachments)
+                {
+                    if (file.Length > 0)
+                    {
+                        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                        var filePath = Path.Combine(uploadDir, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(stream);
+                        }
+
+                        _context.PiecesJointes.Add(new PiecesJointe
+                        {
+                            MessageId = initialMessage.Id,
+                            NomFichier = file.FileName,
+                            CheminFichier = "/uploads/" + fileName,
+                            TailleFichier = (int)file.Length,
+                            DateTeleversement = DateTime.UtcNow
+                        });
+                    }
+                }
+                await _context.SaveChangesAsync();
+            }
+
             var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
             var senderEmail = currentUser?.Email ?? "Inconnu";
             
@@ -75,8 +107,9 @@ namespace CspjMail.Api.Controllers
         }
 
         // 2. POST: api/messages/thread/{id}/reply (Reply inside conversation checking root thread history context)
+        // 2. POST: api/messages/thread/{id}/reply (Reply inside conversation checking root thread history context)
         [HttpPost("thread/{threadId}/reply")]
-        public async Task<IActionResult> ReplyToThread(int threadId, [FromBody] ReplyMessageDto dto)
+        public async Task<IActionResult> ReplyToThread(int threadId, [FromForm] ReplyMessageDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
@@ -118,6 +151,37 @@ namespace CspjMail.Api.Controllers
 
             _context.Messages.Add(replyMessage);
             await _context.SaveChangesAsync();
+
+            // Process Attachments
+            if (dto.Attachments != null && dto.Attachments.Any())
+            {
+                var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
+
+                foreach (var file in dto.Attachments)
+                {
+                    if (file.Length > 0)
+                    {
+                        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                        var filePath = Path.Combine(uploadDir, fileName);
+
+                        using (var stream = new FileStream(filePath, FileMode.Create))
+                        {
+                            await file.CopyToAsync(stream);
+                        }
+
+                        _context.PiecesJointes.Add(new PiecesJointe
+                        {
+                            MessageId = replyMessage.Id,
+                            NomFichier = file.FileName,
+                            CheminFichier = "/uploads/" + fileName,
+                            TailleFichier = (int)file.Length,
+                            DateTeleversement = DateTime.UtcNow
+                        });
+                    }
+                }
+                await _context.SaveChangesAsync();
+            }
 
             var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
             var senderEmail = currentUser?.Email ?? "Inconnu";

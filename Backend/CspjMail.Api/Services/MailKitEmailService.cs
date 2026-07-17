@@ -1,5 +1,6 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using MimeKit;
 using CspjMail.Api.Configuration;
@@ -61,7 +62,7 @@ namespace CspjMail.Api.Services
                 throw;
             }
         }
-        public async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
+        public async Task SendEmailAsync(string toEmail, string subject, string htmlBody, IEnumerable<IFormFile>? attachments = null)
         {
             try
             {
@@ -74,6 +75,20 @@ namespace CspjMail.Api.Services
                 {
                     HtmlBody = htmlBody
                 };
+
+                if (attachments != null)
+                {
+                    foreach (var file in attachments)
+                    {
+                        if (file.Length > 0)
+                        {
+                            using var ms = new MemoryStream();
+                            await file.CopyToAsync(ms);
+                            var fileBytes = ms.ToArray();
+                            bodyBuilder.Attachments.Add(file.FileName, fileBytes, ContentType.Parse(file.ContentType));
+                        }
+                    }
+                }
 
                 message.Body = bodyBuilder.ToMessageBody();
 
