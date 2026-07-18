@@ -34,7 +34,10 @@ const TiptapEditor = ({ content, onChange, placeholder = 'Écrivez votre répons
   const ToolbarButton = ({ onClick, isActive, icon: Icon, title }) => (
     <button
       type="button"
-      onClick={onClick}
+      onClick={(e) => {
+        e.preventDefault();
+        onClick(e);
+      }}
       className={`p-1.5 rounded transition ${
         isActive 
           ? 'bg-blue-100 text-blue-700' 
@@ -78,6 +81,7 @@ const TiptapEditor = ({ content, onChange, placeholder = 'Écrivez votre répons
         <div className="w-px h-5 bg-slate-200 mx-2" />
         <button 
           type="button" 
+          onClick={(e) => e.preventDefault()}
           className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition" 
           title="Ajouter une pièce jointe"
         >
