@@ -29,6 +29,15 @@ namespace CspjMail.Api.DTOs
         public List<ContactDto> Destinataires { get; set; } = new();
     }
 
+    public class PieceJointeDto
+    {
+        public int Id { get; set; }
+        public string NomFichier { get; set; } = null!;
+        public string CheminFichier { get; set; } = null!;
+        public int TailleOctets { get; set; }
+        public string TypeContenu { get; set; } = null!;
+    }
+
     public class MessageDisplayDto
     {
         public int MessageId { get; set; }
@@ -38,6 +47,7 @@ namespace CspjMail.Api.DTOs
         public int ExpediteurId { get; set; }
         public string ExpediteurNomComplet { get; set; } = null!;
         public string ExpediteurRole { get; set; } = null!;
+        public List<PieceJointeDto> PiecesJointes { get; set; } = new();
     }
 
     // Represents a single row in the Inbox / Sent / Archive lists
