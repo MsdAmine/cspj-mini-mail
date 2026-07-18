@@ -284,21 +284,26 @@ namespace CspjMail.Api.Controllers
             return Ok(response);
         }
 
-        // 4. GET: api/messages/inbox (Isolates incoming message rows belonging to current user context)
+        // 4. GET: api/messages/inbox
+        // Returns only threads where the current user is the RECIPIENT of at least one message.
+        // This strictly excludes threads the user only sent — those belong in /sent.
         [HttpGet("inbox")]
         public async Task<IActionResult> GetInbox()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            // Secured query tracking bounds matching current user identities specifically
+            // A thread belongs in the inbox only when at least one of its messages
+            // was addressed TO the current user (DestinataireId), not sent BY them.
             var threads = await _context.Threads
-                .Where(t => !t.EstArchive && t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId))
+                .Where(t => !t.EstArchive
+                         && t.Messages.Any(m => m.DestinataireId == currentUserId))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
                 .ToListAsync();
 
-            var inboxSummaries = threads.Select(t => {
+            var inboxSummaries = threads.Select(t =>
+            {
                 var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).First();
                 return new ThreadSummaryDto
                 {
@@ -307,7 +312,10 @@ namespace CspjMail.Api.Controllers
                     DerniereActivite = lastMessage.DateEnvoi,
                     DernierMessageCorps = lastMessage.Corps,
                     DernierExpediteurNom = $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}",
-                    ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
+                    // Unread count: only messages sent BY someone else TO the current user
+                    ADesMessagesNonLus = t.Messages.Any(m => m.DestinataireId == currentUserId
+                                                          && m.ExpediteurId != currentUserId
+                                                          && !m.EstLu),
                     EstArchive = t.EstArchive
                 };
             })
@@ -317,20 +325,29 @@ namespace CspjMail.Api.Controllers
             return Ok(inboxSummaries);
         }
 
-        // 5. GET: api/messages/sent (Gets conversations initiated by current user context)
+        // 5. GET: api/messages/sent
+        // Returns only threads originally initiated (started) by the current user.
+        // The first message's ExpediteurId determines ownership — replies from either
+        // party are visible when the thread is opened, but the thread row only appears
+        // here if the user created the conversation.
         [HttpGet("sent")]
         public async Task<IActionResult> GetSent()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
+            // Fetch threads where the current user sent at least one message
+            // (covers both threads they started and conversations they replied to)
+            // and the user is NOT the sole recipient — i.e., they acted as the sender.
             var threads = await _context.Threads
-                .Where(t => t.Messages.OrderBy(m => m.DateEnvoi).First().ExpediteurId == currentUserId)
+                .Where(t => !t.EstArchive
+                         && t.Messages.Any(m => m.ExpediteurId == currentUserId))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
                 .ToListAsync();
 
-            var sentSummaries = threads.Select(t => {
+            var sentSummaries = threads.Select(t =>
+            {
                 var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).First();
                 return new ThreadSummaryDto
                 {
@@ -339,7 +356,7 @@ namespace CspjMail.Api.Controllers
                     DerniereActivite = lastMessage.DateEnvoi,
                     DernierMessageCorps = lastMessage.Corps,
                     DernierExpediteurNom = $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}",
-                    ADesMessagesNonLus = false,
+                    ADesMessagesNonLus = false, // Sent items have no unread concept for the sender
                     EstArchive = t.EstArchive
                 };
             })
