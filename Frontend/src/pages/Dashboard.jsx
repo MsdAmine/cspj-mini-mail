@@ -618,6 +618,39 @@ export default function Dashboard() {
                                 className="text-slate-700 text-sm leading-relaxed prose prose-sm max-w-none"
                                 dangerouslySetInnerHTML={{ __html: msg.corps }}
                               />
+
+                              {/* Pièces jointes */}
+                              {msg.piecesJointes && msg.piecesJointes.length > 0 && (
+                                <div className="mt-3 pt-3 border-t border-slate-100">
+                                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                                    Pièces jointes ({msg.piecesJointes.length})
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {msg.piecesJointes.map((file) => {
+                                      const sizeKb = (file.tailleOctets / 1024).toFixed(1);
+                                      const sizeMb = (file.tailleOctets / (1024 * 1024)).toFixed(2);
+                                      const displaySize = file.tailleOctets >= 1024 * 1024
+                                        ? `${sizeMb} Mo`
+                                        : `${sizeKb} Ko`;
+                                      return (
+                                        <a
+                                          key={file.id}
+                                          href={`http://localhost:5182${file.cheminFichier}`}
+                                          download={file.nomFichier}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition duration-150 group"
+                                          title={`Télécharger ${file.nomFichier}`}
+                                        >
+                                          <span className="text-slate-400 group-hover:text-blue-500 transition">📎</span>
+                                          <span className="max-w-[180px] truncate">{file.nomFichier}</span>
+                                          <span className="text-slate-400 text-[10px] font-mono">{displaySize}</span>
+                                        </a>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>

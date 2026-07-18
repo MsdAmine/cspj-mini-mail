@@ -211,6 +211,8 @@ namespace CspjMail.Api.Controllers
             var thread = await _context.Threads
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.PiecesJointes)
                 .FirstOrDefaultAsync(t => t.Id == threadId);
 
             if (thread == null) return NotFound("Thread not found.");
@@ -267,7 +269,15 @@ namespace CspjMail.Api.Controllers
                         EstLu = m.EstLu,
                         ExpediteurId = m.ExpediteurId,
                         ExpediteurNomComplet = $"{m.Expediteur.Prenom} {m.Expediteur.Nom}",
-                        ExpediteurRole = m.Expediteur.Role
+                        ExpediteurRole = m.Expediteur.Role,
+                        PiecesJointes = m.PiecesJointes.Select(p => new PieceJointeDto
+                        {
+                            Id = p.Id,
+                            NomFichier = p.NomFichier,
+                            CheminFichier = p.CheminFichier,
+                            TailleOctets = p.TailleOctets,
+                            TypeContenu = p.TypeContenu
+                        }).ToList()
                     }).ToList()
             };
 
