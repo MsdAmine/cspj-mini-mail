@@ -464,5 +464,48 @@ namespace CspjMail.Api.Controllers
 
             return Ok(contacts);
         }
+
+        // 10. GET: api/messages/attachments/download/{id}
+        // Forces download of an attachment by its DB record ID.
+        // Verifies the requesting user is a participant in the parent message's thread (IDOR guard).
+        [HttpGet("attachments/download/{id:int}")]
+        public async Task<IActionResult> DownloadAttachment(int id)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            // Load the attachment and its parent message (for access check)
+            var attachment = await _context.PiecesJointes
+                .Include(p => p.Message)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (attachment == null) return NotFound("Pièce jointe introuvable.");
+
+            // IDOR guard: only sender or recipient of the parent message may download
+            var msg = attachment.Message;
+            if (msg.ExpediteurId != currentUserId && msg.DestinataireId != currentUserId)
+            {
+                return Forbid("Vous n'êtes pas autorisé à accéder à cette pièce jointe.");
+            }
+
+            // Resolve physical path — CheminFichier is stored as "/uploads/<guid.ext>"
+            var physicalPath = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                attachment.CheminFichier.TrimStart('/')   // strip leading slash before Path.Combine
+            );
+
+            if (!System.IO.File.Exists(physicalPath))
+            {
+                return NotFound("Le fichier physique est introuvable sur le serveur.");
+            }
+
+            // Return the file with Content-Disposition: attachment to force browser download
+            var contentType = string.IsNullOrWhiteSpace(attachment.TypeContenu)
+                ? "application/octet-stream"
+                : attachment.TypeContenu;
+
+            return PhysicalFile(physicalPath, contentType, attachment.NomFichier);
+        }
     }
 }
