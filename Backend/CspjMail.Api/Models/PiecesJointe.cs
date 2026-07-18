@@ -21,7 +21,12 @@ public partial class PiecesJointe
     [Unicode(false)]
     public string CheminFichier { get; set; } = null!;
 
-    public int TailleFichier { get; set; }
+    [Column("TailleOctets")]
+    public int TailleOctets { get; set; }
+
+    [StringLength(255)]
+    [Unicode(false)]
+    public string TypeContenu { get; set; } = null!;
 
     public DateTime DateTeleversement { get; set; }
 

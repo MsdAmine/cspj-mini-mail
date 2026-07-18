@@ -82,7 +82,8 @@ namespace CspjMail.Api.Controllers
                             MessageId = initialMessage.Id,
                             NomFichier = file.FileName,
                             CheminFichier = "/uploads/" + fileName,
-                            TailleFichier = (int)file.Length,
+                            TailleOctets = (int)file.Length, // Maps perfectly to the strict NOT NULL column
+                            TypeContenu = file.ContentType,
                             DateTeleversement = DateTime.UtcNow
                         });
                     }
@@ -175,7 +176,8 @@ namespace CspjMail.Api.Controllers
                             MessageId = replyMessage.Id,
                             NomFichier = file.FileName,
                             CheminFichier = "/uploads/" + fileName,
-                            TailleFichier = (int)file.Length,
+                            TailleOctets = (int)file.Length, // Maps perfectly to the strict NOT NULL column
+                            TypeContenu = file.ContentType,
                             DateTeleversement = DateTime.UtcNow
                         });
                     }
