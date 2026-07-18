@@ -35,7 +35,8 @@ namespace CspjMail.Api.DTOs
         public string NomFichier { get; set; } = null!;
         public string CheminFichier { get; set; } = null!;
         public int TailleOctets { get; set; }
-        public string TypeContenu { get; set; } = null!;
+        // Nullable: DownloadAttachment already falls back to "application/octet-stream" when null
+        public string? TypeContenu { get; set; }
     }
 
     public class MessageDisplayDto
