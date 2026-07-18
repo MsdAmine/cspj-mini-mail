@@ -65,30 +65,74 @@ namespace CspjMail.Api.Controllers
                 var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
                 if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
 
+                // ── Security: MIME-type whitelist ────────────────────────────────────
+                var allowedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "text/plain",
+                    "image/jpeg",
+                    "image/png",
+                    "image/gif",
+                    "image/webp"
+                };
+                const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB per file
+
                 foreach (var file in dto.Attachments)
                 {
-                    if (file.Length > 0)
+                    if (file.Length <= 0) continue;
+
+                    // ── Guard: file size ──────────────────────────────────────────────
+                    if (file.Length > MaxFileSizeBytes)
+                        return BadRequest($"Le fichier '{file.FileName}' dépasse la limite de 10 Mo autorisée.");
+
+                    // ── Guard: MIME type whitelist ──────────────────────────────────────
+                    if (!allowedMimeTypes.Contains(file.ContentType))
+                        return BadRequest($"Le type de fichier '{file.ContentType}' n'est pas autorisé.");
+
+                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                    var filePath = Path.Combine(uploadDir, fileName);
+
+                    // Write file to disk — stream is auto-disposed by 'using var'
+                    using var stream = new FileStream(filePath, FileMode.Create);
+                    await file.CopyToAsync(stream);
+
+                    _context.PiecesJointes.Add(new PiecesJointe
                     {
-                        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                        var filePath = Path.Combine(uploadDir, fileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await file.CopyToAsync(stream);
-                        }
-
-                        _context.PiecesJointes.Add(new PiecesJointe
-                        {
-                            MessageId = initialMessage.Id,
-                            NomFichier = file.FileName,
-                            CheminFichier = "/uploads/" + fileName,
-                            TailleOctets = (int)file.Length, // Maps perfectly to the strict NOT NULL column
-                            TypeContenu = file.ContentType,
-                            DateTeleversement = DateTime.UtcNow
-                        });
-                    }
+                        MessageId = initialMessage.Id,
+                        NomFichier = file.FileName,
+                        CheminFichier = "/uploads/" + fileName,
+                        TailleOctets = (int)file.Length,
+                        TypeContenu = file.ContentType,
+                        DateTeleversement = DateTime.UtcNow
+                    });
                 }
-                await _context.SaveChangesAsync();
+
+                // Save all attachment records — if this fails, cleanup orphan files
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch
+                {
+                    // DB save failed: delete every file that was just written to prevent orphans
+                    foreach (var file in dto.Attachments.Where(f => f.Length > 0))
+                    {
+                        var orphanName = Path.Combine(uploadDir,
+                            _context.PiecesJointes.Local
+                                .Where(p => p.NomFichier == file.FileName)
+                                .Select(p => Path.GetFileName(p.CheminFichier))
+                                .FirstOrDefault() ?? string.Empty);
+                        if (System.IO.File.Exists(orphanName))
+                            System.IO.File.Delete(orphanName);
+                    }
+                    throw;
+                }
             }
 
             var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
@@ -159,30 +203,69 @@ namespace CspjMail.Api.Controllers
                 var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
                 if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
 
+                // ── Security: MIME-type whitelist (identical to StartThread) ─────────────
+                var allowedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "application/pdf",
+                    "application/msword",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "application/vnd.ms-excel",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "text/plain",
+                    "image/jpeg",
+                    "image/png",
+                    "image/gif",
+                    "image/webp"
+                };
+                const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB per file
+
                 foreach (var file in dto.Attachments)
                 {
-                    if (file.Length > 0)
+                    if (file.Length <= 0) continue;
+
+                    if (file.Length > MaxFileSizeBytes)
+                        return BadRequest($"Le fichier '{file.FileName}' dépasse la limite de 10 Mo autorisée.");
+
+                    if (!allowedMimeTypes.Contains(file.ContentType))
+                        return BadRequest($"Le type de fichier '{file.ContentType}' n'est pas autorisé.");
+
+                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                    var filePath = Path.Combine(uploadDir, fileName);
+
+                    using var stream = new FileStream(filePath, FileMode.Create);
+                    await file.CopyToAsync(stream);
+
+                    _context.PiecesJointes.Add(new PiecesJointe
                     {
-                        var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                        var filePath = Path.Combine(uploadDir, fileName);
-
-                        using (var stream = new FileStream(filePath, FileMode.Create))
-                        {
-                            await file.CopyToAsync(stream);
-                        }
-
-                        _context.PiecesJointes.Add(new PiecesJointe
-                        {
-                            MessageId = replyMessage.Id,
-                            NomFichier = file.FileName,
-                            CheminFichier = "/uploads/" + fileName,
-                            TailleOctets = (int)file.Length, // Maps perfectly to the strict NOT NULL column
-                            TypeContenu = file.ContentType,
-                            DateTeleversement = DateTime.UtcNow
-                        });
-                    }
+                        MessageId = replyMessage.Id,
+                        NomFichier = file.FileName,
+                        CheminFichier = "/uploads/" + fileName,
+                        TailleOctets = (int)file.Length,
+                        TypeContenu = file.ContentType,
+                        DateTeleversement = DateTime.UtcNow
+                    });
                 }
-                await _context.SaveChangesAsync();
+
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch
+                {
+                    foreach (var file in dto.Attachments.Where(f => f.Length > 0))
+                    {
+                        var orphanName = Path.Combine(uploadDir,
+                            _context.PiecesJointes.Local
+                                .Where(p => p.NomFichier == file.FileName)
+                                .Select(p => Path.GetFileName(p.CheminFichier))
+                                .FirstOrDefault() ?? string.Empty);
+                        if (System.IO.File.Exists(orphanName))
+                            System.IO.File.Delete(orphanName);
+                    }
+                    throw;
+                }
             }
 
             var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
@@ -218,8 +301,11 @@ namespace CspjMail.Api.Controllers
             if (thread == null) return NotFound("Thread not found.");
 
             // Anti-IDOR Authorization Gate Check
+            // FIX: If the thread has NO messages (DB anomaly), we DENY access by default.
+            // Previously, sampleMsg == null would silently skip the check and return Ok.
             var sampleMsg = thread.Messages.FirstOrDefault();
-            if (sampleMsg != null && sampleMsg.ExpediteurId != currentUserId && sampleMsg.DestinataireId != currentUserId)
+            if (sampleMsg == null ||
+                (sampleMsg.ExpediteurId != currentUserId && sampleMsg.DestinataireId != currentUserId))
             {
                 return Forbid("Access denied to this conversational stream thread context.");
             }
@@ -268,8 +354,11 @@ namespace CspjMail.Api.Controllers
                         DateEnvoi = m.DateEnvoi,
                         EstLu = m.EstLu,
                         ExpediteurId = m.ExpediteurId,
-                        ExpediteurNomComplet = $"{m.Expediteur.Prenom} {m.Expediteur.Nom}",
-                        ExpediteurRole = m.Expediteur.Role,
+                        // FIX: Null-safe mapping — prevents NullReferenceException on broken FK
+                        ExpediteurNomComplet = m.Expediteur != null
+                            ? $"{m.Expediteur.Prenom} {m.Expediteur.Nom}"
+                            : "Utilisateur inconnu",
+                        ExpediteurRole = m.Expediteur?.Role ?? "Inconnu",
                         PiecesJointes = m.PiecesJointes.Select(p => new PieceJointeDto
                         {
                             Id = p.Id,
@@ -304,22 +393,27 @@ namespace CspjMail.Api.Controllers
 
             var inboxSummaries = threads.Select(t =>
             {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).First();
+                // FIX: Use FirstOrDefault() to prevent InvalidOperationException on empty threads
+                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
+                if (lastMessage == null) return null; // Skip malformed threads
                 return new ThreadSummaryDto
                 {
                     ThreadId = t.Id,
                     Objet = t.Objet,
                     DerniereActivite = lastMessage.DateEnvoi,
                     DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}",
+                    DernierExpediteurNom = lastMessage.Expediteur != null
+                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
+                        : "Inconnu",
                     // Unread count: only messages sent BY someone else TO the current user
                     ADesMessagesNonLus = t.Messages.Any(m => m.DestinataireId == currentUserId
-                                                          && m.ExpediteurId != currentUserId
-                                                          && !m.EstLu),
+                                                              && m.ExpediteurId != currentUserId
+                                                              && !m.EstLu),
                     EstArchive = t.EstArchive
                 };
             })
-            .OrderByDescending(s => s.DerniereActivite)
+            .Where(s => s != null)
+            .OrderByDescending(s => s!.DerniereActivite)
             .ToList();
 
             return Ok(inboxSummaries);
@@ -348,19 +442,24 @@ namespace CspjMail.Api.Controllers
 
             var sentSummaries = threads.Select(t =>
             {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).First();
+                // FIX: Use FirstOrDefault() instead of First()
+                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
+                if (lastMessage == null) return null;
                 return new ThreadSummaryDto
                 {
                     ThreadId = t.Id,
                     Objet = t.Objet,
                     DerniereActivite = lastMessage.DateEnvoi,
                     DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}",
+                    DernierExpediteurNom = lastMessage.Expediteur != null
+                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
+                        : "Inconnu",
                     ADesMessagesNonLus = false, // Sent items have no unread concept for the sender
                     EstArchive = t.EstArchive
                 };
             })
-            .OrderByDescending(s => s.DerniereActivite)
+            .Where(s => s != null)
+            .OrderByDescending(s => s!.DerniereActivite)
             .ToList();
 
             return Ok(sentSummaries);
@@ -404,19 +503,24 @@ namespace CspjMail.Api.Controllers
                 .ToListAsync();
 
             var archiveSummaries = threads.Select(t => {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).First();
+                // FIX: Use FirstOrDefault() instead of First()
+                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
+                if (lastMessage == null) return null;
                 return new ThreadSummaryDto
                 {
                     ThreadId = t.Id,
                     Objet = t.Objet,
                     DerniereActivite = lastMessage.DateEnvoi,
                     DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}",
+                    DernierExpediteurNom = lastMessage.Expediteur != null
+                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
+                        : "Inconnu",
                     ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
                     EstArchive = t.EstArchive
                 };
             })
-            .OrderByDescending(s => s.DerniereActivite)
+            .Where(s => s != null)
+            .OrderByDescending(s => s!.DerniereActivite)
             .ToList();
 
             return Ok(archiveSummaries);
@@ -441,19 +545,24 @@ namespace CspjMail.Api.Controllers
                 .ToListAsync();
 
             var results = matchingThreads.Select(t => {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).First();
+                // FIX: Use FirstOrDefault() instead of First()
+                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
+                if (lastMessage == null) return null;
                 return new ThreadSummaryDto
                 {
                     ThreadId = t.Id,
                     Objet = t.Objet,
                     DerniereActivite = lastMessage.DateEnvoi,
                     DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}",
+                    DernierExpediteurNom = lastMessage.Expediteur != null
+                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
+                        : "Inconnu",
                     ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
                     EstArchive = t.EstArchive
                 };
             })
-            .OrderByDescending(s => s.DerniereActivite)
+            .Where(s => s != null)
+            .OrderByDescending(s => s!.DerniereActivite)
             .ToList();
 
             return Ok(results);
@@ -467,7 +576,8 @@ namespace CspjMail.Api.Controllers
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
             var contacts = await _context.Utilisateurs
-                .Where(u => u.Actif && u.Id != currentUserId)
+                // FIX 2-B: Also exclude soft-deleted users from the contacts list
+                .Where(u => u.Actif && !u.IsDeleted && u.Id != currentUserId)
                 .Include(u => u.Entreprise)
                 .Select(u => new ContactDto
                 {
@@ -475,7 +585,8 @@ namespace CspjMail.Api.Controllers
                     Email = u.Email,
                     NomComplet = $"{u.Prenom} {u.Nom}",
                     Role = u.Role,
-                    EntrepriseNom = u.Entreprise.Nom
+                    // FIX 2-C & 4-A: Null-safe navigation for optional Entreprise relationship
+                    EntrepriseNom = u.Entreprise != null ? u.Entreprise.Nom : "Structure inconnue"
                 })
                 .ToListAsync();
 

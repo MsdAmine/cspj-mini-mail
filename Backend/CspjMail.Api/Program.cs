@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.EntityFrameworkCore;
 using CspjMail.Api.Models;
@@ -7,6 +8,22 @@ using CspjMail.Api.Configuration;
 using CspjMail.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// ── Upload Size Limits ────────────────────────────────────────────────────────
+// Prevent attackers from uploading multi-gigabyte files.
+// Enforced at both the Kestrel transport layer and the ASP.NET form reader.
+const long MaxUploadBytes = 10 * 1024 * 1024; // 10 MB
+
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.MaxRequestBodySize = MaxUploadBytes;
+});
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = MaxUploadBytes;
+    options.ValueLengthLimit = int.MaxValue; // allow long HTML bodies from Tiptap
+});
 
 // Add services to the container.
 builder.Services.AddControllers();

@@ -156,10 +156,13 @@ export default function Dashboard() {
     }
   };
 
-  const handleReplySubmit = (e) => {
+  const handleReplySubmit = async (e) => {
     e.preventDefault();
     if (!replyBody.trim()) return;
-    replyToThread(selectedMessage.threadId, replyBody);
+    // FIX 1-B: await the async call so body only clears on SUCCESS
+    // Previously this was fire-and-forget — a network error would silently
+    // discard the user's typed reply.
+    await replyToThread(selectedMessage.threadId, replyBody);
     setReplyBody('');
   };
 
@@ -636,16 +639,14 @@ export default function Dashboard() {
                                       const handleDownload = async (e) => {
                                         e.preventDefault();
                                         try {
-                                          const token = localStorage.getItem('cspj_token');
-                                          const response = await fetch(
-                                            `http://localhost:5182/api/messages/attachments/download/${file.id}`,
-                                            { headers: { Authorization: `Bearer ${token}` } }
+                                          // FIX 1-A: Use the centralized api service instead of a hardcoded
+                                          // localhost URL. This picks up the correct base URL in every
+                                          // environment and automatically attaches the JWT Bearer token.
+                                          const response = await api.get(
+                                            `/messages/attachments/download/${file.id}`,
+                                            { responseType: 'blob' }
                                           );
-                                          if (!response.ok) {
-                                            alert('Erreur lors du téléchargement. Veuillez réessayer.');
-                                            return;
-                                          }
-                                          const blob = await response.blob();
+                                          const blob = response.data;
                                           const url = URL.createObjectURL(blob);
                                           const a = document.createElement('a');
                                           a.href = url;
