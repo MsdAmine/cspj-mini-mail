@@ -71,6 +71,10 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+// Serve files from wwwroot/ (e.g. /uploads/*) BEFORE routing/auth so static
+// requests bypass the API middleware stack entirely.
+app.UseStaticFiles();
+
 app.UseCors("AllowFrontend");
 
 // Authentication MUST come before Authorization

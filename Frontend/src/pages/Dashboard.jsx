@@ -632,20 +632,45 @@ export default function Dashboard() {
                                       const displaySize = file.tailleOctets >= 1024 * 1024
                                         ? `${sizeMb} Mo`
                                         : `${sizeKb} Ko`;
+
+                                      const handleDownload = async (e) => {
+                                        e.preventDefault();
+                                        try {
+                                          const token = localStorage.getItem('cspj_token');
+                                          const response = await fetch(
+                                            `http://localhost:5182/api/messages/attachments/download/${file.id}`,
+                                            { headers: { Authorization: `Bearer ${token}` } }
+                                          );
+                                          if (!response.ok) {
+                                            alert('Erreur lors du téléchargement. Veuillez réessayer.');
+                                            return;
+                                          }
+                                          const blob = await response.blob();
+                                          const url = URL.createObjectURL(blob);
+                                          const a = document.createElement('a');
+                                          a.href = url;
+                                          a.download = file.nomFichier;
+                                          document.body.appendChild(a);
+                                          a.click();
+                                          a.remove();
+                                          URL.revokeObjectURL(url);
+                                        } catch {
+                                          alert('Impossible de télécharger le fichier.');
+                                        }
+                                      };
+
                                       return (
-                                        <a
+                                        <button
                                           key={file.id}
-                                          href={`http://localhost:5182${file.cheminFichier}`}
-                                          download={file.nomFichier}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition duration-150 group"
+                                          type="button"
+                                          onClick={handleDownload}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition duration-150 group cursor-pointer"
                                           title={`Télécharger ${file.nomFichier}`}
                                         >
                                           <span className="text-slate-400 group-hover:text-blue-500 transition">📎</span>
                                           <span className="max-w-[180px] truncate">{file.nomFichier}</span>
                                           <span className="text-slate-400 text-[10px] font-mono">{displaySize}</span>
-                                        </a>
+                                        </button>
                                       );
                                     })}
                                   </div>
