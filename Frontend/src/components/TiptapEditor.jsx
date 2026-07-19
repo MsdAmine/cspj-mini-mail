@@ -76,7 +76,7 @@ const TiptapEditor = ({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm max-w-none focus:outline-none min-h-[100px] px-3 py-2',
+        class: 'tiptap prose prose-sm max-w-none focus:outline-none min-h-[100px] px-3 py-2',
       },
     },
   });
@@ -131,6 +131,29 @@ const TiptapEditor = ({
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+      {/* ── Bulletproof list-style overrides ── */}
+      {/* Tailwind Preflight resets list-style and padding to none/0 globally.  */}
+      {/* This <style> tag re-applies browser-native bullets scoped to .tiptap.  */}
+      <style>{`
+        .tiptap ul {
+          list-style-type: disc !important;
+          padding-left: 1.5rem !important;
+          margin-top: 0.5rem !important;
+          margin-bottom: 0.5rem !important;
+        }
+        .tiptap ol {
+          list-style-type: decimal !important;
+          padding-left: 1.5rem !important;
+          margin-top: 0.5rem !important;
+          margin-bottom: 0.5rem !important;
+        }
+        .tiptap li {
+          display: list-item !important;
+        }
+        .tiptap li p {
+          margin: 0 !important;
+        }
+      `}</style>
       {/* ── Barre d'outils ── */}
       <div className="flex items-center gap-1 px-3 py-2 bg-slate-50 border-b border-slate-200">
         <ToolbarButton
