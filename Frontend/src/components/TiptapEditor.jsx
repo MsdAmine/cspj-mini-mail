@@ -3,6 +3,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import BulletList from '@tiptap/extension-bullet-list';
+import { ListItem } from '@tiptap/extension-list-item';
 import TextAlign from '@tiptap/extension-text-align';
 import { Bold, Italic, Underline as UnderlineIcon, List, Paperclip, X } from 'lucide-react';
 
@@ -16,6 +17,30 @@ import { Bold, Italic, Underline as UnderlineIcon, List, Paperclip, X } from 'lu
  *  - attachments   {File[]}   - list of currently selected files (controlled from parent)
  *  - onAttachmentsChange {fn} - called with the new File[] whenever files are added/removed
  */
+
+// Defined at module scope so React always sees the same component reference.
+// If defined inside TiptapEditor, every `onTransaction` re-render would create
+// a new component type → React unmounts + remounts the buttons → sluggish lag.
+const ToolbarButton = ({ onClick, isActive, icon: Icon, title }) => (
+  <button
+    type="button"
+    onMouseDown={(e) => {
+      // Use onMouseDown + preventDefault so the editor never loses focus,
+      // which also makes the active state update feel completely instant.
+      e.preventDefault();
+      onClick();
+    }}
+    className={`p-1.5 rounded transition-colors ${
+      isActive
+        ? 'bg-blue-100 text-blue-700'
+        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
+    }`}
+    title={title}
+  >
+    <Icon size={16} />
+  </button>
+);
+
 const TiptapEditor = ({
   content,
   onChange,
@@ -31,7 +56,10 @@ const TiptapEditor = ({
     extensions: [
       StarterKit,
       Underline,
+      // Tiptap v3: BulletList and ListItem are no longer bundled inside StarterKit
+      // and must be registered explicitly. ListItem is required by BulletList.
       BulletList,
+      ListItem,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
@@ -100,24 +128,6 @@ const TiptapEditor = ({
   );
 
   if (!editor) return null;
-
-  const ToolbarButton = ({ onClick, isActive, icon: Icon, title }) => (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        onClick();
-      }}
-      className={`p-1.5 rounded transition ${
-        isActive
-          ? 'bg-blue-100 text-blue-700'
-          : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
-      }`}
-      title={title}
-    >
-      <Icon size={16} />
-    </button>
-  );
 
   return (
     <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
