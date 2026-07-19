@@ -30,7 +30,7 @@ export default function ComposeModal({ onClose }) {
         subject: subject.trim(),
         body: body.trim(),
         receiverId: receiverId,
-        attachments: attachments
+        attachments: attachments,
       });
       onClose();
     } catch (err) {
@@ -43,13 +43,13 @@ export default function ComposeModal({ onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-2xl bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden m-4">
-        
+
         {/* Header du Modal */}
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <h3 className="font-bold tracking-wide text-sm uppercase">Nouveau Message Interne</h3>
           </div>
-          <button 
+          <button
             onClick={onClose}
             className="text-slate-400 hover:text-white transition text-xl outline-none"
             disabled={isSending}
@@ -60,7 +60,7 @@ export default function ComposeModal({ onClose }) {
 
         {/* Formulaire */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          
+
           {errorMessage && (
             <div className="p-3 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-lg">
               {errorMessage}
@@ -104,54 +104,23 @@ export default function ComposeModal({ onClose }) {
             />
           </div>
 
-          {/* Corps du message */}
+          {/* Corps du message — le bouton paperclip et la liste de fichiers
+              sont désormais intégrés directement dans TiptapEditor */}
           <div>
             <label className="block text-xs font-bold uppercase text-slate-500 mb-1 tracking-wider">
               Message *
             </label>
-            <TiptapEditor 
-              content={body} 
-              onChange={setBody} 
+            <TiptapEditor
+              content={body}
+              onChange={setBody}
               placeholder="Écrivez votre message professionnel ici..."
+              attachments={attachments}
+              onAttachmentsChange={setAttachments}
             />
           </div>
 
           {/* Footer du Modal */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-            {/* Bouton Fichier Joint */}
-            <div className="flex flex-col items-start space-y-2">
-              <label className="flex items-center space-x-2 cursor-pointer text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition border border-blue-200">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                </svg>
-                <span>Ajouter une pièce jointe</span>
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => setAttachments(Array.from(e.target.files))}
-                  className="hidden"
-                  disabled={isSending}
-                />
-              </label>
-              {attachments.length > 0 && (
-                <div className="text-[10px] text-slate-500 flex flex-col gap-1">
-                  {attachments.map((f, i) => (
-                    <div key={i} className="flex items-center justify-between bg-slate-100 px-2 py-1 rounded">
-                      <span className="truncate max-w-[150px]">{f.name}</span>
-                      <button 
-                        type="button"
-                        onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))}
-                        className="ml-2 text-rose-500 hover:text-rose-700"
-                        title="Retirer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
+          <div className="flex items-center justify-end pt-4 border-t border-slate-100">
             {/* Actions d'envoi */}
             <div className="flex items-center space-x-3">
               <button
