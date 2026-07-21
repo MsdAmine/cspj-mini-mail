@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -114,25 +114,22 @@ namespace CspjMail.Api.Controllers
 
             // ── Resolve recipient list ───────────────────────────────────────────
             List<int> recipientIds;
-            bool isGroup;
 
             if (dto.DestinataireIds != null && dto.DestinataireIds.Count >= 1)
             {
                 recipientIds = dto.DestinataireIds.Distinct().Where(id => id != currentUserId).ToList();
-                isGroup = recipientIds.Count > 1;
             }
             else if (dto.DestinataireId.HasValue && dto.DestinataireId.Value > 0)
             {
                 recipientIds = new List<int> { dto.DestinataireId.Value };
-                isGroup = false;
             }
             else
             {
                 return BadRequest("Au moins un destinataire est requis.");
             }
 
-            if (isGroup && string.IsNullOrWhiteSpace(dto.TitreGroupe))
-                return BadRequest("Un nom de groupe est requis pour une discussion de groupe.");
+            if (recipientIds.Count == 0)
+                return BadRequest("Au moins un destinataire valide est requis.");
 
             // ── Validate all recipients exist ────────────────────────────────────
             foreach (var rid in recipientIds)
@@ -140,6 +137,128 @@ namespace CspjMail.Api.Controllers
                 var exists = await _context.Utilisateurs.AnyAsync(u => u.Id == rid);
                 if (!exists) return BadRequest($"L'utilisateur destinataire (ID {rid}) est introuvable.");
             }
+
+            // ── Determine mode ───────────────────────────────────────────────────
+            // Broadcast (Diffusion): multiple recipients WITHOUT a group title, or explicit EstDiffusion flag.
+            bool isBroadcast = dto.EstDiffusion ||
+                               (recipientIds.Count > 1 && string.IsNullOrWhiteSpace(dto.TitreGroupe));
+
+            // Group: multiple recipients WITH a title (shared chatroom).
+            bool isGroup = !isBroadcast && recipientIds.Count > 1;
+
+            if (isGroup && string.IsNullOrWhiteSpace(dto.TitreGroupe))
+                return BadRequest("Un nom de groupe est requis pour une discussion de groupe.");
+
+            // ════════════════════════════════════════════════════════════════════
+            // BROADCAST PATH — create N independent 1-to-1 threads
+            // ════════════════════════════════════════════════════════════════════
+            if (isBroadcast)
+            {
+                var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
+                var senderEmail = currentUser?.Email ?? "Inconnu";
+
+                // Pre-save uploaded files to disk ONCE so we can share the physical paths.
+                var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
+
+                // Build a list of (originalFileName, savedFileName, size, contentType) tuples.
+                var savedFiles = new List<(string OriginalName, string SavedPath, long Size, string ContentType)>();
+                if (dto.Attachments != null)
+                {
+                    foreach (var file in dto.Attachments)
+                    {
+                        if (file.Length <= 0) continue;
+
+                        if (file.Length > MaxFileSizeBytes)
+                            return BadRequest($"Le fichier '{file.FileName}' dépasse la limite de 10 Mo autorisée.");
+
+                        if (!AllowedMimeTypes.Contains(file.ContentType))
+                            return BadRequest($"Le type de fichier '{file.ContentType}' n'est pas autorisé.");
+
+                        var savedName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                        var fullPath  = Path.Combine(uploadDir, savedName);
+
+                        using var stream = new FileStream(fullPath, FileMode.Create);
+                        await file.CopyToAsync(stream);
+
+                        savedFiles.Add((file.FileName, "/uploads/" + savedName, file.Length, file.ContentType));
+                    }
+                }
+
+                var createdThreadIds = new List<int>();
+
+                foreach (var recipientId in recipientIds)
+                {
+                    // 1. Create thread
+                    var broadcastThread = new Models.Thread
+                    {
+                        Objet         = dto.Objet,
+                        DateCreation  = DateTime.UtcNow,
+                        EstArchive    = false,
+                        EstGroupe     = false,
+                        TitreGroupe   = null
+                    };
+                    _context.Threads.Add(broadcastThread);
+                    await _context.SaveChangesAsync();
+
+                    // 2. ThreadParticipant records (sender + this recipient)
+                    _context.ThreadParticipants.Add(new ThreadParticipant { ThreadId = broadcastThread.Id, UserId = currentUserId });
+                    _context.ThreadParticipants.Add(new ThreadParticipant { ThreadId = broadcastThread.Id, UserId = recipientId });
+                    await _context.SaveChangesAsync();
+
+                    // 3. Initial message
+                    var broadcastMessage = new Message
+                    {
+                        ThreadId       = broadcastThread.Id,
+                        ExpediteurId   = currentUserId,
+                        DestinataireId = recipientId,
+                        Corps          = dto.Corps,
+                        DateEnvoi      = DateTime.UtcNow,
+                        EstLu          = false
+                    };
+                    _context.Messages.Add(broadcastMessage);
+                    await _context.SaveChangesAsync();
+
+                    // 4. Attachment references — one DB row per thread, same physical file
+                    foreach (var (origName, savedPath, size, contentType) in savedFiles)
+                    {
+                        _context.PiecesJointes.Add(new PiecesJointe
+                        {
+                            MessageId          = broadcastMessage.Id,
+                            NomFichier         = origName,
+                            CheminFichier      = savedPath,
+                            TailleOctets       = (int)size,
+                            TypeContenu        = contentType,
+                            DateTeleversement  = DateTime.UtcNow
+                        });
+                    }
+                    if (savedFiles.Count > 0) await _context.SaveChangesAsync();
+
+                    createdThreadIds.Add(broadcastThread.Id);
+                }
+
+                // 5. Single audit entry for the entire broadcast
+                _context.AuditLogs.Add(new AuditLog
+                {
+                    DateHeure  = DateTime.UtcNow,
+                    TypeAction = "BROADCAST_MESSAGE",
+                    Utilisateur = senderEmail,
+                    Description = $"Diffusion envoyée à {recipientIds.Count} destinataire(s) : {dto.Objet}"
+                });
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    ThreadIds   = createdThreadIds,
+                    Count       = createdThreadIds.Count,
+                    Message     = $"Diffusion envoyée : {createdThreadIds.Count} discussion(s) créée(s).",
+                    EstDiffusion = true
+                });
+            }
+
+            // ════════════════════════════════════════════════════════════════════
+            // NORMAL PATH — single thread (1-to-1 OR group chatroom)
+            // ════════════════════════════════════════════════════════════════════
 
             // ── Create thread ────────────────────────────────────────────────────
             var newThread = new Models.Thread
@@ -192,14 +311,14 @@ namespace CspjMail.Api.Controllers
             }
 
             // ── Audit log ────────────────────────────────────────────────────────
-            var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
-            var senderEmail = currentUser?.Email ?? "Inconnu";
+            var normalUser = await _context.Utilisateurs.FindAsync(currentUserId);
+            var normalSenderEmail = normalUser?.Email ?? "Inconnu";
 
             _context.AuditLogs.Add(new AuditLog
             {
                 DateHeure = DateTime.UtcNow,
                 TypeAction = isGroup ? "CREATE_GROUP_THREAD" : "SEND_MESSAGE",
-                Utilisateur = senderEmail,
+                Utilisateur = normalSenderEmail,
                 Description = isGroup
                     ? $"Discussion de groupe créée : « {dto.TitreGroupe} » avec {recipientIds.Count} participants."
                     : $"Nouvelle discussion initiée : {dto.Objet}"
