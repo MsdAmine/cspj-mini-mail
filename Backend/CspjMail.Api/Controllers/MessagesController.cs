@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,38 +19,163 @@ namespace CspjMail.Api.Controllers
             _context = context;
         }
 
-        // 1. POST: api/messages/thread (Start a new conversation securely preserving recipient)
-        // 1. POST: api/messages/thread (Start a new conversation securely preserving recipient)
+        // ─── Shared helpers ────────────────────────────────────────────────────────
+
+        /// <summary>Returns the allowed MIME types for file uploads.</summary>
+        private static readonly HashSet<string> AllowedMimeTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "application/pdf",
+            "application/msword",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.ms-excel",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "text/plain",
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp"
+        };
+
+        private const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB per file
+
+        /// <summary>Saves uploaded files and adds PiecesJointe records. Returns BadRequest on error.</summary>
+        private async Task<IActionResult?> ProcessAttachmentsAsync(
+            List<IFormFile> attachments, int messageId)
+        {
+            var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+            if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
+
+            foreach (var file in attachments)
+            {
+                if (file.Length <= 0) continue;
+
+                if (file.Length > MaxFileSizeBytes)
+                    return BadRequest($"Le fichier '{file.FileName}' dépasse la limite de 10 Mo autorisée.");
+
+                if (!AllowedMimeTypes.Contains(file.ContentType))
+                    return BadRequest($"Le type de fichier '{file.ContentType}' n'est pas autorisé.");
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                var filePath = Path.Combine(uploadDir, fileName);
+
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await file.CopyToAsync(stream);
+
+                _context.PiecesJointes.Add(new PiecesJointe
+                {
+                    MessageId = messageId,
+                    NomFichier = file.FileName,
+                    CheminFichier = "/uploads/" + fileName,
+                    TailleOctets = (int)file.Length,
+                    TypeContenu = file.ContentType,
+                    DateTeleversement = DateTime.UtcNow
+                });
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                // Cleanup orphan files on DB failure
+                foreach (var file in attachments.Where(f => f.Length > 0))
+                {
+                    var orphanName = Path.Combine(uploadDir,
+                        _context.PiecesJointes.Local
+                            .Where(p => p.NomFichier == file.FileName)
+                            .Select(p => Path.GetFileName(p.CheminFichier))
+                            .FirstOrDefault() ?? string.Empty);
+                    if (System.IO.File.Exists(orphanName))
+                        System.IO.File.Delete(orphanName);
+                }
+                throw;
+            }
+
+            return null; // null means no error
+        }
+
+        /// <summary>True when the user is a registered participant of the thread.</summary>
+        private async Task<bool> IsParticipantAsync(int threadId, int userId)
+        {
+            return await _context.ThreadParticipants
+                .AnyAsync(tp => tp.ThreadId == threadId && tp.UserId == userId);
+        }
+
+        // ─── 1. POST: api/messages/thread ─────────────────────────────────────────
         [HttpPost("thread")]
         public async Task<IActionResult> StartThread([FromForm] CreateThreadDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
-            {
                 return Unauthorized();
-            }
 
-            var destinationExists = await _context.Utilisateurs.AnyAsync(u => u.Id == dto.DestinataireId);
-            if (!destinationExists)
+            // ── Resolve recipient list ───────────────────────────────────────────
+            List<int> recipientIds;
+            bool isGroup;
+
+            if (dto.DestinataireIds != null && dto.DestinataireIds.Count >= 1)
             {
-                return BadRequest("The recipient user could not be found.");
+                recipientIds = dto.DestinataireIds.Distinct().Where(id => id != currentUserId).ToList();
+                isGroup = recipientIds.Count > 1;
+            }
+            else if (dto.DestinataireId.HasValue && dto.DestinataireId.Value > 0)
+            {
+                recipientIds = new List<int> { dto.DestinataireId.Value };
+                isGroup = false;
+            }
+            else
+            {
+                return BadRequest("Au moins un destinataire est requis.");
             }
 
+            if (isGroup && string.IsNullOrWhiteSpace(dto.TitreGroupe))
+                return BadRequest("Un nom de groupe est requis pour une discussion de groupe.");
+
+            // ── Validate all recipients exist ────────────────────────────────────
+            foreach (var rid in recipientIds)
+            {
+                var exists = await _context.Utilisateurs.AnyAsync(u => u.Id == rid);
+                if (!exists) return BadRequest($"L'utilisateur destinataire (ID {rid}) est introuvable.");
+            }
+
+            // ── Create thread ────────────────────────────────────────────────────
             var newThread = new Models.Thread
             {
                 Objet = dto.Objet,
                 DateCreation = DateTime.UtcNow,
-                EstArchive = false
+                EstArchive = false,
+                EstGroupe = isGroup,
+                TitreGroupe = isGroup ? dto.TitreGroupe!.Trim() : null
             };
 
             _context.Threads.Add(newThread);
             await _context.SaveChangesAsync();
 
+            // ── Record all participants (creator + recipients) ───────────────────
+            var allParticipantIds = new List<int> { currentUserId };
+            allParticipantIds.AddRange(recipientIds);
+            allParticipantIds = allParticipantIds.Distinct().ToList();
+
+            foreach (var pid in allParticipantIds)
+            {
+                _context.ThreadParticipants.Add(new ThreadParticipant
+                {
+                    ThreadId = newThread.Id,
+                    UserId = pid
+                });
+            }
+            await _context.SaveChangesAsync();
+
+            // ── Create the first message ─────────────────────────────────────────
+            // For 1-to-1: populate DestinataireId. For groups: leave it null.
             var initialMessage = new Message
             {
                 ThreadId = newThread.Id,
                 ExpediteurId = currentUserId,
-                DestinataireId = dto.DestinataireId, // Preserving recipient reference data permanently
+                DestinataireId = isGroup ? null : recipientIds[0],
                 Corps = dto.Corps,
                 DateEnvoi = DateTime.UtcNow,
                 EstLu = false
@@ -59,136 +184,79 @@ namespace CspjMail.Api.Controllers
             _context.Messages.Add(initialMessage);
             await _context.SaveChangesAsync();
 
-            // Process Attachments
+            // ── Process attachments ──────────────────────────────────────────────
             if (dto.Attachments != null && dto.Attachments.Any())
             {
-                var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
-
-                // ── Security: MIME-type whitelist ────────────────────────────────────
-                var allowedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    "application/pdf",
-                    "application/msword",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    "application/vnd.ms-excel",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "application/vnd.ms-powerpoint",
-                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    "text/plain",
-                    "image/jpeg",
-                    "image/png",
-                    "image/gif",
-                    "image/webp"
-                };
-                const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB per file
-
-                foreach (var file in dto.Attachments)
-                {
-                    if (file.Length <= 0) continue;
-
-                    // ── Guard: file size ──────────────────────────────────────────────
-                    if (file.Length > MaxFileSizeBytes)
-                        return BadRequest($"Le fichier '{file.FileName}' dépasse la limite de 10 Mo autorisée.");
-
-                    // ── Guard: MIME type whitelist ──────────────────────────────────────
-                    if (!allowedMimeTypes.Contains(file.ContentType))
-                        return BadRequest($"Le type de fichier '{file.ContentType}' n'est pas autorisé.");
-
-                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                    var filePath = Path.Combine(uploadDir, fileName);
-
-                    // Write file to disk — stream is auto-disposed by 'using var'
-                    using var stream = new FileStream(filePath, FileMode.Create);
-                    await file.CopyToAsync(stream);
-
-                    _context.PiecesJointes.Add(new PiecesJointe
-                    {
-                        MessageId = initialMessage.Id,
-                        NomFichier = file.FileName,
-                        CheminFichier = "/uploads/" + fileName,
-                        TailleOctets = (int)file.Length,
-                        TypeContenu = file.ContentType,
-                        DateTeleversement = DateTime.UtcNow
-                    });
-                }
-
-                // Save all attachment records — if this fails, cleanup orphan files
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch
-                {
-                    // DB save failed: delete every file that was just written to prevent orphans
-                    foreach (var file in dto.Attachments.Where(f => f.Length > 0))
-                    {
-                        var orphanName = Path.Combine(uploadDir,
-                            _context.PiecesJointes.Local
-                                .Where(p => p.NomFichier == file.FileName)
-                                .Select(p => Path.GetFileName(p.CheminFichier))
-                                .FirstOrDefault() ?? string.Empty);
-                        if (System.IO.File.Exists(orphanName))
-                            System.IO.File.Delete(orphanName);
-                    }
-                    throw;
-                }
+                var attachErr = await ProcessAttachmentsAsync(dto.Attachments, initialMessage.Id);
+                if (attachErr != null) return attachErr;
             }
 
+            // ── Audit log ────────────────────────────────────────────────────────
             var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
             var senderEmail = currentUser?.Email ?? "Inconnu";
-            
-            var auditLog = new AuditLog
+
+            _context.AuditLogs.Add(new AuditLog
             {
                 DateHeure = DateTime.UtcNow,
-                TypeAction = "SEND_MESSAGE",
+                TypeAction = isGroup ? "CREATE_GROUP_THREAD" : "SEND_MESSAGE",
                 Utilisateur = senderEmail,
-                Description = $"Nouvelle discussion initiée : {dto.Objet}"
-            };
-            _context.AuditLogs.Add(auditLog);
+                Description = isGroup
+                    ? $"Discussion de groupe créée : « {dto.TitreGroupe} » avec {recipientIds.Count} participants."
+                    : $"Nouvelle discussion initiée : {dto.Objet}"
+            });
             await _context.SaveChangesAsync();
 
-            return Ok(new { ThreadId = newThread.Id, Message = "Thread created successfully." });
+            return Ok(new { ThreadId = newThread.Id, Message = "Thread created successfully.", EstGroupe = isGroup });
         }
 
-        // 2. POST: api/messages/thread/{id}/reply (Reply inside conversation checking root thread history context)
-        // 2. POST: api/messages/thread/{id}/reply (Reply inside conversation checking root thread history context)
+        // ─── 2. POST: api/messages/thread/{id}/reply ──────────────────────────────
         [HttpPost("thread/{threadId}/reply")]
         public async Task<IActionResult> ReplyToThread(int threadId, [FromForm] ReplyMessageDto dto)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
-            {
                 return Unauthorized();
-            }
 
-            // Obtain the first root message within this thread container to discover original routing identity bounds
-            var firstMessageInThread = await _context.Messages
-                .Where(m => m.ThreadId == threadId)
-                .OrderBy(m => m.DateEnvoi)
-                .FirstOrDefaultAsync();
-
-            if (firstMessageInThread == null)
+            // ── Auth: current user must be a registered participant ──────────────
+            if (!await IsParticipantAsync(threadId, currentUserId))
             {
-                return NotFound("The targeted email thread does not exist or contains no original message contexts.");
+                // Backward-compat fallback: check legacy DestinataireId on the first message
+                var firstMsg = await _context.Messages
+                    .Where(m => m.ThreadId == threadId)
+                    .OrderBy(m => m.DateEnvoi)
+                    .FirstOrDefaultAsync();
+
+                if (firstMsg == null) return NotFound("La discussion n'existe pas.");
+                if (firstMsg.ExpediteurId != currentUserId && firstMsg.DestinataireId != currentUserId)
+                    return Forbid("Vous n'êtes pas autorisé à répondre dans cette discussion.");
             }
 
-            // Enforce secure visibility access validation to prevent cross-account injection injections
-            if (firstMessageInThread.ExpediteurId != currentUserId && firstMessageInThread.DestinataireId != currentUserId)
+            var thread = await _context.Threads
+                .Include(t => t.Participants)
+                .FirstOrDefaultAsync(t => t.Id == threadId);
+
+            if (thread == null) return NotFound("Discussion introuvable.");
+
+            // ── Determine DestinataireId ─────────────────────────────────────────
+            // For group threads: null. For 1-to-1: the other party.
+            int? replyDestinataireId = null;
+            if (!thread.EstGroupe)
             {
-                return Forbid("You do not have administrative routing authorization to reply within this communication thread.");
-            }
+                var firstMessage = await _context.Messages
+                    .Where(m => m.ThreadId == threadId)
+                    .OrderBy(m => m.DateEnvoi)
+                    .FirstOrDefaultAsync();
 
-            // Infer correct opposite participant mapping coordinates
-            int runtimeRecipientId = (firstMessageInThread.ExpediteurId == currentUserId) 
-                ? firstMessageInThread.DestinataireId 
-                : firstMessageInThread.ExpediteurId;
+                replyDestinataireId = firstMessage?.ExpediteurId == currentUserId
+                    ? firstMessage?.DestinataireId
+                    : firstMessage?.ExpediteurId;
+            }
 
             var replyMessage = new Message
             {
                 ThreadId = threadId,
                 ExpediteurId = currentUserId,
-                DestinataireId = runtimeRecipientId,
+                DestinataireId = replyDestinataireId,
                 Corps = dto.Corps,
                 DateEnvoi = DateTime.UtcNow,
                 EstLu = false
@@ -197,94 +265,26 @@ namespace CspjMail.Api.Controllers
             _context.Messages.Add(replyMessage);
             await _context.SaveChangesAsync();
 
-            // Process Attachments
             if (dto.Attachments != null && dto.Attachments.Any())
             {
-                var uploadDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-                if (!Directory.Exists(uploadDir)) Directory.CreateDirectory(uploadDir);
-
-                // ── Security: MIME-type whitelist (identical to StartThread) ─────────────
-                var allowedMimeTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    "application/pdf",
-                    "application/msword",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    "application/vnd.ms-excel",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    "application/vnd.ms-powerpoint",
-                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    "text/plain",
-                    "image/jpeg",
-                    "image/png",
-                    "image/gif",
-                    "image/webp"
-                };
-                const long MaxFileSizeBytes = 10 * 1024 * 1024; // 10 MB per file
-
-                foreach (var file in dto.Attachments)
-                {
-                    if (file.Length <= 0) continue;
-
-                    if (file.Length > MaxFileSizeBytes)
-                        return BadRequest($"Le fichier '{file.FileName}' dépasse la limite de 10 Mo autorisée.");
-
-                    if (!allowedMimeTypes.Contains(file.ContentType))
-                        return BadRequest($"Le type de fichier '{file.ContentType}' n'est pas autorisé.");
-
-                    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-                    var filePath = Path.Combine(uploadDir, fileName);
-
-                    using var stream = new FileStream(filePath, FileMode.Create);
-                    await file.CopyToAsync(stream);
-
-                    _context.PiecesJointes.Add(new PiecesJointe
-                    {
-                        MessageId = replyMessage.Id,
-                        NomFichier = file.FileName,
-                        CheminFichier = "/uploads/" + fileName,
-                        TailleOctets = (int)file.Length,
-                        TypeContenu = file.ContentType,
-                        DateTeleversement = DateTime.UtcNow
-                    });
-                }
-
-                try
-                {
-                    await _context.SaveChangesAsync();
-                }
-                catch
-                {
-                    foreach (var file in dto.Attachments.Where(f => f.Length > 0))
-                    {
-                        var orphanName = Path.Combine(uploadDir,
-                            _context.PiecesJointes.Local
-                                .Where(p => p.NomFichier == file.FileName)
-                                .Select(p => Path.GetFileName(p.CheminFichier))
-                                .FirstOrDefault() ?? string.Empty);
-                        if (System.IO.File.Exists(orphanName))
-                            System.IO.File.Delete(orphanName);
-                    }
-                    throw;
-                }
+                var attachErr = await ProcessAttachmentsAsync(dto.Attachments, replyMessage.Id);
+                if (attachErr != null) return attachErr;
             }
 
             var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
-            var senderEmail = currentUser?.Email ?? "Inconnu";
-
-            var auditLog = new AuditLog
+            _context.AuditLogs.Add(new AuditLog
             {
                 DateHeure = DateTime.UtcNow,
                 TypeAction = "REPLY_MESSAGE",
-                Utilisateur = senderEmail,
+                Utilisateur = currentUser?.Email ?? "Inconnu",
                 Description = $"Réponse envoyée dans la discussion ID {threadId}"
-            };
-            _context.AuditLogs.Add(auditLog);
+            });
             await _context.SaveChangesAsync();
 
             return Ok(new { MessageId = replyMessage.Id, Message = "Reply successfully sent." });
         }
 
-        // 3. GET: api/messages/thread/{id} (Fetch full conversation with secure IDOR boundaries)
+        // ─── 3. GET: api/messages/thread/{id} ────────────────────────────────────
         [HttpGet("thread/{threadId}")]
         public async Task<IActionResult> GetThreadDetails(int threadId)
         {
@@ -296,47 +296,73 @@ namespace CspjMail.Api.Controllers
                     .ThenInclude(m => m.Expediteur)
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.PiecesJointes)
+                .Include(t => t.Participants)
+                    .ThenInclude(tp => tp.Utilisateur)
+                        .ThenInclude(u => u.Entreprise)
                 .FirstOrDefaultAsync(t => t.Id == threadId);
 
             if (thread == null) return NotFound("Thread not found.");
 
-            // Anti-IDOR Authorization Gate Check
-            // FIX: If the thread has NO messages (DB anomaly), we DENY access by default.
-            // Previously, sampleMsg == null would silently skip the check and return Ok.
-            var sampleMsg = thread.Messages.FirstOrDefault();
-            if (sampleMsg == null ||
-                (sampleMsg.ExpediteurId != currentUserId && sampleMsg.DestinataireId != currentUserId))
+            // ── IDOR Authorization Gate ──────────────────────────────────────────
+            // Primary check: ThreadParticipant table (works for both 1-to-1 and group).
+            bool isParticipant = thread.Participants.Any(tp => tp.UserId == currentUserId);
+
+            // Backward-compat fallback for old threads without participant rows.
+            if (!isParticipant)
             {
-                return Forbid("Access denied to this conversational stream thread context.");
+                var sampleMsg = thread.Messages.FirstOrDefault();
+                if (sampleMsg == null ||
+                    (sampleMsg.ExpediteurId != currentUserId && sampleMsg.DestinataireId != currentUserId))
+                {
+                    return Forbid("Accès refusé à cette discussion.");
+                }
             }
 
-            var unreadIncomingMessages = thread.Messages.Where(m => m.ExpediteurId != currentUserId && !m.EstLu);
-            foreach (var msg in unreadIncomingMessages)
-            {
-                msg.EstLu = true;
-            }
+            // ── Mark incoming messages as read ───────────────────────────────────
+            var unread = thread.Messages.Where(m => m.ExpediteurId != currentUserId && !m.EstLu);
+            foreach (var msg in unread) msg.EstLu = true;
             await _context.SaveChangesAsync();
 
-            // Get all unique participant IDs in the thread
-            var participantIds = thread.Messages
-                .SelectMany(m => new[] { m.ExpediteurId, m.DestinataireId })
-                .Distinct()
-                .Where(id => id != currentUserId) // Exclude current user from recipients
-                .ToList();
+            // ── Build participant lists ───────────────────────────────────────────
+            // All participants from junction table (preferred path)
+            List<ContactDto> allParticipants;
+            if (thread.Participants.Any())
+            {
+                allParticipants = thread.Participants
+                    .Select(tp => new ContactDto
+                    {
+                        Id = tp.Utilisateur.Id,
+                        Email = tp.Utilisateur.Email,
+                        NomComplet = $"{tp.Utilisateur.Prenom} {tp.Utilisateur.Nom}",
+                        Role = tp.Utilisateur.Role,
+                        EntrepriseNom = tp.Utilisateur.Entreprise?.Nom ?? "Structure inconnue"
+                    }).ToList();
+            }
+            else
+            {
+                // Fallback: derive from message Expediteur/DestinataireId columns
+                var participantIds = thread.Messages
+                    .SelectMany(m => new[] { (int?)m.ExpediteurId, m.DestinataireId })
+                    .Where(id => id.HasValue)
+                    .Select(id => id!.Value)
+                    .Distinct()
+                    .ToList();
 
-            // Fetch recipient details
-            var recipients = await _context.Utilisateurs
-                .Where(u => participantIds.Contains(u.Id))
-                .Include(u => u.Entreprise)
-                .Select(u => new ContactDto
-                {
-                    Id = u.Id,
-                    Email = u.Email,
-                    NomComplet = $"{u.Prenom} {u.Nom}",
-                    Role = u.Role,
-                    EntrepriseNom = u.Entreprise.Nom
-                })
-                .ToListAsync();
+                allParticipants = await _context.Utilisateurs
+                    .Where(u => participantIds.Contains(u.Id))
+                    .Include(u => u.Entreprise)
+                    .Select(u => new ContactDto
+                    {
+                        Id = u.Id,
+                        Email = u.Email,
+                        NomComplet = $"{u.Prenom} {u.Nom}",
+                        Role = u.Role,
+                        EntrepriseNom = u.Entreprise != null ? u.Entreprise.Nom : "Structure inconnue"
+                    }).ToListAsync();
+            }
+
+            // "Destinataires" = everyone except the current user (for the thread header)
+            var destinataires = allParticipants.Where(p => p.Id != currentUserId).ToList();
 
             var response = new ThreadDetailsDto
             {
@@ -344,7 +370,10 @@ namespace CspjMail.Api.Controllers
                 Objet = thread.Objet,
                 DateCreation = thread.DateCreation,
                 EstArchive = thread.EstArchive,
-                Destinataires = recipients,
+                EstGroupe = thread.EstGroupe,
+                TitreGroupe = thread.TitreGroupe,
+                Destinataires = destinataires,
+                TousLesParticipants = allParticipants,
                 Messages = thread.Messages
                     .OrderBy(m => m.DateEnvoi)
                     .Select(m => new MessageDisplayDto
@@ -354,7 +383,6 @@ namespace CspjMail.Api.Controllers
                         DateEnvoi = m.DateEnvoi,
                         EstLu = m.EstLu,
                         ExpediteurId = m.ExpediteurId,
-                        // FIX: Null-safe mapping — prevents NullReferenceException on broken FK
                         ExpediteurNomComplet = m.Expediteur != null
                             ? $"{m.Expediteur.Prenom} {m.Expediteur.Nom}"
                             : "Utilisateur inconnu",
@@ -373,29 +401,28 @@ namespace CspjMail.Api.Controllers
             return Ok(response);
         }
 
-        // 4. GET: api/messages/inbox
-        // Returns only threads where the current user is the RECIPIENT of at least one message.
-        // This strictly excludes threads the user only sent — those belong in /sent.
+        // ─── 4. GET: api/messages/inbox ───────────────────────────────────────────
         [HttpGet("inbox")]
         public async Task<IActionResult> GetInbox()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            // A thread belongs in the inbox only when at least one of its messages
-            // was addressed TO the current user (DestinataireId), not sent BY them.
+            // Include threads where the user is a registered participant (covers group + legacy 1-to-1)
             var threads = await _context.Threads
-                .Where(t => !t.EstArchive
-                         && t.Messages.Any(m => m.DestinataireId == currentUserId))
+                .Where(t => !t.EstArchive &&
+                    (t.Participants.Any(tp => tp.UserId == currentUserId) ||           // group/new 1-to-1
+                     t.Messages.Any(m => m.DestinataireId == currentUserId)))          // legacy fallback
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Participants)
                 .ToListAsync();
 
-            var inboxSummaries = threads.Select(t =>
+            var summaries = threads.Select(t =>
             {
-                // FIX: Use FirstOrDefault() to prevent InvalidOperationException on empty threads
                 var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
-                if (lastMessage == null) return null; // Skip malformed threads
+                if (lastMessage == null) return null;
+
                 return new ThreadSummaryDto
                 {
                     ThreadId = t.Id,
@@ -405,44 +432,42 @@ namespace CspjMail.Api.Controllers
                     DernierExpediteurNom = lastMessage.Expediteur != null
                         ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
                         : "Inconnu",
-                    // Unread count: only messages sent BY someone else TO the current user
-                    ADesMessagesNonLus = t.Messages.Any(m => m.DestinataireId == currentUserId
-                                                              && m.ExpediteurId != currentUserId
-                                                              && !m.EstLu),
-                    EstArchive = t.EstArchive
+                    ADesMessagesNonLus = t.Messages.Any(m =>
+                        m.ExpediteurId != currentUserId && !m.EstLu &&
+                        (m.DestinataireId == currentUserId ||
+                         t.Participants.Any(tp => tp.UserId == currentUserId))),
+                    EstArchive = t.EstArchive,
+                    EstGroupe = t.EstGroupe,
+                    TitreGroupe = t.TitreGroupe,
+                    NombreParticipants = t.Participants.Count > 0
+                        ? t.Participants.Count
+                        : 2 // legacy 1-to-1 assumption
                 };
             })
             .Where(s => s != null)
             .OrderByDescending(s => s!.DerniereActivite)
             .ToList();
 
-            return Ok(inboxSummaries);
+            return Ok(summaries);
         }
 
-        // 5. GET: api/messages/sent
-        // Returns only threads originally initiated (started) by the current user.
-        // The first message's ExpediteurId determines ownership — replies from either
-        // party are visible when the thread is opened, but the thread row only appears
-        // here if the user created the conversation.
+        // ─── 5. GET: api/messages/sent ────────────────────────────────────────────
         [HttpGet("sent")]
         public async Task<IActionResult> GetSent()
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            // Fetch threads where the current user sent at least one message
-            // (covers both threads they started and conversations they replied to)
-            // and the user is NOT the sole recipient — i.e., they acted as the sender.
             var threads = await _context.Threads
-                .Where(t => !t.EstArchive
-                         && t.Messages.Any(m => m.ExpediteurId == currentUserId))
+                .Where(t => !t.EstArchive &&
+                    (t.Messages.Any(m => m.ExpediteurId == currentUserId)))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Participants)
                 .ToListAsync();
 
             var sentSummaries = threads.Select(t =>
             {
-                // FIX: Use FirstOrDefault() instead of First()
                 var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
                 if (lastMessage == null) return null;
                 return new ThreadSummaryDto
@@ -454,8 +479,11 @@ namespace CspjMail.Api.Controllers
                     DernierExpediteurNom = lastMessage.Expediteur != null
                         ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
                         : "Inconnu",
-                    ADesMessagesNonLus = false, // Sent items have no unread concept for the sender
-                    EstArchive = t.EstArchive
+                    ADesMessagesNonLus = false,
+                    EstArchive = t.EstArchive,
+                    EstGroupe = t.EstGroupe,
+                    TitreGroupe = t.TitreGroupe,
+                    NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
                 };
             })
             .Where(s => s != null)
@@ -465,20 +493,28 @@ namespace CspjMail.Api.Controllers
             return Ok(sentSummaries);
         }
 
-        // 6. PUT: api/messages/thread/{id}/archive (Toggles archiving parameters if part of participants matrix)
+        // ─── 6. PUT: api/messages/thread/{id}/archive ─────────────────────────────
         [HttpPut("thread/{threadId}/archive")]
         public async Task<IActionResult> ToggleArchiveThread(int threadId)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            var firstMessage = await _context.Messages.Where(m => m.ThreadId == threadId).FirstOrDefaultAsync();
-            if (firstMessage == null) return NotFound("Thread context not located.");
+            // Primary auth: ThreadParticipant
+            bool authorized = await IsParticipantAsync(threadId, currentUserId);
 
-            if (firstMessage.ExpediteurId != currentUserId && firstMessage.DestinataireId != currentUserId)
+            // Backward-compat: check first message
+            if (!authorized)
             {
-                return Forbid();
+                var firstMessage = await _context.Messages
+                    .Where(m => m.ThreadId == threadId)
+                    .FirstOrDefaultAsync();
+                if (firstMessage == null) return NotFound("Thread context not located.");
+                authorized = firstMessage.ExpediteurId == currentUserId ||
+                             firstMessage.DestinataireId == currentUserId;
             }
+
+            if (!authorized) return Forbid();
 
             var thread = await _context.Threads.FindAsync(threadId);
             if (thread == null) return NotFound("Thread not found.");
@@ -486,10 +522,11 @@ namespace CspjMail.Api.Controllers
             thread.EstArchive = !thread.EstArchive;
             await _context.SaveChangesAsync();
 
-            return Ok(new { ThreadId = thread.Id, EstArchive = thread.EstArchive, Message = $"Thread archive status set to {thread.EstArchive}." });
+            return Ok(new { ThreadId = thread.Id, EstArchive = thread.EstArchive,
+                Message = $"Thread archive status set to {thread.EstArchive}." });
         }
 
-        // 7. GET: api/messages/archive (Gets archived communication records for this user context)
+        // ─── 7. GET: api/messages/archive ─────────────────────────────────────────
         [HttpGet("archive")]
         public async Task<IActionResult> GetArchive()
         {
@@ -497,13 +534,16 @@ namespace CspjMail.Api.Controllers
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
             var threads = await _context.Threads
-                .Where(t => t.EstArchive && t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId))
+                .Where(t => t.EstArchive &&
+                    (t.Participants.Any(tp => tp.UserId == currentUserId) ||
+                     t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Participants)
                 .ToListAsync();
 
-            var archiveSummaries = threads.Select(t => {
-                // FIX: Use FirstOrDefault() instead of First()
+            var archiveSummaries = threads.Select(t =>
+            {
                 var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
                 if (lastMessage == null) return null;
                 return new ThreadSummaryDto
@@ -516,7 +556,10 @@ namespace CspjMail.Api.Controllers
                         ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
                         : "Inconnu",
                     ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
-                    EstArchive = t.EstArchive
+                    EstArchive = t.EstArchive,
+                    EstGroupe = t.EstGroupe,
+                    TitreGroupe = t.TitreGroupe,
+                    NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
                 };
             })
             .Where(s => s != null)
@@ -526,7 +569,7 @@ namespace CspjMail.Api.Controllers
             return Ok(archiveSummaries);
         }
 
-        // 8. GET: api/messages/search (Searches across threads securely checking matching keywords)
+        // ─── 8. GET: api/messages/search ──────────────────────────────────────────
         [HttpGet("search")]
         public async Task<IActionResult> SearchMessages([FromQuery] string searchTerm)
         {
@@ -538,14 +581,19 @@ namespace CspjMail.Api.Controllers
             var normalizedTerm = searchTerm.ToLower();
 
             var matchingThreads = await _context.Threads
-                .Where(t => (t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)) &&
-                            (t.Objet.ToLower().Contains(normalizedTerm) || t.Messages.Any(m => m.Corps.ToLower().Contains(normalizedTerm))))
+                .Where(t =>
+                    (t.Participants.Any(tp => tp.UserId == currentUserId) ||
+                     t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)) &&
+                    (t.Objet.ToLower().Contains(normalizedTerm) ||
+                     (t.TitreGroupe != null && t.TitreGroupe.ToLower().Contains(normalizedTerm)) ||
+                     t.Messages.Any(m => m.Corps.ToLower().Contains(normalizedTerm))))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Participants)
                 .ToListAsync();
 
-            var results = matchingThreads.Select(t => {
-                // FIX: Use FirstOrDefault() instead of First()
+            var results = matchingThreads.Select(t =>
+            {
                 var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
                 if (lastMessage == null) return null;
                 return new ThreadSummaryDto
@@ -558,7 +606,10 @@ namespace CspjMail.Api.Controllers
                         ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
                         : "Inconnu",
                     ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
-                    EstArchive = t.EstArchive
+                    EstArchive = t.EstArchive,
+                    EstGroupe = t.EstGroupe,
+                    TitreGroupe = t.TitreGroupe,
+                    NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
                 };
             })
             .Where(s => s != null)
@@ -568,7 +619,7 @@ namespace CspjMail.Api.Controllers
             return Ok(results);
         }
 
-        // 9. GET: api/messages/contacts (Get selectable targets list)
+        // ─── 9. GET: api/messages/contacts ────────────────────────────────────────
         [HttpGet("contacts")]
         public async Task<IActionResult> GetContactsList()
         {
@@ -576,7 +627,6 @@ namespace CspjMail.Api.Controllers
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
             var contacts = await _context.Utilisateurs
-                // FIX 2-B: Also exclude soft-deleted users from the contacts list
                 .Where(u => u.Actif && !u.IsDeleted && u.Id != currentUserId)
                 .Include(u => u.Entreprise)
                 .Select(u => new ContactDto
@@ -585,7 +635,6 @@ namespace CspjMail.Api.Controllers
                     Email = u.Email,
                     NomComplet = $"{u.Prenom} {u.Nom}",
                     Role = u.Role,
-                    // FIX 2-C & 4-A: Null-safe navigation for optional Entreprise relationship
                     EntrepriseNom = u.Entreprise != null ? u.Entreprise.Nom : "Structure inconnue"
                 })
                 .ToListAsync();
@@ -593,42 +642,40 @@ namespace CspjMail.Api.Controllers
             return Ok(contacts);
         }
 
-        // 10. GET: api/messages/attachments/download/{id}
-        // Forces download of an attachment by its DB record ID.
-        // Verifies the requesting user is a participant in the parent message's thread (IDOR guard).
+        // ─── 10. GET: api/messages/attachments/download/{id} ─────────────────────
         [HttpGet("attachments/download/{id:int}")]
         public async Task<IActionResult> DownloadAttachment(int id)
         {
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            // Load the attachment and its parent message (for access check)
             var attachment = await _context.PiecesJointes
                 .Include(p => p.Message)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (attachment == null) return NotFound("Pièce jointe introuvable.");
 
-            // IDOR guard: only sender or recipient of the parent message may download
             var msg = attachment.Message;
-            if (msg.ExpediteurId != currentUserId && msg.DestinataireId != currentUserId)
+
+            // IDOR guard: participant in thread (group or 1-to-1) OR direct message participant
+            bool authorized = await IsParticipantAsync(msg.ThreadId, currentUserId);
+            if (!authorized)
             {
-                return Forbid("Vous n'êtes pas autorisé à accéder à cette pièce jointe.");
+                authorized = msg.ExpediteurId == currentUserId || msg.DestinataireId == currentUserId;
             }
 
-            // Resolve physical path — CheminFichier is stored as "/uploads/<guid.ext>"
+            if (!authorized)
+                return Forbid("Vous n'êtes pas autorisé à accéder à cette pièce jointe.");
+
             var physicalPath = Path.Combine(
                 Directory.GetCurrentDirectory(),
                 "wwwroot",
-                attachment.CheminFichier.TrimStart('/')   // strip leading slash before Path.Combine
+                attachment.CheminFichier.TrimStart('/')
             );
 
             if (!System.IO.File.Exists(physicalPath))
-            {
                 return NotFound("Le fichier physique est introuvable sur le serveur.");
-            }
 
-            // Return the file with Content-Disposition: attachment to force browser download
             var contentType = string.IsNullOrWhiteSpace(attachment.TypeContenu)
                 ? "application/octet-stream"
                 : attachment.TypeContenu;

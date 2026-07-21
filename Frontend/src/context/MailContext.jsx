@@ -75,14 +75,25 @@ export const MailProvider = ({ children }) => {
     }
   };
 
-  // Send a brand new message thread
-  const sendNewMessage = async ({ subject, body, receiverId, attachments }) => {
+  // Send a brand new message thread (1-to-1 or group)
+  const sendNewMessage = async ({ subject, body, receiverId, receiverIds, titreGroupe, attachments }) => {
     try {
       const formData = new FormData();
       formData.append('objet', subject.trim());
       formData.append('corps', body.trim());
-      formData.append('destinataireId', parseInt(receiverId, 10));
-      
+
+      const isGroup = receiverIds && receiverIds.length > 1;
+
+      if (isGroup) {
+        // Group thread: append each ID under the array field name
+        receiverIds.forEach(id => formData.append('destinataireIds', id));
+        if (titreGroupe) formData.append('titreGroupe', titreGroupe.trim());
+      } else {
+        // 1-to-1: use the singular field
+        const singleId = receiverIds?.[0] ?? receiverId;
+        formData.append('destinataireId', parseInt(singleId, 10));
+      }
+
       if (attachments && attachments.length > 0) {
         attachments.forEach(file => formData.append('attachments', file));
       }

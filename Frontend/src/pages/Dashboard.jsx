@@ -537,20 +537,55 @@ export default function Dashboard() {
                   <div className="px-6 py-5 border-b border-slate-200 bg-white">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
-                        <h2 className="text-xl font-semibold text-slate-800 truncate mb-2">{selectedMessage.objet}</h2>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <span className="font-medium">De:</span>
-                          <span className="text-slate-700">
-                            {selectedMessage.messages?.[0]?.expediteurNomComplet || 'Inconnu'} 
-                            <span className="text-xs font-mono text-slate-500 ml-1">({selectedMessage.messages?.[0]?.expediteurRole || ''})</span>
-                          </span>
-                          <span className="text-slate-400">à</span>
-                          <span className="text-slate-700">
-                            {selectedMessage.destinataires?.map(d => d.nomComplet).join(', ') || 'Destinataires'}
-                          </span>
-                        </div>
+
+                        {/* Group header */}
+                        {selectedMessage.estGroupe ? (
+                          <>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-violet-100 text-violet-700 border border-violet-200">
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Groupe
+                              </span>
+                            </div>
+                            <h2 className="text-xl font-semibold text-slate-800 truncate mb-1">
+                              {selectedMessage.titreGroupe || selectedMessage.objet}
+                            </h2>
+                            {/* Participant summary */}
+                            {(() => {
+                              const all = selectedMessage.tousLesParticipants || selectedMessage.destinataires || [];
+                              const maxShow = 3;
+                              const shown = all.slice(0, maxShow).map(p => p.nomComplet).join(', ');
+                              const remaining = all.length - maxShow;
+                              return (
+                                <p className="text-xs text-slate-500">
+                                  <span className="font-medium text-slate-600">Participants :</span>{' '}
+                                  {shown}{remaining > 0 && ` +${remaining} autre(s)`}
+                                </p>
+                              );
+                            })()}
+                          </>
+                        ) : (
+                          /* Individual thread header */
+                          <>
+                            <h2 className="text-xl font-semibold text-slate-800 truncate mb-2">{selectedMessage.objet}</h2>
+                            <div className="flex items-center gap-2 text-sm text-slate-600">
+                              <span className="font-medium">De:</span>
+                              <span className="text-slate-700">
+                                {selectedMessage.messages?.[0]?.expediteurNomComplet || 'Inconnu'}
+                                <span className="text-xs font-mono text-slate-500 ml-1">({selectedMessage.messages?.[0]?.expediteurRole || ''})</span>
+                              </span>
+                              <span className="text-slate-400">à</span>
+                              <span className="text-slate-700">
+                                {selectedMessage.destinataires?.map(d => d.nomComplet).join(', ') || 'Destinataires'}
+                              </span>
+                            </div>
+                          </>
+                        )}
+
                       </div>
-                      <button 
+                      <button
                         onClick={() => toggleArchiveMessage(selectedMessage.threadId)}
                         className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 shadow-sm transition flex items-center gap-2 flex-shrink-0"
                       >
