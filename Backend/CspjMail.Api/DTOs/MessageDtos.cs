@@ -18,6 +18,12 @@ namespace CspjMail.Api.DTOs
         /// <summary>Display name for the group (required when creating a group thread).</summary>
         public string? TitreGroupe { get; set; }
 
+        /// <summary>
+        /// When true and DestinataireIds contains ≥2 IDs, the controller creates N independent
+        /// 1-to-1 threads (one per recipient) instead of a single shared group chatroom.
+        /// </summary>
+        public bool EstDiffusion { get; set; }
+
         public List<IFormFile>? Attachments { get; set; }
     }
 

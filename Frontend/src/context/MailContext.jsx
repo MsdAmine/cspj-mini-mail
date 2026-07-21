@@ -75,19 +75,21 @@ export const MailProvider = ({ children }) => {
     }
   };
 
-  // Send a brand new message thread (1-to-1 or group)
-  const sendNewMessage = async ({ subject, body, receiverId, receiverIds, titreGroupe, attachments }) => {
+  // Send a brand new message thread (1-to-1, group, or broadcast diffusion)
+  const sendNewMessage = async ({ subject, body, receiverId, receiverIds, titreGroupe, estDiffusion, attachments }) => {
     try {
       const formData = new FormData();
       formData.append('objet', subject.trim());
       formData.append('corps', body.trim());
 
-      const isGroup = receiverIds && receiverIds.length > 1;
+      const isGroup     = !estDiffusion && receiverIds && receiverIds.length > 1;
+      const isBroadcast = estDiffusion  && receiverIds && receiverIds.length >= 1;
 
-      if (isGroup) {
-        // Group thread: append each ID under the array field name
+      if (isGroup || isBroadcast) {
+        // Multi-recipient: append each ID under the array field name
         receiverIds.forEach(id => formData.append('destinataireIds', id));
-        if (titreGroupe) formData.append('titreGroupe', titreGroupe.trim());
+        if (isGroup && titreGroupe) formData.append('titreGroupe', titreGroupe.trim());
+        if (isBroadcast)            formData.append('estDiffusion', 'true');
       } else {
         // 1-to-1: use the singular field
         const singleId = receiverIds?.[0] ?? receiverId;
