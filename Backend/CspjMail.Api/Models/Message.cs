@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -15,8 +15,11 @@ public partial class Message
 
     public int ExpediteurId { get; set; }
 
-    // Added to resolve AntiGravity's compliance flaw reporting
-    public int DestinataireId { get; set; }
+    /// <summary>
+    /// Populated for 1-to-1 messages. Null for group thread messages —
+    /// authorization is handled via ThreadParticipant in that case.
+    /// </summary>
+    public int? DestinataireId { get; set; }
 
     [Column(TypeName = "text")]
     public string Corps { get; set; } = null!;
@@ -29,9 +32,9 @@ public partial class Message
     [InverseProperty("Messages")]
     public virtual Utilisateur Expediteur { get; set; } = null!;
 
-    // Configured recipient identity relationship mapping
+    // Nullable navigation — only populated for 1-to-1 messages
     [ForeignKey("DestinataireId")]
-    public virtual Utilisateur Destinataire { get; set; } = null!;
+    public virtual Utilisateur? Destinataire { get; set; }
 
     [InverseProperty("Message")]
     public virtual ICollection<PiecesJointe> PiecesJointes { get; set; } = new List<PiecesJointe>();
@@ -39,4 +42,4 @@ public partial class Message
     [ForeignKey("ThreadId")]
     [InverseProperty("Messages")]
     public virtual Thread Thread { get; set; } = null!;
-}
+}

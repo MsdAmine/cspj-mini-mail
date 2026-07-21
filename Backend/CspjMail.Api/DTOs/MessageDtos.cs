@@ -2,12 +2,22 @@ using Microsoft.AspNetCore.Http;
 
 namespace CspjMail.Api.DTOs
 {
-    // Payload used to start a brand new conversation thread
+    // Payload used to start a brand new conversation thread.
+    // Supports both 1-to-1 (DestinataireId) and group (DestinataireIds + TitreGroupe) modes.
     public class CreateThreadDto
     {
         public string Objet { get; set; } = null!;
         public string Corps { get; set; } = null!;
-        public int DestinataireId { get; set; }
+
+        /// <summary>Used for 1-to-1 messages. Ignored when DestinataireIds is provided.</summary>
+        public int? DestinataireId { get; set; }
+
+        /// <summary>Used for group messages. When set with ≥2 IDs the thread is marked as a group.</summary>
+        public List<int>? DestinataireIds { get; set; }
+
+        /// <summary>Display name for the group (required when creating a group thread).</summary>
+        public string? TitreGroupe { get; set; }
+
         public List<IFormFile>? Attachments { get; set; }
     }
 
@@ -25,8 +35,13 @@ namespace CspjMail.Api.DTOs
         public string Objet { get; set; } = null!;
         public DateTime DateCreation { get; set; }
         public bool EstArchive { get; set; }
+        public bool EstGroupe { get; set; }
+        public string? TitreGroupe { get; set; }
         public List<MessageDisplayDto> Messages { get; set; } = new();
+        /// <summary>All participants OTHER than the current user (used for the "De/À" header).</summary>
         public List<ContactDto> Destinataires { get; set; } = new();
+        /// <summary>All participants including the current user (for group member summary).</summary>
+        public List<ContactDto> TousLesParticipants { get; set; } = new();
     }
 
     public class PieceJointeDto
@@ -61,6 +76,12 @@ namespace CspjMail.Api.DTOs
         public string DernierExpediteurNom { get; set; } = null!;
         public bool ADesMessagesNonLus { get; set; }
         public bool EstArchive { get; set; }
+        /// <summary>True if this is a group thread.</summary>
+        public bool EstGroupe { get; set; }
+        /// <summary>Display name for group threads.</summary>
+        public string? TitreGroupe { get; set; }
+        /// <summary>Total number of participants (for display in the sidebar).</summary>
+        public int NombreParticipants { get; set; }
     }
 
     // Represents a contact selectable when creating a new thread
@@ -131,4 +152,4 @@ namespace CspjMail.Api.DTOs
         public string Utilisateur { get; set; } = null!;
         public string Description { get; set; } = null!;
     }
-}
+}

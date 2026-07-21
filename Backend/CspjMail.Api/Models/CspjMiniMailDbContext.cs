@@ -21,6 +21,7 @@ public partial class CspjMiniMailDbContext : DbContext
     public virtual DbSet<Thread> Threads { get; set; }
     public virtual DbSet<Utilisateur> Utilisateurs { get; set; }
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
+    public virtual DbSet<ThreadParticipant> ThreadParticipants { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -50,11 +51,12 @@ public partial class CspjMiniMailDbContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Messages_Utilisateurs");
 
-            // Added configuration for Destinataire foreign key relation mapping
+            // DestinataireId is nullable — null for group thread messages.
             entity.HasOne(d => d.Destinataire)
                 .WithMany()
                 .HasForeignKey(d => d.DestinataireId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
+                .IsRequired(false)
                 .HasConstraintName("FK_Messages_Recipient_Utilisateurs");
 
             entity.HasOne(d => d.Thread).WithMany(p => p.Messages).HasConstraintName("FK_Messages_Threads");
@@ -71,6 +73,25 @@ public partial class CspjMiniMailDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__Threads__3214EC07ADEA7B22");
             entity.Property(e => e.DateCreation).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.EstGroupe).HasDefaultValue(false);
+        });
+
+        // Composite PK for the junction table
+        modelBuilder.Entity<ThreadParticipant>(entity =>
+        {
+            entity.HasKey(tp => new { tp.ThreadId, tp.UserId });
+
+            entity.HasOne(tp => tp.Thread)
+                .WithMany(t => t.Participants)
+                .HasForeignKey(tp => tp.ThreadId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_ThreadParticipants_Threads");
+
+            entity.HasOne(tp => tp.Utilisateur)
+                .WithMany()
+                .HasForeignKey(tp => tp.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ThreadParticipants_Utilisateurs");
         });
 
         modelBuilder.Entity<Utilisateur>(entity =>
@@ -87,4 +108,4 @@ public partial class CspjMiniMailDbContext : DbContext
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
-}
+}
