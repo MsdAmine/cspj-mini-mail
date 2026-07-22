@@ -140,9 +140,9 @@ export default function ManageUsers() {
       {/* Title & Stats summary */}
       <div className="border-b border-slate-200 pb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">إدارة المستخدمين</h2>
+          <h2 className="text-xl font-bold text-slate-900">Gestion des Utilisateurs</h2>
           <p className="text-slate-500 text-xs mt-1">
-            عرض وبحث وتفعيل/تعطيل أو حذف حسابات المستخدمين على المنصة.
+            Visualisez, recherchez, activez/désactivez ou supprimez les comptes utilisateurs de la plateforme.
           </p>
         </div>
         <div className="flex space-x-2">
@@ -153,7 +153,7 @@ export default function ManageUsers() {
             <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
             </svg>
-            تحديث
+            Actualiser
           </button>
         </div>
       </div>
@@ -187,7 +187,7 @@ export default function ManageUsers() {
           </span>
           <input
             type="text"
-            placeholder="البحث بالاسم أو البريد أو الدور أو الهيكل..."
+            placeholder="Rechercher par nom, prénom, email, rôle ou structure..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-250 rounded-lg text-sm focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
@@ -198,7 +198,7 @@ export default function ManageUsers() {
             onClick={() => setSearchQuery('')}
             className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition px-2 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer"
           >
-            مسح
+            Effacer
           </button>
         )}
       </div>
@@ -211,29 +211,29 @@ export default function ManageUsers() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <p className="text-slate-500 text-xs font-medium">جاري تحميل المستخدمين...</p>
+            <p className="text-slate-500 text-xs font-medium">Chargement des utilisateurs en cours...</p>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-16 text-center">
             <svg className="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
-            <h3 className="font-semibold text-slate-800 text-sm">لا يوجد مستخدم</h3>
+            <h3 className="font-semibold text-slate-800 text-sm">Aucun utilisateur trouvé</h3>
             <p className="text-slate-400 text-xs mt-1">
-              {searchQuery ? "ضبّط فلاتير البحث أو أعد تعيين الحقل." : "لا يوجد مستخدم مسجل في النظام."}
+              {searchQuery ? "Ajustez vos filtres de recherche ou réinitialisez le champ." : "Aucun utilisateur n'est inscrit dans le système."}
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-              <table className="w-full text-right text-xs border-collapse">
+              <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-wider">
-                  <th className="px-6 py-4">الاسم / اللقب</th>
-                  <th className="px-6 py-4">البريد الإلكتروني</th>
-                  <th className="px-6 py-4">الهيكل</th>
-                  <th className="px-6 py-4">الدور</th>
-                  <th className="px-6 py-4 text-center">الحالة</th>
-                  <th className="px-6 py-4 text-left">الإجراءات</th>
+                  <th className="px-6 py-4">Nom / Prénom</th>
+                  <th className="px-6 py-4">Adresse Email</th>
+                  <th className="px-6 py-4">Structure</th>
+                  <th className="px-6 py-4">Rôle</th>
+                  <th className="px-6 py-4 text-center">Statut (Actif)</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
@@ -257,7 +257,7 @@ export default function ManageUsers() {
                             </span>
                             {isSelf && (
                               <span className="inline-block text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 rounded mt-0.5 font-mono">
-                                أنت (متصل)
+                                VOUS (Connecté)
                               </span>
                             )}
                           </div>
@@ -272,7 +272,7 @@ export default function ManageUsers() {
                       {/* Enterprise/Structure */}
                       <td className="px-6 py-4.5">
                         <span className="text-xs font-semibold text-slate-700">
-                          {u.entrepriseNom || "غير محدد"}
+                          {u.entrepriseNom || "Non définie"}
                         </span>
                       </td>
 
@@ -299,7 +299,7 @@ export default function ManageUsers() {
                               u.actif ? 'bg-emerald-500' : 'bg-slate-300'
                             }`}
                             aria-checked={u.actif}
-                            title={u.actif ? "تعطيل الحساب" : "تفعيل الحساب"}
+                            title={u.actif ? "Désactiver le compte" : "Activer le compte"}
                           >
                             <span
                               className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
@@ -319,7 +319,7 @@ export default function ManageUsers() {
                           className={`p-2 text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-lg transition border border-rose-200 hover:border-rose-500 cursor-pointer ${
                             isSelf ? 'opacity-30 cursor-not-allowed hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200' : ''
                           }`}
-                          title={isSelf ? "لا يمكنك حذف حسابك الخاص" : "حذف هذا المستخدم"}
+                          title={isSelf ? "Vous ne pouvez pas supprimer votre propre compte" : "Supprimer cet utilisateur"}
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -346,7 +346,7 @@ export default function ManageUsers() {
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
-                تأكيد الحذف
+                Confirmation de suppression
               </h3>
               <button
                 onClick={() => setDeletingUser(null)}
@@ -360,7 +360,7 @@ export default function ManageUsers() {
             {/* Modal Body */}
             <div className="p-6 space-y-4">
               <p className="text-sm text-slate-700 font-medium leading-relaxed">
-                هل أنت متأكد تمامًا من حذف حساب <strong>{deletingUser.prenom} {deletingUser.nom}</strong> بصفة نهائية؟
+                Êtes-vous absolument sûr de vouloir supprimer définitivement le compte de <strong>{deletingUser.prenom} {deletingUser.nom}</strong> ?
               </p>
 
               <div className="p-3.5 bg-rose-50 text-rose-900 border border-rose-100 rounded-lg text-xs leading-relaxed space-y-2">
@@ -368,15 +368,15 @@ export default function ManageUsers() {
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  نتائج هذا الإجراء:
+                  Conséquences de cette action :
                 </p>
                 <ul className="list-disc pl-4 space-y-1 font-medium text-[11px]">
-                  <li>حذف ملف المستخدم.</li>
-                  <li>حذف جميع الرسائل المرسلة والمستلمة.</li>
-                  <li>حذف المرفقات المرتبطة بهذه الرسائل.</li>
-                  <li>حذف سلاسل المحادثات التي تصبح فارغة تلقائيًا.</li>
+                  <li>Suppression de sa fiche utilisateur.</li>
+                  <li>Suppression de tous les messages envoyés et reçus par cet utilisateur.</li>
+                  <li>Suppression des pièces jointes associées à ces messages.</li>
+                  <li>Suppression automatique des fils de discussion devenant vides.</li>
                 </ul>
-                <p className="font-semibold text-rose-700 italic">هذا الإجراء نهائي ولا يمكن التراجع عنه.</p>
+                <p className="font-semibold text-rose-700 italic">Cette action est définitive et irréversible.</p>
               </div>
             </div>
 
@@ -388,7 +388,7 @@ export default function ManageUsers() {
                 className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 rounded-lg transition border border-slate-200 cursor-pointer"
                 disabled={isDeleteLoading}
               >
-                إلغاء
+                Annuler
               </button>
               <button
                 type="button"
@@ -402,14 +402,14 @@ export default function ManageUsers() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    جاري الحذف...
+                    Suppression...
                   </>
                 ) : (
                   <>
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                    تأكيد الحذف
+                    Confirmer la suppression
                   </>
                 )}
               </button>
