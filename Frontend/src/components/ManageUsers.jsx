@@ -121,11 +121,25 @@ export default function ManageUsers() {
     }
   };
 
-  // Exclude the currently logged-in admin from the list
-  const otherUsers = users.filter(u => u.id !== currentUser?.id);
+  // Bulletproof: exclude the currently logged-in admin using both email AND id,
+  // guarding against string-vs-number type mismatches from the API.
+  const otherUsers = users.filter((u) => {
+    // Email comparison — most reliable, always a string on both sides
+    const isSameEmail =
+      u.email?.toLowerCase().trim() === currentUser?.email?.toLowerCase().trim();
 
-  // Filter users dynamically based on query
-  const filteredUsers = otherUsers.filter(user => {
+    // ID comparison — coerce both to string to avoid "3" !== 3 false-negatives
+    const currentId = currentUser?.id ?? currentUser?.userId;
+    const userId = u.id ?? u.userId;
+    const isSameId =
+      currentId != null && userId != null && String(currentId) === String(userId);
+
+    // Hide the row if EITHER match resolves to the connected admin
+    return !isSameEmail && !isSameId;
+  });
+
+  // Filter users dynamically based on search query
+  const filteredUsers = otherUsers.filter((user) => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
 
