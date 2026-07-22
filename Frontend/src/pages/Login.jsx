@@ -77,23 +77,23 @@ export default function Login({ onForgotPassword }) {
         <form onSubmit={handleSubmit} className="space-y-5">
           {!showTwoFactor ? (
             <>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+              <div dir="ltr">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 text-right" dir="rtl">
                   البريد الإلكتروني
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="مثال: admin@cspj.ma"
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition text-right"
+                  placeholder="admin@cspj.ma"
+                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                   disabled={isSubmitting}
                   dir="ltr"
                 />
               </div>
 
-              <div>
-                <div className="flex justify-between items-center mb-2">
+              <div dir="ltr">
+                <div className="flex justify-between items-center mb-2" dir="rtl">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                     كلمة المرور
                   </label>

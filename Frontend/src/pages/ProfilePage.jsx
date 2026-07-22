@@ -234,8 +234,7 @@ export default function ProfilePage({ onBack }) {
               <div className={`pt-14 flex-1 flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div className={isRTL ? 'text-right' : ''}>
                   <h1 className="text-xl font-bold text-slate-900 leading-tight">{fullName}</h1>
-                  {/* Email always LTR since it's Latin */}
-                  <p className="text-sm text-slate-500 font-mono mt-0.5" dir="ltr">{user?.email}</p>
+                  <p className="text-sm text-slate-500 font-mono mt-0.5">{user?.email}</p>
                 </div>
                 <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg ${getRoleBadge(user?.role)}`}>
                   {getRoleBadgeLabel(user?.role)}
@@ -311,21 +310,14 @@ export default function ProfilePage({ onBack }) {
                       <input
                         type={field.key === 'email' ? 'email' : 'text'}
                         required
-                        /* emails are always LTR (Latin chars) */
-                        dir={field.key === 'email' ? 'ltr' : (isRTL ? 'rtl' : 'ltr')}
+                        dir={isRTL ? 'rtl' : 'ltr'}
                         value={getEditValue(field.key)}
                         onChange={(e) => handleEditChange(field.key, e.target.value)}
-                        className={`col-span-2 px-3.5 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 ${
-                          isRTL && field.key !== 'email' ? 'text-right' : 'text-left'
-                        }`}
+                        className={`col-span-2 px-3.5 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 ${isRTL ? 'text-right' : 'text-left'}`}
                       />
                     ) : (
                       <span
-                        /* email values always render LTR */
-                        dir={field.key === 'email' ? 'ltr' : undefined}
-                        className={`col-span-2 text-sm font-semibold text-slate-800 ${
-                          field.key === 'email' ? 'font-mono block text-left' : ''
-                        }`}
+                        className={`col-span-2 text-sm font-semibold text-slate-800 ${field.key === 'email' ? 'font-mono' : ''}`}
                       >
                         {field.value || '—'}
                       </span>
