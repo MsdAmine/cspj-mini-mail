@@ -121,8 +121,11 @@ export default function ManageUsers() {
     }
   };
 
+  // Exclude the currently logged-in admin from the list
+  const otherUsers = users.filter(u => u.id !== currentUser?.id);
+
   // Filter users dynamically based on query
-  const filteredUsers = users.filter(user => {
+  const filteredUsers = otherUsers.filter(user => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
 
@@ -237,13 +240,10 @@ export default function ManageUsers() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
-                {filteredUsers.map((u) => {
-                  const isSelf = currentUser?.id === u.id;
-
-                  return (
+                {filteredUsers.map((u) => (
                     <tr
                       key={u.id}
-                      className={`hover:bg-slate-50/50 transition duration-150 ${isSelf ? 'bg-blue-50/15' : ''}`}
+                      className="hover:bg-slate-50/50 transition duration-150"
                     >
                       {/* Name / Firstname */}
                       <td className="px-6 py-4.5 font-semibold text-slate-800">
@@ -255,11 +255,6 @@ export default function ManageUsers() {
                             <span className="block text-sm font-semibold text-slate-900">
                               {u.prenom} {u.nom}
                             </span>
-                            {isSelf && (
-                              <span className="inline-block text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-200 px-1.5 rounded mt-0.5 font-mono">
-                                VOUS (Connecté)
-                              </span>
-                            )}
                           </div>
                         </div>
                       </td>
@@ -315,11 +310,8 @@ export default function ManageUsers() {
                         <button
                           type="button"
                           onClick={() => setDeletingUser(u)}
-                          disabled={isSelf}
-                          className={`p-2 text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-lg transition border border-rose-200 hover:border-rose-500 cursor-pointer ${
-                            isSelf ? 'opacity-30 cursor-not-allowed hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200' : ''
-                          }`}
-                          title={isSelf ? "Vous ne pouvez pas supprimer votre propre compte" : "Supprimer cet utilisateur"}
+                          className="p-2 text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-lg transition border border-rose-200 hover:border-rose-500 cursor-pointer"
+                          title="Supprimer cet utilisateur"
                         >
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -327,8 +319,7 @@ export default function ManageUsers() {
                         </button>
                       </td>
                     </tr>
-                  );
-                })}
+                  ))}
               </tbody>
             </table>
           </div>
