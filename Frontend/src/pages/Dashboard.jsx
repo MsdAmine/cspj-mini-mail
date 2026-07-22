@@ -211,7 +211,7 @@ export default function Dashboard() {
       <div className="flex flex-col flex-1 min-w-0">
         
         {/* En-tête épuré avec barre de recherche et profil utilisateur */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
+        <header dir="ltr" className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
           <div className="w-96">
             {!isAdminView && (
               <input
@@ -250,7 +250,7 @@ export default function Dashboard() {
 
         {/* Contenu alternatif (Gestion Admin ou Messagerie) */}
         {isAdminView ? (
-          <div className="flex-1 bg-slate-50 p-8 overflow-y-auto flex flex-col items-center">
+          <div dir="ltr" className="flex-1 bg-slate-50 p-8 overflow-y-auto flex flex-col items-center text-left">
             {adminTab === 'stats' ? (
               <div className="w-full max-w-4xl space-y-8 animate-fade-in">
                 {/* En-tête du tableau de bord */}

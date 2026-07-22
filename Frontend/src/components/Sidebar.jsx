@@ -17,15 +17,17 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
   return (
     <div className="w-64 bg-slate-950 text-slate-200 flex flex-col h-full justify-between border-l border-slate-800 font-sans">
       
-      {/* القسم العلوي: العنوان + التنقل */}
+      {/* App title */}
       <div className="p-4 flex-1">
-        {/* عنوان التطبيق */}
         <div className="mb-8 px-2">
           <h1 className="font-bold text-sm tracking-wide text-white font-mono">CSPJ Mail</h1>
-          <p className="text-[10px] text-slate-400 font-sans tracking-widest uppercase">النظام الداخلي</p>
+          {/* Subtitle adapts to the active role */}
+          <p className="text-[10px] text-slate-400 font-sans tracking-widest uppercase">
+            {isUserAdmin ? 'Administration' : 'النظام الداخلي'}
+          </p>
         </div>
 
-        {/* زر رسالة جديدة (مخفي للمدير) */}
+        {/* Compose button — Fonctionnaire / Association only */}
         {!isUserAdmin && (
           <button
             onClick={onComposeOpen}
@@ -35,7 +37,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
           </button>
         )}
 
-        {/* قائمة المجلدات (مخفية للمدير) */}
+        {/* Folder nav — Fonctionnaire / Association only */}
         {!isUserAdmin && (
           <nav className="space-y-1">
             {folders.map((folder) => {
@@ -60,68 +62,70 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
           </nav>
         )}
 
-        {/* قائمة المدير: لوحة التحكم وإدارة المستخدمين */}
+        {/* Admin nav — French + LTR so text renders correctly */}
         {isUserAdmin && (
-          <nav className="space-y-1 mt-4">
+          <nav className="space-y-1 mt-4" dir="ltr">
             <div className="px-3 mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">الإدارة</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Administration</span>
             </div>
             
             <button
               onClick={() => setAdminTab('stats')}
               className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${
                 adminTab === 'stats'
-                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-r-4 border-blue-500'
+                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-l-4 border-blue-500'
                   : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200'
               }`}
             >
-              <span>لوحة التحكم</span>
+              <span>Tableau de bord</span>
             </button>
 
             <button
               onClick={() => setAdminTab('manage-users')}
               className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${
                 adminTab === 'manage-users'
-                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-r-4 border-blue-500'
+                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-l-4 border-blue-500'
                   : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200'
               }`}
             >
-              <span>إدارة المستخدمين</span>
+              <span>Gestion des utilisateurs</span>
             </button>
 
             <button
               onClick={() => setAdminTab('audit-logs')}
               className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${
                 adminTab === 'audit-logs'
-                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-r-4 border-blue-500'
+                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-l-4 border-blue-500'
                   : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200'
               }`}
             >
-              <span>سجل التدقيق</span>
+              <span>Journal d'audit</span>
             </button>
 
             <button
               onClick={() => setAdminTab('create-user')}
               className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${
                 adminTab === 'create-user'
-                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-r-4 border-blue-500'
+                  ? 'bg-slate-800 text-white font-semibold shadow-inner border-l-4 border-blue-500'
                   : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200'
               }`}
             >
-              <span>إنشاء حساب</span>
+              <span>Créer un compte</span>
             </button>
           </nav>
         )}
       </div>
 
-      {/* القسم السفلي: زر تسجيل الخروج */}
+      {/* Logout button */}
       <div className="p-4 border-t border-slate-900 bg-slate-950">
         <button
           onClick={logout}
-          className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-rose-450 hover:text-rose-300 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-900/30 rounded-xl transition cursor-pointer"
-          title="تسجيل الخروج من النظام"
+          className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium text-rose-400 hover:text-rose-300 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-900/30 rounded-xl transition cursor-pointer"
+          title={isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج من النظام'}
         >
-          <span className="font-semibold tracking-wide">تسجيل الخروج</span>
+          <span className="font-semibold tracking-wide">
+            {isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج'}
+          </span>
         </button>
       </div>
 
