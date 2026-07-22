@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { useMail } from "../context/MailContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -18,19 +18,19 @@ export default function MailList() {
 
   return (
     <div className="h-full flex flex-col bg-white">
-      {/* En-tête de la liste */}
+      {/* رأس القائمة */}
       <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          {activeFolder === "inbox" && "Boîte de réception"}
-          {activeFolder === "sent" && "Messages envoyés"}
-          {activeFolder === "archived" && "Conversations archivées"}
+          {activeFolder === "inbox" && "العلبة الواردة"}
+          {activeFolder === "sent" && "الرسائل المرسلة"}
+          {activeFolder === "archived" && "المحادثات المؤرشفة"}
         </span>
         <span className="text-xs text-slate-400 font-mono">
-          {messages.length} discussion(s)
+          {messages.length} محادثة
         </span>
       </div>
 
-      {/* Liste défilante */}
+      {/* القائمة القابلة للتمرير */}
       <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
         {loading && messages.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-400">
@@ -38,11 +38,11 @@ export default function MailList() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            Chargement...
+            جارٍ التحميل...
           </div>
         ) : messages.length === 0 ? (
           <div className="p-8 text-center text-sm text-slate-400">
-            Aucune discussion trouvée.
+            لا توجد محادثات.
           </div>
         ) : (
           messages.map((msg) => {
@@ -54,18 +54,18 @@ export default function MailList() {
               <div
                 key={msg.threadId}
                 onClick={() => handleSelectMessage(msg)}
-                className={`p-4 cursor-pointer transition relative flex items-start space-x-3 ${
+                className={`p-4 cursor-pointer transition relative flex items-start space-x-3 space-x-reverse ${
                   isSelected
-                    ? "bg-blue-50/70 border-l-4 border-blue-600 pl-3"
+                    ? "bg-blue-50/70 border-r-4 border-blue-600 pr-3"
                     : "hover:bg-slate-50"
                 }`}
               >
-                {/* Indicateur Non lu */}
+                {/* مؤشر غير مقروء */}
                 {showUnreadDot && (
-                  <span className="absolute top-5 right-4 h-2.5 w-2.5 bg-blue-600 rounded-full" />
+                  <span className="absolute top-5 left-4 h-2.5 w-2.5 bg-blue-600 rounded-full" />
                 )}
 
-                {/* Avatar / Group Icon */}
+                {/* الصورة الرمزية / أيقونة المجموعة */}
                 <div
                   className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold uppercase mt-0.5 ${
                     isGroup
@@ -82,23 +82,23 @@ export default function MailList() {
                   )}
                 </div>
 
-                {/* Contenu de l'aperçu */}
+                {/* محتوى المعاينة */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline mb-0.5">
                     <div className="flex items-center gap-1.5 min-w-0">
                       {isGroup && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-violet-100 text-violet-700 border border-violet-200 flex-shrink-0">
-                          Groupe
+                          مجموعة
                         </span>
                       )}
-                      <h4 className={`text-sm truncate pr-4 ${showUnreadDot ? "font-bold text-slate-900" : "text-slate-700"}`}>
+                      <h4 className={`text-sm truncate pl-4 ${showUnreadDot ? "font-bold text-slate-900" : "text-slate-700"}`}>
                         {isGroup
-                          ? msg.titreGroupe || "Discussion de groupe"
+                          ? msg.titreGroupe || "محادثة جماعية"
                           : msg.dernierExpediteurNom}
                       </h4>
                     </div>
                     <span className="text-xxs text-slate-400 font-mono whitespace-nowrap flex-shrink-0">
-                      {new Date(msg.derniereActivite).toLocaleDateString([], {
+                      {new Date(msg.derniereActivite).toLocaleDateString('ar-MA', {
                         month: "short",
                         day: "numeric",
                       })}
@@ -107,7 +107,7 @@ export default function MailList() {
 
                   {isGroup && msg.nombreParticipants > 0 && (
                     <p className="text-[10px] text-violet-600 font-medium mb-0.5">
-                      {msg.nombreParticipants} participants
+                      {msg.nombreParticipants} مشارك
                     </p>
                   )}
 

@@ -41,7 +41,7 @@ export default function ManageLogs() {
   const formatTimestamp = (dateString) => {
     try {
       const date = new Date(dateString);
-      return date.toLocaleString('fr-FR', {
+      return date.toLocaleString('ar-MA', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
@@ -74,9 +74,9 @@ export default function ManageLogs() {
     <div className="w-full max-w-6xl space-y-6 animate-fade-in pb-12">
       {/* Title & Description */}
       <div className="border-b border-slate-200 pb-5">
-        <h2 className="text-xl font-bold text-slate-900">Journal d'Audit & Sécurité</h2>
+        <h2 className="text-xl font-bold text-slate-900">سجل التدقيق والأمان</h2>
         <p className="text-slate-500 text-xs mt-1">
-          Historique chronologique des événements de sécurité et actions d'administration de la plateforme (sans contenu de message).
+          سجل زمني لأحداث الأمان وإجراءات الإدارة (دون محتوى الرسائل).
         </p>
       </div>
 
@@ -91,7 +91,7 @@ export default function ManageLogs() {
           </span>
           <input
             type="text"
-            placeholder="Rechercher par email, action ou description..."
+            placeholder="البحث بالبريد أو الإجراء أو الوصف..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-250 rounded-lg text-sm focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
@@ -107,7 +107,7 @@ export default function ManageLogs() {
           >
             {actionTypes.map(type => (
               <option key={type} value={type}>
-                {type === 'ALL' ? 'Toutes les actions' : type}
+                {type === 'ALL' ? 'جميع الإجراءات' : type}
               </option>
             ))}
           </select>
@@ -122,7 +122,7 @@ export default function ManageLogs() {
             }}
             className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition px-4 py-2.5 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer flex items-center justify-center"
           >
-            Réinitialiser
+            إعادة ضبط
           </button>
         )}
       </div>
@@ -134,20 +134,20 @@ export default function ManageLogs() {
             <svg className="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <h3 className="font-semibold text-slate-800 text-sm">Aucun log trouvé</h3>
+            <h3 className="font-semibold text-slate-800 text-sm">لا توجد سجلات</h3>
             <p className="text-slate-400 text-xs mt-1">
-              Ajustez vos filtres de recherche ou réinitialisez le champ.
+              ضبّط فلاتير البحث أو أعد تعيين الحقل.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-right text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-wider">
-                  <th className="px-6 py-4 w-44">Date / Heure</th>
-                  <th className="px-6 py-4 w-48">Type d'Action</th>
-                  <th className="px-6 py-4 w-52">Utilisateur</th>
-                  <th className="px-6 py-4">Description</th>
+                  <th className="px-6 py-4 w-44">التاريخ / الوقت</th>
+                  <th className="px-6 py-4 w-48">نوع الإجراء</th>
+                  <th className="px-6 py-4 w-52">المستخدم</th>
+                  <th className="px-6 py-4">الوصف</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">

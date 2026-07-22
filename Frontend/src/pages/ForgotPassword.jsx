@@ -12,7 +12,7 @@ export default function ForgotPassword({ onBack }) {
     setError('');
 
     if (!email.trim()) {
-      setError('Veuillez saisir votre adresse email.');
+      setError('يرجى إدخال عنوان بريدك الإلكتروني.');
       return;
     }
 
@@ -22,7 +22,7 @@ export default function ForgotPassword({ onBack }) {
       setSubmitted(true);
     } catch {
       // Always show success to prevent enumeration — only show error on network failures
-      setError('Une erreur réseau est survenue. Veuillez réessayer.');
+      setError('حدث خطأ في الشبكة. يرجى المحاولة مجددًا.');
     } finally {
       setIsSubmitting(false);
     }
@@ -32,7 +32,7 @@ export default function ForgotPassword({ onBack }) {
     <div className="flex h-screen w-screen items-center justify-center bg-slate-900 font-sans antialiased text-slate-100">
       <div className="w-full max-w-md p-8 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
 
-        {/* Header */}
+        {/* العنوان */}
         <div className="text-center mb-8">
           <div className="inline-flex p-3 bg-blue-600/10 rounded-full text-blue-500 mb-3">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,12 +40,12 @@ export default function ForgotPassword({ onBack }) {
                 d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Mot de passe oublié</h1>
-          <p className="text-sm text-slate-400 mt-1">CSPJ Mini Mail · Récupération de compte</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">نسيت كلمة المرور</h1>
+          <p className="text-sm text-slate-400 mt-1">CSPJ Mini Mail · استعادة الحساب</p>
         </div>
 
         {submitted ? (
-          /* ── Success state ── */
+          /* ── حالة النجاح ── */
           <div className="text-center space-y-6">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/10 rounded-full border border-emerald-500/20 mx-auto">
               <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -53,32 +53,30 @@ export default function ForgotPassword({ onBack }) {
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white mb-2">E-mail envoyé !</h2>
+              <h2 className="text-lg font-semibold text-white mb-2">تم إرسال البريد الإلكتروني!</h2>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Si un compte existe avec l'adresse{' '}
-                <span className="text-slate-200 font-medium">{email}</span>, un lien de
-                réinitialisation vient d'y être envoyé. Vérifiez également vos spams.
+                إذا كان الحساب مرتبطًا بالعنوان{' '}
+                <span className="text-slate-200 font-medium">{email}</span>، فقد تم إرسال رابط إعادة التعيين. تحقق من مجلد الرسائل غير المرغوب فيها أيضًا.
               </p>
               <p className="text-xs text-slate-500 mt-3">
-                Le lien expire dans <span className="text-slate-400">15 minutes</span>.
+                ينتهي الرابط خلال <span className="text-slate-400">15 دقيقة</span>.
               </p>
             </div>
             <button
               onClick={onBack}
               className="w-full py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
-              Retour à la connexion
+              العودة إلى تسجيل الدخول
             </button>
           </div>
         ) : (
-          /* ── Form state ── */
+          /* ── نموذج الإدخال ── */
           <>
             <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-              Saisissez votre adresse email ci-dessous. Si un compte lui est associé, vous
-              recevrez un lien de réinitialisation valable <span className="text-slate-300">15 minutes</span>.
+              أدخل عنوان بريدك الإلكتروني أدناه. إذا كان هناك حساب مرتبط به، ستتلقى رابط إعادة تعيين صالحًا لمدة <span className="text-slate-300">15 دقيقة</span>.
             </p>
 
             {error && (
@@ -91,17 +89,18 @@ export default function ForgotPassword({ onBack }) {
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  Adresse Email
+                  البريد الإلكتروني
                 </label>
                 <input
                   id="forgot-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Ex: vous@cspj.ma"
+                  placeholder="مثال: vous@cspj.ma"
                   className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                   disabled={isSubmitting}
                   autoFocus
+                  dir="ltr"
                 />
               </div>
 
@@ -117,10 +116,10 @@ export default function ForgotPassword({ onBack }) {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
-                    Envoi en cours...
+                    جارٍ الإرسال...
                   </>
                 ) : (
-                  'Envoyer le lien de réinitialisation'
+                  'إرسال رابط إعادة التعيين'
                 )}
               </button>
 
@@ -129,10 +128,10 @@ export default function ForgotPassword({ onBack }) {
                 onClick={onBack}
                 className="w-full py-2 text-sm text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                Retour à la connexion
+                العودة إلى تسجيل الدخول
               </button>
             </form>
           </>
