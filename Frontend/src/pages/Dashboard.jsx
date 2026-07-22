@@ -182,9 +182,12 @@ export default function Dashboard() {
     return matchesQuery && matchesStatus;
   });
 
+  const isAdmin = user?.role === 'Administrateur';
+  const layoutDir = isAdmin ? 'ltr' : 'rtl';
+
   if (isProfileOpen) {
     return (
-      <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
+      <div dir={layoutDir} className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
         <Sidebar 
           onComposeOpen={() => setIsComposeOpen(true)} 
           isAdminView={isAdminView}
@@ -198,7 +201,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
+    <div dir={layoutDir} className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
       
       <Sidebar 
         onComposeOpen={() => setIsComposeOpen(true)} 
