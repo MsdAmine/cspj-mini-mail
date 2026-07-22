@@ -15,7 +15,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
   const isUserAdmin = user?.role === "Administrateur";
 
   return (
-    <div className="w-64 bg-slate-950 text-slate-200 flex flex-col h-full justify-between border-l border-slate-800 font-sans">
+    <div className={`w-64 bg-slate-950 text-slate-200 flex flex-col h-full justify-between font-sans ${isUserAdmin ? 'border-r border-slate-800' : 'border-l border-slate-800'}`}>
       
       {/* App title */}
       <div className="p-4 flex-1">
