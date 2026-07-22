@@ -136,7 +136,7 @@ export default function ManageUsers() {
   });
 
   return (
-    <div className="w-full max-w-6xl space-y-6 animate-fade-in pb-12">
+    <div dir="ltr" className="w-full max-w-6xl space-y-6 animate-fade-in pb-12 text-left">
       {/* Title & Stats summary */}
       <div className="border-b border-slate-200 pb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
