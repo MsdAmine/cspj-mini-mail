@@ -4,3 +4,30 @@
 @tailwind utilities;
 @source "../index.html";
 @source "./**/*.{js,ts,jsx,tsx}";
+
+/* ── Arabic / RTL global base ── */
+@layer base {
+  :root {
+    --font-arabic: 'Cairo', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  html {
+    direction: rtl;
+    font-family: var(--font-arabic);
+  }
+
+  body {
+    font-family: var(--font-arabic);
+  }
+
+  /* Ensure Arabic text renders correctly */
+  * {
+    font-family: var(--font-arabic);
+  }
+
+  /* Fix border-l / border-r active indicator for RTL sidebar */
+  .rtl-active-border {
+    border-right: 4px solid;
+    border-left: none;
+  }
+}

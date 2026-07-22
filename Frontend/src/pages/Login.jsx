@@ -17,7 +17,7 @@ export default function Login({ onForgotPassword }) {
     
     if (!showTwoFactor) {
       if (!email.trim() || !password.trim()) {
-        setError('Veuillez remplir tous les champs.');
+        setError('يرجى ملء جميع الحقول المطلوبة.');
         return;
       }
 
@@ -28,13 +28,13 @@ export default function Login({ onForgotPassword }) {
           setShowTwoFactor(true);
         }
       } catch (err) {
-        setError(err.message || 'Une erreur est survenue lors de la connexion.');
+        setError(err.message || 'حدث خطأ أثناء تسجيل الدخول.');
       } finally {
         setIsSubmitting(false);
       }
     } else {
       if (!twoFactorCode.trim()) {
-        setError('Veuillez saisir le code de vérification.');
+        setError('يرجى إدخال رمز التحقق.');
         return;
       }
 
@@ -42,7 +42,7 @@ export default function Login({ onForgotPassword }) {
       try {
         await verifyTwoFactor(email, twoFactorCode);
       } catch (err) {
-        setError(err.message || 'Code de vérification invalide.');
+        setError(err.message || 'رمز التحقق غير صالح.');
       } finally {
         setIsSubmitting(false);
       }
@@ -53,18 +53,19 @@ export default function Login({ onForgotPassword }) {
     <div className="flex h-screen w-screen items-center justify-center bg-slate-900 font-sans antialiased text-slate-100">
       <div className="w-full max-w-md p-8 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
         
-        {/* En-tête / Logo */}
+        {/* الشعار / العنوان */}
         <div className="text-center mb-8">
           <div className="inline-flex p-3 bg-blue-600/10 rounded-full text-blue-500 mb-3">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">CSPJ MINI-MAIL</h1>
-          <p className="text-sm text-slate-400 mt-1">Plateforme de messagerie interne professionnelle</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">نظام المراسلات الداخلي</h1>
+          <p className="text-sm text-blue-400 font-mono mt-0.5">CSPJ Mail</p>
+          <p className="text-xs text-slate-400 mt-1">منصة المراسلات المهنية الداخلية</p>
         </div>
 
-        {/* Message d'erreur */}
+        {/* رسالة الخطأ */}
         {error && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm flex items-center gap-2">
             <span>⚠️</span>
@@ -72,35 +73,36 @@ export default function Login({ onForgotPassword }) {
           </div>
         )}
 
-        {/* Formulaire */}
+        {/* النموذج */}
         <form onSubmit={handleSubmit} className="space-y-5">
           {!showTwoFactor ? (
             <>
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  Adresse Email
+                  البريد الإلكتروني
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Ex: admin@cspj.ma"
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
+                  placeholder="مثال: admin@cspj.ma"
+                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition text-right"
                   disabled={isSubmitting}
+                  dir="ltr"
                 />
               </div>
 
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                    Mot de passe
+                    كلمة المرور
                   </label>
                   <button
                     type="button"
                     onClick={onForgotPassword}
                     className="text-xs text-blue-500 hover:text-blue-400 hover:underline transition"
                   >
-                    Mot de passe oublié ?
+                    نسيت كلمة المرور؟
                   </button>
                 </div>
                 <input
@@ -110,16 +112,17 @@ export default function Login({ onForgotPassword }) {
                   placeholder="••••••••"
                   className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                   disabled={isSubmitting}
+                  dir="ltr"
                 />
               </div>
             </>
           ) : (
             <div>
               <p className="text-sm text-slate-300 mb-4 text-center">
-                Un code de vérification a été envoyé à <strong>{email}</strong>.
+                تم إرسال رمز التحقق إلى <strong>{email}</strong>.
               </p>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                Code à 6 chiffres
+                رمز التحقق المكوّن من 6 أرقام
               </label>
               <input
                 type="text"
@@ -129,6 +132,7 @@ export default function Login({ onForgotPassword }) {
                 maxLength={6}
                 className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-center tracking-[0.5em] text-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
                 disabled={isSubmitting}
+                dir="ltr"
               />
             </div>
           )}
@@ -144,10 +148,10 @@ export default function Login({ onForgotPassword }) {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                {showTwoFactor ? 'Vérification...' : 'Connexion en cours...'}
+                {showTwoFactor ? 'جارٍ التحقق...' : 'جارٍ تسجيل الدخول...'}
               </>
             ) : (
-              showTwoFactor ? 'Vérifier' : 'Se connecter'
+              showTwoFactor ? 'تحقق' : 'تسجيل الدخول'
             )}
           </button>
         </form>
