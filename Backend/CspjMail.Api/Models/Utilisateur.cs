@@ -58,4 +58,12 @@ public partial class Utilisateur
     public DateTime? ResetTokenExpiry { get; set; }
 
     public bool IsDeleted { get; set; }
+
+    /// <summary>
+    /// Persistent Base32-encoded TOTP secret. Generated once on first login
+    /// and reused for every subsequent verification via an Authenticator app.
+    /// </summary>
+    [StringLength(64)]
+    [Unicode(false)]
+    public string? TwoFactorSecret { get; set; }
 }
