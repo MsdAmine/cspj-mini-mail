@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,8 +46,8 @@ namespace CspjMail.Api.Controllers
                 return Unauthorized("Invalid password.");
             }
 
-            // Generate 2FA Code
-            var code = new Random().Next(100000, 999999).ToString();
+            // Generate a cryptographically secure 6-digit 2FA code (100000–999999)
+            var code = GenerateSecureOtpCode();
             user.TwoFactorCode = code;
             user.TwoFactorExpiry = DateTime.UtcNow.AddMinutes(5);
             await _context.SaveChangesAsync();
@@ -73,12 +74,23 @@ namespace CspjMail.Api.Controllers
                 return Unauthorized("Invalid email or account is inactive.");
             }
 
-            if (user.TwoFactorCode != dto.Code || user.TwoFactorExpiry < DateTime.UtcNow)
+            // Guard: code must exist, must not be expired, and must match the stored value
+            bool codeIsNullOrExpired = string.IsNullOrEmpty(user.TwoFactorCode)
+                || user.TwoFactorExpiry == null
+                || user.TwoFactorExpiry < DateTime.UtcNow;
+
+            // Use constant-time comparison to prevent timing-based enumeration attacks
+            bool codeMatches = !string.IsNullOrEmpty(user.TwoFactorCode)
+                && CryptographicOperations.FixedTimeEquals(
+                    Encoding.UTF8.GetBytes(user.TwoFactorCode),
+                    Encoding.UTF8.GetBytes(dto.Code ?? string.Empty));
+
+            if (codeIsNullOrExpired || !codeMatches)
             {
                 return Unauthorized("Invalid or expired 2FA code.");
             }
 
-            // Clear 2FA
+            // Immediately invalidate the code after successful verification (single-use)
             user.TwoFactorCode = null;
             user.TwoFactorExpiry = null;
             await _context.SaveChangesAsync();
@@ -116,6 +128,20 @@ namespace CspjMail.Api.Controllers
                 Prenom = user.Prenom,
                 Role = user.Role
             });
+        }
+
+        // ─── Helpers ──────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Generates a cryptographically secure 6-digit OTP code in the range [100000, 999999].
+        /// Uses <see cref="RandomNumberGenerator.GetInt32(int, int)"/> (available since .NET 6)
+        /// which produces an unbiased, cryptographically strong result.
+        /// </summary>
+        private static string GenerateSecureOtpCode()
+        {
+            // GetInt32(fromInclusive, toExclusive) — upper bound is exclusive, so pass 1_000_000
+            int code = RandomNumberGenerator.GetInt32(100_000, 1_000_000);
+            return code.ToString("D6");
         }
 
         [HttpPut("profile")]

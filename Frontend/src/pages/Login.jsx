@@ -10,6 +10,9 @@ export default function Login({ onForgotPassword }) {
   
   const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
+  // Store the server-echoed email (may be normalized/lowercased by the backend)
+  // to ensure verify-2fa always uses the exact email the server recognizes.
+  const [pendingEmail, setPendingEmail] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,6 +28,8 @@ export default function Login({ onForgotPassword }) {
       try {
         const result = await login(email, password);
         if (result && result.requiresTwoFactor) {
+          // Use the server-echoed email (normalized/lowercased by the backend)
+          setPendingEmail(result.email || email.trim());
           setShowTwoFactor(true);
         }
       } catch (err) {
@@ -40,7 +45,7 @@ export default function Login({ onForgotPassword }) {
 
       setIsSubmitting(true);
       try {
-        await verifyTwoFactor(email, twoFactorCode);
+        await verifyTwoFactor(pendingEmail, twoFactorCode);
       } catch (err) {
         setError(err.message || 'رمز التحقق غير صالح.');
       } finally {
@@ -119,7 +124,7 @@ export default function Login({ onForgotPassword }) {
           ) : (
             <div>
               <p className="text-sm text-slate-300 mb-4 text-center">
-                تم إرسال رمز التحقق إلى <strong>{email}</strong>.
+                تم إرسال رمز التحقق إلى <strong>{pendingEmail}</strong>.
               </p>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
                 رمز التحقق المكوّن من 6 أرقام
