@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +9,7 @@ using CspjMail.Api.Models;
 using CspjMail.Api.DTOs;
 using CspjMail.Api.Services;
 using BCrypt.Net;
+using OtpNet;
 
 namespace CspjMail.Api.Controllers
 {
@@ -46,19 +46,20 @@ namespace CspjMail.Api.Controllers
                 return Unauthorized("Invalid password.");
             }
 
-            // Generate a cryptographically secure 6-digit 2FA code (100000–999999)
-            var code = GenerateSecureOtpCode();
-            user.TwoFactorCode = code;
-            user.TwoFactorExpiry = DateTime.UtcNow.AddMinutes(5);
-            await _context.SaveChangesAsync();
-
-            // Send real email via MailKit
-            await _emailService.SendTwoFactorCodeAsync(user.Email, code);
+            // ── TOTP: Generate secret on first login, then reuse it ──────────────
+            if (string.IsNullOrEmpty(user.TwoFactorSecret))
+            {
+                // 20 random bytes → 160-bit key (standard for TOTP/HOTP)
+                var secretBytes = KeyGeneration.GenerateRandomKey(20);
+                user.TwoFactorSecret = Base32Encoding.ToString(secretBytes);
+                await _context.SaveChangesAsync();
+            }
 
             return Ok(new
             {
                 RequiresTwoFactor = true,
-                Email = user.Email
+                Email = user.Email,
+                TwoFactorSecret = user.TwoFactorSecret
             });
         }
 
@@ -74,26 +75,25 @@ namespace CspjMail.Api.Controllers
                 return Unauthorized("Invalid email or account is inactive.");
             }
 
-            // Guard: code must exist, must not be expired, and must match the stored value
-            bool codeIsNullOrExpired = string.IsNullOrEmpty(user.TwoFactorCode)
-                || user.TwoFactorExpiry == null
-                || user.TwoFactorExpiry < DateTime.UtcNow;
+            if (string.IsNullOrEmpty(user.TwoFactorSecret))
+            {
+                return Unauthorized("2FA is not set up for this account. Please log in again.");
+            }
 
-            // Use constant-time comparison to prevent timing-based enumeration attacks
-            bool codeMatches = !string.IsNullOrEmpty(user.TwoFactorCode)
-                && CryptographicOperations.FixedTimeEquals(
-                    Encoding.UTF8.GetBytes(user.TwoFactorCode),
-                    Encoding.UTF8.GetBytes(dto.Code ?? string.Empty));
+            // ── TOTP verification via Otp.NET ────────────────────────────────────
+            var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
+            var totp = new Totp(secretBytes);
 
-            if (codeIsNullOrExpired || !codeMatches)
+            // VerificationWindow.RfcSpecifiedNetworkDelay allows ±1 time step (±30 s) for clock skew
+            bool isValid = totp.VerifyTotp(
+                dto.Code ?? string.Empty,
+                out _,
+                VerificationWindow.RfcSpecifiedNetworkDelay);
+
+            if (!isValid)
             {
                 return Unauthorized("Invalid or expired 2FA code.");
             }
-
-            // Immediately invalidate the code after successful verification (single-use)
-            user.TwoFactorCode = null;
-            user.TwoFactorExpiry = null;
-            await _context.SaveChangesAsync();
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtSettings = _configuration.GetSection("Jwt");
@@ -130,19 +130,6 @@ namespace CspjMail.Api.Controllers
             });
         }
 
-        // ─── Helpers ──────────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// Generates a cryptographically secure 6-digit OTP code in the range [100000, 999999].
-        /// Uses <see cref="RandomNumberGenerator.GetInt32(int, int)"/> (available since .NET 6)
-        /// which produces an unbiased, cryptographically strong result.
-        /// </summary>
-        private static string GenerateSecureOtpCode()
-        {
-            // GetInt32(fromInclusive, toExclusive) — upper bound is exclusive, so pass 1_000_000
-            int code = RandomNumberGenerator.GetInt32(100_000, 1_000_000);
-            return code.ToString("D6");
-        }
 
         [HttpPut("profile")]
         [Authorize]

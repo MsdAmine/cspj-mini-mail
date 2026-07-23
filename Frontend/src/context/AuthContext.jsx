@@ -48,7 +48,11 @@ export const AuthProvider = ({ children }) => {
       });
 
       if (response.data.requiresTwoFactor) {
-        return { requiresTwoFactor: true, email: response.data.email };
+        return {
+          requiresTwoFactor: true,
+          email: response.data.email,
+          twoFactorSecret: response.data.twoFactorSecret ?? ''
+        };
       }
 
       const { token, email: userEmail, nom, prenom, role } = response.data;
