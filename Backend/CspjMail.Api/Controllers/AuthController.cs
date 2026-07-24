@@ -46,20 +46,30 @@ namespace CspjMail.Api.Controllers
                 return Unauthorized("Invalid password.");
             }
 
-            // ── TOTP: Generate secret on first login, then reuse it ──────────────
+            // ── TOTP: Branch on whether the user already has a secret ────────────
             if (string.IsNullOrEmpty(user.TwoFactorSecret))
             {
-                // 20 random bytes → 160-bit key (standard for TOTP/HOTP)
+                // First-time setup: generate a 160-bit (20-byte) Base32 secret,
+                // persist it, and return it so the user can enrol their Authenticator app.
                 var secretBytes = KeyGeneration.GenerateRandomKey(20);
                 user.TwoFactorSecret = Base32Encoding.ToString(secretBytes);
                 await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    RequiresTwoFactor = true,
+                    Email = user.Email,
+                    TwoFactorSecret = user.TwoFactorSecret,
+                    IsFirstTimeSetup = true
+                });
             }
 
+            // Returning user: secret already exists — do NOT expose it again.
             return Ok(new
             {
                 RequiresTwoFactor = true,
                 Email = user.Email,
-                TwoFactorSecret = user.TwoFactorSecret
+                IsFirstTimeSetup = false
             });
         }
 
