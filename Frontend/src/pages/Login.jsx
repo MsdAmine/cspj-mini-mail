@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login({ onForgotPassword }) {
@@ -58,6 +59,11 @@ export default function Login({ onForgotPassword }) {
       }
     }
   };
+
+  // Standard OTPAuth URI for Authenticator apps
+  const otpAuthUrl = pendingSecret
+    ? `otpauth://totp/CSPJ%20Mail:${encodeURIComponent(pendingEmail)}?secret=${pendingSecret}&issuer=CSPJ%20Mail`
+    : '';
 
   const handleCopySecret = async () => {
     try {
@@ -152,8 +158,27 @@ export default function Login({ onForgotPassword }) {
 
                   {/* Step 1: Setup instructions */}
                   <p className="text-xs text-slate-400 leading-relaxed" dir="rtl">
-                    افتح تطبيق <strong className="text-slate-200">Google Authenticator</strong> أو <strong className="text-slate-200">Microsoft Authenticator</strong> أو <strong className="text-slate-200">Authy</strong>، ثم اضغط على <strong className="text-slate-200">+</strong> واختر <strong className="text-slate-200">إدخال مفتاح الإعداد</strong>.
+                    امسح رمز QR أدناه بتطبيق <strong className="text-slate-200">Google Authenticator</strong> أو <strong className="text-slate-200">Microsoft Authenticator</strong> أو <strong className="text-slate-200">Authy</strong>. أو اضغط على <strong className="text-slate-200">+</strong> واختر <strong className="text-slate-200">إدخال مفتاح الإعداد</strong> يدويًا.
                   </p>
+
+                  {/* QR Code */}
+                  {otpAuthUrl && (
+                    <div className="flex justify-center my-1 p-3 bg-white rounded-xl shadow-inner w-fit mx-auto">
+                      <QRCodeSVG
+                        value={otpAuthUrl}
+                        size={160}
+                        level="M"
+                        includeMargin={false}
+                      />
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-slate-700" />
+                    <span className="text-xs text-slate-500 flex-shrink-0">أو أدخل المفتاح يدويًا</span>
+                    <div className="flex-1 h-px bg-slate-700" />
+                  </div>
 
                   {/* Secret key box */}
                   <div className="space-y-1.5">
