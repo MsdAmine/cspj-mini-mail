@@ -17,7 +17,6 @@ export default function Login({ onForgotPassword }) {
   const [pendingSecret, setPendingSecret] = useState('');
   // Whether this is the very first TOTP enrolment for this user
   const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,20 +59,10 @@ export default function Login({ onForgotPassword }) {
     }
   };
 
-  // Standard OTPAuth URI for Authenticator apps
+  // Standard OTPAuth URI — used exclusively to render the QR code
   const otpAuthUrl = pendingSecret
     ? `otpauth://totp/CSPJ%20Mail:${encodeURIComponent(pendingEmail)}?secret=${pendingSecret}&issuer=CSPJ%20Mail`
     : '';
-
-  const handleCopySecret = async () => {
-    try {
-      await navigator.clipboard.writeText(pendingSecret);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch {
-      // fallback: select the text
-    }
-  };
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-slate-900 font-sans antialiased text-slate-100">
@@ -158,7 +147,7 @@ export default function Login({ onForgotPassword }) {
 
                   {/* Step 1: Setup instructions */}
                   <p className="text-xs text-slate-400 leading-relaxed" dir="rtl">
-                    امسح رمز QR أدناه بتطبيق <strong className="text-slate-200">Google Authenticator</strong> أو <strong className="text-slate-200">Microsoft Authenticator</strong> أو <strong className="text-slate-200">Authy</strong>. أو اضغط على <strong className="text-slate-200">+</strong> واختر <strong className="text-slate-200">إدخال مفتاح الإعداد</strong> يدويًا.
+                    امسح رمز QR أدناه باستخدام تطبيق <strong className="text-slate-200">Google Authenticator</strong> أو <strong className="text-slate-200">Microsoft Authenticator</strong> أو <strong className="text-slate-200">Authy</strong>.
                   </p>
 
                   {/* QR Code */}
@@ -172,59 +161,6 @@ export default function Login({ onForgotPassword }) {
                       />
                     </div>
                   )}
-
-                  {/* Divider */}
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-px bg-slate-700" />
-                    <span className="text-xs text-slate-500 flex-shrink-0">أو أدخل المفتاح يدويًا</span>
-                    <div className="flex-1 h-px bg-slate-700" />
-                  </div>
-
-                  {/* Secret key box */}
-                  <div className="space-y-1.5">
-                    <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">مفتاح الإعداد (Base32 Secret Key)</p>
-                    <div className="flex items-center gap-2">
-                      <code
-                        id="totp-secret-display"
-                        className="flex-1 block bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 font-mono text-sm text-emerald-400 tracking-widest break-all select-all"
-                        dir="ltr"
-                      >
-                        {pendingSecret}
-                      </code>
-                      <button
-                        type="button"
-                        id="copy-secret-btn"
-                        onClick={handleCopySecret}
-                        title="Copy secret key"
-                        className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all duration-200
-                          ${copied
-                            ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
-                            : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:text-white'
-                          }`}
-                      >
-                        {copied ? (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                            </svg>
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            Copy
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Account name hint */}
-                  <p className="text-xs text-slate-500" dir="rtl">
-                    اسم الحساب: <span className="text-slate-300 font-mono">{pendingEmail}</span>
-                  </p>
                 </div>
               ) : (
                 /* ── Returning user: minimal header only ─────────────────────── */
