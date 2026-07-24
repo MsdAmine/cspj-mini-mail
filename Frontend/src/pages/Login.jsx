@@ -12,8 +12,10 @@ export default function Login({ onForgotPassword }) {
   const [twoFactorCode, setTwoFactorCode] = useState('');
   // Store the server-echoed email (normalized/lowercased by the backend)
   const [pendingEmail, setPendingEmail] = useState('');
-  // Store the Base32 TOTP secret returned from the login response
+  // Store the Base32 TOTP secret returned only on first-time setup
   const [pendingSecret, setPendingSecret] = useState('');
+  // Whether this is the very first TOTP enrolment for this user
+  const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -32,6 +34,7 @@ export default function Login({ onForgotPassword }) {
         if (result && result.requiresTwoFactor) {
           setPendingEmail(result.email || email.trim());
           setPendingSecret(result.twoFactorSecret || '');
+          setIsFirstTimeSetup(result.isFirstTimeSetup ?? false);
           setShowTwoFactor(true);
         }
       } catch (err) {
@@ -135,73 +138,86 @@ export default function Login({ onForgotPassword }) {
             </>
           ) : (
             <div className="space-y-4">
-              {/* TOTP Onboarding Panel */}
-              <div className="bg-slate-900/60 border border-slate-600 rounded-xl p-4 space-y-3">
-                {/* Shield icon + title */}
-                <div className="flex items-center gap-2 text-blue-400">
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {isFirstTimeSetup ? (
+                /* ── First-time setup: full onboarding panel ─────────────────── */
+                <div className="bg-slate-900/60 border border-slate-600 rounded-xl p-4 space-y-3">
+                  {/* Shield icon + title */}
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span className="text-sm font-semibold text-white">إعداد التحقق بخطوتين — Authenticator App</span>
+                  </div>
+
+                  {/* Step 1: Setup instructions */}
+                  <p className="text-xs text-slate-400 leading-relaxed" dir="rtl">
+                    افتح تطبيق <strong className="text-slate-200">Google Authenticator</strong> أو <strong className="text-slate-200">Microsoft Authenticator</strong> أو <strong className="text-slate-200">Authy</strong>، ثم اضغط على <strong className="text-slate-200">+</strong> واختر <strong className="text-slate-200">إدخال مفتاح الإعداد</strong>.
+                  </p>
+
+                  {/* Secret key box */}
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">مفتاح الإعداد (Base32 Secret Key)</p>
+                    <div className="flex items-center gap-2">
+                      <code
+                        id="totp-secret-display"
+                        className="flex-1 block bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 font-mono text-sm text-emerald-400 tracking-widest break-all select-all"
+                        dir="ltr"
+                      >
+                        {pendingSecret}
+                      </code>
+                      <button
+                        type="button"
+                        id="copy-secret-btn"
+                        onClick={handleCopySecret}
+                        title="Copy secret key"
+                        className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all duration-200
+                          ${copied
+                            ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
+                            : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:text-white'
+                          }`}
+                      >
+                        {copied ? (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Account name hint */}
+                  <p className="text-xs text-slate-500" dir="rtl">
+                    اسم الحساب: <span className="text-slate-300 font-mono">{pendingEmail}</span>
+                  </p>
+                </div>
+              ) : (
+                /* ── Returning user: minimal header only ─────────────────────── */
+                <div className="flex items-center gap-2 bg-slate-900/60 border border-slate-600 rounded-xl px-4 py-3">
+                  <svg className="w-5 h-5 flex-shrink-0 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                       d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
-                  <span className="text-sm font-semibold text-white">التحقق بخطوتين — Authenticator App</span>
+                  <span className="text-sm font-semibold text-white">التحقق بخطوتين</span>
                 </div>
+              )}
 
-                {/* Step 1: Setup instructions */}
-                <p className="text-xs text-slate-400 leading-relaxed" dir="rtl">
-                  افتح تطبيق <strong className="text-slate-200">Google Authenticator</strong> أو <strong className="text-slate-200">Microsoft Authenticator</strong> أو <strong className="text-slate-200">Authy</strong>، ثم اضغط على <strong className="text-slate-200">+</strong> واختر <strong className="text-slate-200">إدخال مفتاح الإعداد</strong>.
-                </p>
-
-                {/* Secret key box */}
-                <div className="space-y-1.5">
-                  <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">مفتاح الإعداد (Base32 Secret Key)</p>
-                  <div className="flex items-center gap-2">
-                    <code
-                      id="totp-secret-display"
-                      className="flex-1 block bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 font-mono text-sm text-emerald-400 tracking-widest break-all select-all"
-                      dir="ltr"
-                    >
-                      {pendingSecret}
-                    </code>
-                    <button
-                      type="button"
-                      id="copy-secret-btn"
-                      onClick={handleCopySecret}
-                      title="Copy secret key"
-                      className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all duration-200
-                        ${copied
-                          ? 'bg-emerald-600/20 border-emerald-500/40 text-emerald-400'
-                          : 'bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600 hover:text-white'
-                        }`}
-                    >
-                      {copied ? (
-                        <>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                          </svg>
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                          Copy
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Account name hint */}
-                <p className="text-xs text-slate-500" dir="rtl">
-                  اسم الحساب: <span className="text-slate-300 font-mono">{pendingEmail}</span>
-                </p>
-              </div>
-
-              {/* Step 2: Enter code */}
+              {/* Enter code — shown in both branches */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  أدخل الرمز المكوّن من 6 أرقام الذي يظهر في التطبيق
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2" dir="rtl">
+                  {isFirstTimeSetup
+                    ? 'أدخل الرمز المكوّن من 6 أرقام الذي يظهر في التطبيق'
+                    : 'أدخل الرمز من تطبيق المصادقة الخاص بك'}
                 </label>
                 <input
                   id="totp-code-input"
@@ -215,6 +231,7 @@ export default function Login({ onForgotPassword }) {
                   disabled={isSubmitting}
                   dir="ltr"
                   autoComplete="one-time-code"
+                  autoFocus
                 />
               </div>
             </div>

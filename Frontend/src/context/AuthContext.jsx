@@ -51,7 +51,8 @@ export const AuthProvider = ({ children }) => {
         return {
           requiresTwoFactor: true,
           email: response.data.email,
-          twoFactorSecret: response.data.twoFactorSecret ?? ''
+          twoFactorSecret: response.data.twoFactorSecret ?? '',
+          isFirstTimeSetup: response.data.isFirstTimeSetup ?? false
         };
       }
 
