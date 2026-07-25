@@ -31,7 +31,8 @@ export default function Dashboard() {
     setSearchQuery, 
     selectedMessage, 
     replyToThread, 
-    toggleArchiveMessage 
+    toggleArchiveMessage,
+    activeFolder
   } = useMail();
   
   const [isComposeOpen, setIsComposeOpen] = useState(false);
