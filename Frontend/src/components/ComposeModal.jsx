@@ -3,6 +3,16 @@ import { useMail } from "../context/MailContext";
 import { useAuth } from "../context/AuthContext";
 import TiptapEditor from "./TiptapEditor";
 
+// ── Role → Arabic label helper ───────────────────────────────────────────
+const getRoleArabicLabel = (role) => {
+  if (!role) return '';
+  const lower = role.toString().toLowerCase();
+  if (lower === 'fonctionnaire') return 'موظف';
+  if (lower === 'association')   return 'جمعية';
+  if (lower === 'admin' || lower === 'administrateur') return 'مدير النظام';
+  return role;
+};
+
 export default function ComposeModal({ onClose }) {
   const { user } = useAuth();
   const { contacts, sendNewMessage } = useMail();
@@ -253,7 +263,7 @@ export default function ComposeModal({ onClose }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-800 truncate">{contact.nomComplet}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{contact.role} — {contact.entrepriseNom}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{getRoleArabicLabel(contact.role)} — {contact.entrepriseNom}</p>
                 </div>
               </label>
             );
@@ -328,7 +338,7 @@ export default function ComposeModal({ onClose }) {
                 <option value="">اختر جهة اتصال...</option>
                 {contacts.map((contact) => (
                   <option key={contact.id} value={contact.id}>
-                    {contact.nomComplet} ({contact.role} — {contact.entrepriseNom})
+                    {contact.nomComplet} ({getRoleArabicLabel(contact.role)} — {contact.entrepriseNom})
                   </option>
                 ))}
               </select>

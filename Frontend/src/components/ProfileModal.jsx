@@ -10,10 +10,13 @@ export default function ProfileModal({ onClose }) {
     return "Structure externe";
   };
 
-  const getRoleLabel = (role) => {
-    if (role === 'Administrateur') return 'Administrateur (CSPJ)';
-    if (role === 'Fonctionnaire') return 'Fonctionnaire (Interne CSPJ)';
-    if (role === 'Association') return 'Association (Partenaire Externe)';
+  // ── Role → Arabic label helper ────────────────────────────────
+  const getRoleArabicLabel = (role) => {
+    if (!role) return '';
+    const lower = role.toString().toLowerCase();
+    if (lower === 'fonctionnaire') return 'موظف';
+    if (lower === 'association')   return 'جمعية';
+    if (lower === 'admin' || lower === 'administrateur') return 'مدير النظام';
     return role;
   };
 
@@ -51,7 +54,7 @@ export default function ProfileModal({ onClose }) {
               <p className="text-xs text-slate-500 font-mono">{user?.email}</p>
               <div className="mt-1 flex items-center">
                 <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
-                  {user?.role}
+                  {getRoleArabicLabel(user?.role)}
                 </span>
               </div>
             </div>
@@ -109,7 +112,7 @@ export default function ProfileModal({ onClose }) {
               <input
                 type="text"
                 disabled
-                value={getRoleLabel(user?.role)}
+                value={getRoleArabicLabel(user?.role)}
                 className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-600 outline-none font-medium cursor-not-allowed"
               />
             </div>

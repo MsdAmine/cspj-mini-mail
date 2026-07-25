@@ -12,6 +12,15 @@ import ManageLogs from '../components/ManageLogs';
 import TiptapEditor from '../components/TiptapEditor';
 import { Send } from 'lucide-react';
 
+// ── Role → Arabic label helper (shared across this page) ─────────────────────
+const getRoleArabicLabel = (role) => {
+  if (!role) return '';
+  const lower = role.toString().toLowerCase();
+  if (lower === 'fonctionnaire') return 'موظف';
+  if (lower === 'association')   return 'جمعية';
+  if (lower === 'admin' || lower === 'administrateur') return 'مدير النظام';
+  return role;
+};
 
 export default function Dashboard() {
   const { user, adminCreateUser } = useAuth();
@@ -239,7 +248,7 @@ export default function Dashboard() {
                   {user ? `${user.prenom} ${user.nom}` : ''}
                 </p>
                 <p className="text-[10px] text-amber-600 font-mono font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
-                  {user?.role}
+                  {getRoleArabicLabel(user?.role)}
                 </p>
               </div>
 
@@ -575,7 +584,7 @@ export default function Dashboard() {
                               <span className="font-medium">من:</span>
                               <span className="text-slate-700">
                                 {selectedMessage.messages?.[0]?.expediteurNomComplet || 'Inconnu'}
-                                <span className="text-xs font-mono text-slate-500 ml-1">({selectedMessage.messages?.[0]?.expediteurRole || ''})</span>
+                                <span className="text-xs font-mono text-slate-500 ml-1">({getRoleArabicLabel(selectedMessage.messages?.[0]?.expediteurRole)})</span>
                               </span>
                               <span className="text-slate-400">إلى</span>
                               <span className="text-slate-700">
@@ -636,7 +645,7 @@ export default function Dashboard() {
                                         ? 'bg-blue-100 text-blue-700 border border-blue-200'
                                         : 'bg-slate-100 text-slate-600 border border-slate-200'
                                     }`}>
-                                      {msg.expediteurRole}
+                                      {getRoleArabicLabel(msg.expediteurRole)}
                                     </span>
                                   </div>
                                 </div>
