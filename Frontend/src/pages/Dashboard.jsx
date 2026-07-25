@@ -198,7 +198,7 @@ export default function Dashboard() {
 
   if (isProfileOpen) {
     return (
-      <div dir={layoutDir} className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800">
+      <div dir={layoutDir} className="flex h-screen w-full bg-gradient-to-br from-slate-50 via-slate-100/50 to-slate-50 overflow-hidden font-sans text-slate-800">
         <Sidebar 
           onComposeOpen={() => setIsComposeOpen(true)} 
           isAdminView={isAdminView}
@@ -212,7 +212,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div dir={layoutDir} className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800">
+    <div dir={layoutDir} className="flex h-screen w-full bg-gradient-to-br from-slate-50 via-slate-100/50 to-slate-50 overflow-hidden font-sans text-slate-800">
       
       <Sidebar 
         onComposeOpen={() => setIsComposeOpen(true)} 
@@ -225,7 +225,7 @@ export default function Dashboard() {
       <div className="flex flex-col flex-1 min-w-0">
         
         {/* En-tête épuré avec barre de recherche et profil utilisateur */}
-        <header dir="ltr" className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 shadow-sm flex-shrink-0">
+        <header dir="ltr" className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-4 md:px-6 shadow-sm flex-shrink-0">
           <div className="flex-1 max-w-xs md:max-w-sm">
             {!isAdminView && (
               <input
@@ -233,7 +233,7 @@ export default function Dashboard() {
                 placeholder="البحث عن رسالة أو موضوع..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 bg-slate-100 border border-transparent rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
+                className="w-full px-4 py-2 bg-slate-100 border border-transparent rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
               />
             )}
           </div>
@@ -242,26 +242,30 @@ export default function Dashboard() {
             {/* Zone profil cliquable avec avatar */}
             <div 
               onClick={() => setIsProfileOpen(true)}
-              className="flex items-center space-x-3 cursor-pointer hover:bg-slate-50 px-3 py-1.5 rounded-xl border border-transparent hover:border-slate-200 transition duration-150 group"
+              className="flex items-center space-x-3 cursor-pointer hover:bg-slate-50 px-3 py-1.5 rounded-xl border border-transparent hover:border-slate-200/80 transition-all duration-150 group"
               title="عرض معلوماتي الشخصية"
             >
               <div className="text-left">
                 <p className="text-sm font-semibold text-slate-700 group-hover:text-blue-600 transition">
                   {user ? `${user.prenom} ${user.nom}` : ''}
                 </p>
-                <p className={`text-[10px] font-semibold px-2 py-0.5 rounded border inline-block ${
+                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                   user?.role === 'Administrateur' || user?.role?.toLowerCase() === 'admin'
-                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200/60'
                     : user?.role === 'Association'
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200/60'
                     : 'bg-slate-100 text-slate-700 border-slate-200'
                 }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    user?.role === 'Administrateur' || user?.role?.toLowerCase() === 'admin' ? 'bg-blue-500' :
+                    user?.role === 'Association' ? 'bg-amber-500' : 'bg-slate-400'
+                  }`} />
                   {getRoleArabicLabel(user?.role)}
-                </p>
+                </span>
               </div>
 
               {/* Avatar de profil circulaire */}
-              <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-semibold text-sm flex items-center justify-center border border-slate-800 shadow-sm group-hover:bg-blue-600 group-hover:border-blue-500 transition duration-150 uppercase font-mono">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-white font-semibold text-sm flex items-center justify-center border border-slate-700/50 shadow-md shadow-slate-900/20 group-hover:from-blue-500 group-hover:to-indigo-600 group-hover:border-blue-400/50 transition-all duration-200 uppercase font-mono">
                 {user?.prenom ? user.prenom.charAt(0) : 'U'}
               </div>
             </div>
@@ -270,44 +274,58 @@ export default function Dashboard() {
 
         {/* Contenu alternatif (Gestion Admin ou Messagerie) */}
         {isAdminView ? (
-          <div dir="ltr" className="flex-1 bg-slate-50/70 p-8 overflow-y-auto flex flex-col items-center text-left">
+          <div dir="ltr" className="flex-1 bg-gradient-to-br from-slate-50 via-slate-100/40 to-slate-50 p-8 overflow-y-auto flex flex-col items-center text-left">
             {adminTab === 'stats' ? (
               <div className="w-full max-w-4xl space-y-8 animate-fade-in">
                 {/* En-tête du tableau de bord */}
-                <div className="border-b border-slate-200 pb-5">
-                  <h2 className="text-lg font-bold text-slate-900">Tableau de bord administratif</h2>
-                  <p className="text-slate-500 text-xs mt-1">Données analytiques et statistiques globales d'activité sur le serveur de messagerie.</p>
+                <div className="border-b border-slate-200/80 pb-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-1 h-5 rounded-full bg-gradient-to-b from-blue-500 to-indigo-600" />
+                    <h2 className="text-lg font-bold tracking-tight text-slate-900">Tableau de bord administratif</h2>
+                  </div>
+                  <p className="text-slate-500 text-xs mt-1 ml-3">Données analytiques et statistiques globales d'activité sur le serveur de messagerie.</p>
                 </div>
 
                 {/* Grille des indicateurs de statistiques */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Carte : Utilisateurs */}
-                  <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm border-l-[3px] border-l-blue-500 transition hover:shadow-md">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Comptes Utilisateurs</p>
-                    <p className="text-2xl font-extrabold text-slate-900 mt-2 tabular-nums">{stats.totalUsers}</p>
-                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">Profils enregistrés et habilités sur le réseau interne.</p>
+                  <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                    <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-500" />
+                    <div className="p-5">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Comptes Utilisateurs</p>
+                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-2 tabular-nums">{stats.totalUsers}</p>
+                      <p className="text-xs text-slate-500 mt-2 leading-relaxed">Profils enregistrés et habilités sur le réseau interne.</p>
+                    </div>
                   </div>
 
                   {/* Carte : Discussions */}
-                  <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm border-l-[3px] border-l-indigo-500 transition hover:shadow-md">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discussions Initiées</p>
-                    <p className="text-2xl font-extrabold text-slate-900 mt-2 tabular-nums">{stats.totalThreads}</p>
-                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">Fils de discussion distincts créés par les utilisateurs.</p>
+                  <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                    <div className="h-1 w-full bg-gradient-to-r from-violet-500 to-purple-500" />
+                    <div className="p-5">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discussions Initiées</p>
+                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-2 tabular-nums">{stats.totalThreads}</p>
+                      <p className="text-xs text-slate-500 mt-2 leading-relaxed">Fils de discussion distincts créés par les utilisateurs.</p>
+                    </div>
                   </div>
 
                   {/* Carte : Messages */}
-                  <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm border-l-[3px] border-l-slate-500 transition hover:shadow-md">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Messages Acheminés</p>
-                    <p className="text-2xl font-extrabold text-slate-900 mt-2 tabular-nums">{stats.totalMessagesSent}</p>
-                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">Volume total de messages transmis de bout en bout.</p>
+                  <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                    <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
+                    <div className="p-5">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Messages Acheminés</p>
+                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-2 tabular-nums">{stats.totalMessagesSent}</p>
+                      <p className="text-xs text-slate-500 mt-2 leading-relaxed">Volume total de messages transmis de bout en bout.</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Tableau de suivi des discussions */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden space-y-4 p-6">
+                <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                  <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
+                  <div className="space-y-4 p-6">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
                     <div>
-                      <h3 className="text-sm font-bold text-slate-900">Suivi des Discussions / Échanges</h3>
+                      <h3 className="text-sm font-bold tracking-tight text-slate-900">Suivi des Discussions / Échanges</h3>
                       <p className="text-slate-500 text-[11px] mt-0.5">Dernières conversations surveillées sur la plateforme (Juillet 2026).</p>
                     </div>
                     
@@ -317,12 +335,12 @@ export default function Dashboard() {
                         placeholder="Rechercher sujet, expéditeur..."
                         value={threadSearch}
                         onChange={(e) => setThreadSearch(e.target.value)}
-                        className="px-3 py-1.5 border border-slate-250 rounded-lg text-xs outline-none focus:border-blue-600 w-48 md:w-56"
+                        className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 w-48 md:w-56 transition"
                       />
                       <select
                         value={threadStatusFilter}
                         onChange={(e) => setThreadStatusFilter(e.target.value)}
-                        className="px-3 py-1.5 border border-slate-250 rounded-lg text-xs outline-none bg-white cursor-pointer w-32"
+                        className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs outline-none bg-white cursor-pointer w-32 focus:border-blue-500 transition"
                       >
                         <option value="ALL">Tous les statuts</option>
                         <option value="EN_COURS">En cours</option>
@@ -339,7 +357,7 @@ export default function Dashboard() {
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-wider">
+                          <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
                             <th className="px-4 py-3">Sujet / Objet</th>
                             <th className="px-4 py-3">Expéditeur</th>
                             <th className="px-4 py-3">Destinataire</th>
@@ -349,41 +367,43 @@ export default function Dashboard() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-600">
-                          {filteredThreads.map((t) => (
-                            <tr key={t.id} className="hover:bg-slate-50/50 transition">
+                          {filteredThreads.map((t, idx) => (
+                            <tr key={t.id} className={`hover:bg-blue-50/30 transition-colors duration-150 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
                               <td className="px-4 py-3.5 font-semibold text-slate-800 max-w-xs truncate" title={t.objet}>
                                 {t.objet}
                               </td>
                               <td className="px-4 py-3.5">
-                                <div className="font-medium text-slate-850">{t.expediteur}</div>
+                                <div className="font-medium text-slate-800">{t.expediteur}</div>
                                 <div className="text-[10px] text-slate-400 font-mono" dir="ltr">{t.expediteurEmail}</div>
                               </td>
                               <td className="px-4 py-3.5">
-                                <div className="font-medium text-slate-850">{t.destinataire}</div>
+                                <div className="font-medium text-slate-800">{t.destinataire}</div>
                                 <div className="text-[10px] text-slate-400 font-mono" dir="ltr">{t.destinataireEmail}</div>
                               </td>
                               <td className="px-4 py-3.5 text-center">
                                 {t.hasAttachment ? (
-                                  <span className="inline-flex items-center text-slate-600">
+                                  <span className="inline-flex items-center text-slate-500">
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.586 6.586a6 6 0 108.486 8.486L20 13" /></svg>
                                   </span>
                                 ) : '-'}
                               </td>
                               <td className="px-4 py-3.5 text-center">
-                                <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full border ${
                                   t.statutLecture === 'Lu' 
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
                                     : 'bg-indigo-50 text-indigo-700 border border-indigo-200 animate-pulse'
                                 }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${t.statutLecture === 'Lu' ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
                                   {t.statutLecture}
                                 </span>
                               </td>
                               <td className="px-4 py-3.5 text-center">
-                                <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-lg border uppercase tracking-wider font-mono ${
+                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold rounded-full border uppercase tracking-wider font-mono ${
                                   t.statutAcheminement === 'En cours'
                                     ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                    : 'bg-slate-100 text-slate-600 border-slate-300'
+                                    : 'bg-slate-100 text-slate-600 border-slate-200'
                                 }`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${t.statutAcheminement === 'En cours' ? 'bg-blue-400' : 'bg-slate-400'}`} />
                                   {t.statutAcheminement}
                                 </span>
                               </td>
@@ -393,36 +413,65 @@ export default function Dashboard() {
                       </table>
                     </div>
                   )}
+                  </div>
                 </div>
 
                 {/* Tableau des habilitations système */}
-                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-                  <div className="px-6 py-4 bg-slate-50 border-b border-slate-200/65">
-                    <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Matrice des habilitations d'accès</h3>
+                <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+                  <div className="h-0.5 w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
+                  <div className="px-6 py-4 bg-slate-50/60 border-b border-slate-100">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Matrice des habilitations d'accès</h3>
                   </div>
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-50/50 border-b border-slate-200/60 text-slate-450 uppercase font-semibold">
+                      <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
                         <th className="px-6 py-3">Rôle Système</th>
                         <th className="px-6 py-3">Périmètre Applicatif</th>
                         <th className="px-6 py-3">Statut Réseau</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 text-slate-600">
-                      <tr>
-                        <td className="px-6 py-3.5 font-semibold text-slate-800">Administrateur</td>
-                        <td className="px-6 py-3.5">Création et audit des comptes utilisateurs, consultation des statistiques de trafic.</td>
-                        <td className="px-6 py-3.5 text-emerald-600 font-medium">Actif</td>
+                      <tr className="hover:bg-blue-50/30 transition-colors duration-150">
+                        <td className="px-6 py-3.5">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200/60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            مدير النظام
+                          </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-slate-600">Création et audit des comptes utilisateurs, consultation des statistiques de trafic.</td>
+                        <td className="px-6 py-3.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Actif
+                          </span>
+                        </td>
                       </tr>
-                      <tr>
-                        <td className="px-6 py-3.5 font-semibold text-slate-800">Fonctionnaire</td>
-                        <td className="px-6 py-3.5">Messagerie professionnelle interne, communication sécurisée inter-services.</td>
-                        <td className="px-6 py-3.5 text-emerald-600 font-medium">Actif</td>
+                      <tr className="hover:bg-blue-50/30 transition-colors duration-150 bg-slate-50/40">
+                        <td className="px-6 py-3.5">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                            موظف
+                          </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-slate-600">Messagerie professionnelle interne, communication sécurisée inter-services.</td>
+                        <td className="px-6 py-3.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Actif
+                          </span>
+                        </td>
                       </tr>
-                      <tr>
-                        <td className="px-6 py-3.5 font-semibold text-slate-800">Association</td>
-                        <td className="px-6 py-3.5">Accès externe restreint, envoi et réception de messages avec les services habilités.</td>
-                        <td className="px-6 py-3.5 text-emerald-600 font-medium">Actif</td>
+                      <tr className="hover:bg-blue-50/30 transition-colors duration-150">
+                        <td className="px-6 py-3.5">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                            جمعية
+                          </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-slate-600">Accès externe restreint, envoi et réception de messages avec les services habilités.</td>
+                        <td className="px-6 py-3.5">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Actif
+                          </span>
+                        </td>
                       </tr>
                     </tbody>
                   </table>
@@ -433,20 +482,30 @@ export default function Dashboard() {
             ) : adminTab === 'audit-logs' ? (
               <ManageLogs />
             ) : (
-              <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/80 shadow-md overflow-hidden animate-fade-in">
+              <div className="w-full max-w-xl bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden animate-fade-in">
+                {/* Accent top bar */}
+                <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
                 {/* En-tête de la fiche de création */}
-                <div className="px-6 py-5 bg-slate-50/50 border-b border-slate-200/60">
-                  <h2 className="text-base font-bold text-slate-900">Enregistrer un nouvel utilisateur</h2>
-                  <p className="text-slate-500 text-xs mt-1">Le compte créé sera actif et recevra automatiquement ses accès sécurisés.</p>
+                <div className="px-6 py-5 bg-slate-50/60 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-500 to-indigo-600" />
+                    <h2 className="text-base font-bold tracking-tight text-slate-900">Enregistrer un nouvel utilisateur</h2>
+                  </div>
+                  <p className="text-slate-500 text-xs mt-1 ml-3">Le compte créé sera actif et recevra automatiquement ses accès sécurisés.</p>
                 </div>
 
                 <div className="p-6">
                   {adminMessage.text && (
-                    <div className={`p-4 rounded-xl text-xs font-semibold mb-5 ${
+                    <div className={`p-4 rounded-xl text-xs font-semibold mb-5 flex items-center gap-2 ${
                       adminMessage.type === 'success' 
                         ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
                         : 'bg-rose-50 text-rose-800 border border-rose-200'
                     }`}>
+                      {adminMessage.type === 'success' ? (
+                        <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      ) : (
+                        <svg className="w-4 h-4 text-rose-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                      )}
                       {adminMessage.text}
                     </div>
                   )}
@@ -461,7 +520,7 @@ export default function Dashboard() {
                           value={newPrenom}
                           onChange={(e) => setNewPrenom(e.target.value)}
                           placeholder="Ex: Sanaa"
-                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/30 hover:border-slate-350 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
                         />
                       </div>
                       <div>
@@ -472,7 +531,7 @@ export default function Dashboard() {
                           value={newNom}
                           onChange={(e) => setNewNom(e.target.value)}
                           placeholder="Ex: Benjelloun"
-                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/30 hover:border-slate-350 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
                         />
                       </div>
                     </div>
@@ -485,7 +544,7 @@ export default function Dashboard() {
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
                         placeholder="Ex: s.benjelloun@cspj.ma"
-                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/30 hover:border-slate-350 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
                       />
                     </div>
 
@@ -497,7 +556,7 @@ export default function Dashboard() {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="••••••••"
-                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg text-sm bg-slate-50/30 hover:border-slate-350 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
                       />
                     </div>
 
@@ -507,7 +566,7 @@ export default function Dashboard() {
                         <select
                           value={newRole}
                           onChange={(e) => setNewRole(e.target.value)}
-                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
+                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
                         >
                           <option value="Fonctionnaire">Fonctionnaire</option>
                           <option value="Association">Association</option>
@@ -520,7 +579,7 @@ export default function Dashboard() {
                         <select
                           value={newEntrepriseId}
                           onChange={(e) => setNewEntrepriseId(e.target.value)}
-                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-lg bg-white text-sm focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
+                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
                         >
                           {entreprises.map(e => (
                             <option key={e.id} value={e.id.toString()}>{e.nom}</option>
@@ -532,7 +591,7 @@ export default function Dashboard() {
                     <div className="pt-4">
                       <button
                         type="submit"
-                        className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 active:scale-[0.99] transition duration-150 shadow-sm cursor-pointer focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 outline-none"
+                        className="w-full py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-xl text-sm font-semibold hover:from-slate-700 hover:to-slate-800 active:scale-[0.98] transition-all duration-150 shadow-md shadow-slate-900/20 cursor-pointer focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 outline-none"
                       >
                         Créer le compte utilisateur
                       </button>
@@ -645,22 +704,24 @@ export default function Dashboard() {
                                 }`}>
                                   {isOwnMessage ? user?.prenom?.charAt(0) + user?.nom?.charAt(0) : initials}
                                 </div>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-slate-900 text-sm">
-                                      {isOwnMessage ? "أنا" : msg.expediteurNomComplet}
-                                    </span>
-                                    {/* Badge rôle */}
-                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                                      msg.expediteurRole === 'Administrateur' 
-                                        ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                                        : msg.expediteurRole === 'Association'
-                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
-                                        : 'bg-slate-100 text-slate-700 border-slate-200'
-                                    }`}>
-                                      {getRoleArabicLabel(msg.expediteurRole)}
-                                    </span>
-                                  </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold text-slate-900 text-sm">
+                                    {isOwnMessage ? "أنا" : msg.expediteurNomComplet}
+                                  </span>
+                                  {/* Badge rôle — modern pill with dot */}
+                                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                                    msg.expediteurRole === 'Administrateur' 
+                                      ? 'bg-blue-50 text-blue-800 border-blue-200/60' 
+                                      : msg.expediteurRole === 'Association'
+                                      ? 'bg-amber-50 text-amber-800 border-amber-200/60'
+                                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                                  }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                      msg.expediteurRole === 'Administrateur' ? 'bg-blue-500' :
+                                      msg.expediteurRole === 'Association' ? 'bg-amber-500' : 'bg-slate-400'
+                                    }`} />
+                                    {getRoleArabicLabel(msg.expediteurRole)}
+                                  </span>
                                 </div>
                               </div>
                               <span className="text-xs text-slate-500 font-mono" dir="ltr">

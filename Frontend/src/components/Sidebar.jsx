@@ -81,7 +81,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
     <>
       {/* ── Mobile hamburger trigger (visible only on small screens) ── */}
       <button
-        className="md:hidden fixed top-4 z-50 p-2 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:bg-slate-50 transition"
+        className="md:hidden fixed top-4 z-50 p-2 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-xl shadow-md text-slate-600 hover:bg-slate-50 active:scale-95 transition-all duration-150"
         style={{ [isUserAdmin ? 'left' : 'right']: '1rem' }}
         onClick={() => setMobileOpen(v => !v)}
         aria-label="Toggle sidebar"
@@ -97,7 +97,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
       {/* ── Mobile backdrop ── */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -108,8 +108,9 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
           fixed md:relative z-40 md:z-auto
           flex flex-col h-full
           w-64 flex-shrink-0
-          bg-white font-sans
-          ${isUserAdmin ? 'border-r border-slate-200' : 'border-l border-slate-200'}
+          bg-white/95 backdrop-blur-md font-sans
+          ${isUserAdmin ? 'border-r border-slate-200/80' : 'border-l border-slate-200/80'}
+          shadow-xl md:shadow-none
           transition-transform duration-200 ease-in-out
           ${mobileOpen ? 'translate-x-0' : (isUserAdmin ? '-translate-x-full md:translate-x-0' : 'translate-x-full md:translate-x-0')}
         `}
@@ -117,8 +118,8 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
         {/* ── Brand Header ── */}
         <div className="px-5 py-4 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            {/* Logo mark */}
-            <div className="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center flex-shrink-0">
+            {/* Logo mark with gradient */}
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center flex-shrink-0 shadow-md shadow-slate-900/20">
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
@@ -140,7 +141,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
             <>
               <button
                 onClick={() => handleNavClick(onComposeOpen)}
-                className="w-full mb-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mb-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-xl text-sm font-semibold hover:from-slate-700 hover:to-slate-800 active:scale-95 transition-all duration-150 shadow-md shadow-slate-900/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -160,12 +161,15 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
                         setIsAdminView(false);
                         setActiveFolder(folder.id);
                       })}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
                         isActive
-                          ? 'bg-slate-100 text-blue-600 font-semibold border-r-2 border-blue-500'
+                          ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100'
                           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
                       }`}
                     >
+                      {isActive && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 shadow-sm shadow-blue-500/50" />
+                      )}
                       <span className={isActive ? 'text-blue-500' : 'text-slate-400'}>{folder.icon}</span>
                       <span>{folder.label}</span>
                     </button>
@@ -185,12 +189,15 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
                   <button
                     key={item.id}
                     onClick={() => handleNavClick(() => setAdminTab(item.id))}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
                       isActive
-                        ? 'bg-slate-100 text-blue-600 font-semibold border-l-2 border-blue-500'
+                        ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100'
                         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
                     }`}
                   >
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 shadow-sm shadow-blue-500/50" />
+                    )}
                     <span className={isActive ? 'text-blue-500' : 'text-slate-400'}>{item.icon}</span>
                     <span>{item.label}</span>
                   </button>
@@ -201,10 +208,10 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
         </div>
 
         {/* ── Footer / Logout ── */}
-        <div className="px-3 py-3 border-t border-slate-100 flex-shrink-0">
+        <div className="px-3 py-3 border-t border-slate-100/80 flex-shrink-0">
           <button
             onClick={logout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-rose-600 bg-transparent hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-lg transition-all duration-150 cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-rose-600 bg-transparent hover:bg-rose-50/80 border border-transparent hover:border-rose-200/60 rounded-xl transition-all duration-150 cursor-pointer active:scale-95"
             title={isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج من النظام'}
           >
             <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
