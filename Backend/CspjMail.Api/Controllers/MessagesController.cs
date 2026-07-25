@@ -527,11 +527,27 @@ namespace CspjMail.Api.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            // Include threads where the user is a registered participant (covers group + legacy 1-to-1)
+            // INBOX = threads where the current user is a RECIPIENT of at least one message
+            // (i.e., someone else sent them a message in that thread).
+            //
+            // Condition A — modern threads (ThreadParticipant rows exist):
+            //   The user is a registered participant AND at least one message in the thread
+            //   was written by someone other than the current user.
+            //   This correctly excludes threads the current user started solo but never received a reply on.
+            //
+            // Condition B — legacy 1-to-1 threads (no ThreadParticipant rows):
+            //   The message's DestinataireId directly equals the current user.
             var threads = await _context.Threads
                 .Where(t => !t.EstArchive &&
-                    (t.Participants.Any(tp => tp.UserId == currentUserId) ||           // group/new 1-to-1
-                     t.Messages.Any(m => m.DestinataireId == currentUserId)))          // legacy fallback
+                    (
+                        // Modern path: participant in thread + has received at least one message
+                        (
+                            t.Participants.Any(tp => tp.UserId == currentUserId) &&
+                            t.Messages.Any(m => m.ExpediteurId != currentUserId)
+                        ) ||
+                        // Legacy path: directly addressed as DestinataireId
+                        t.Messages.Any(m => m.DestinataireId == currentUserId)
+                    ))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
                 .Include(t => t.Participants)
@@ -551,6 +567,7 @@ namespace CspjMail.Api.Controllers
                     DernierExpediteurNom = lastMessage.Expediteur != null
                         ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
                         : "Inconnu",
+                    // Unread badge: count messages sent by others that haven't been read yet
                     ADesMessagesNonLus = t.Messages.Any(m =>
                         m.ExpediteurId != currentUserId && !m.EstLu &&
                         (m.DestinataireId == currentUserId ||
@@ -577,27 +594,45 @@ namespace CspjMail.Api.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
+            // SENT = threads where the current user is the SENDER of at least one message.
+            // This correctly includes both original thread starters and threads where the
+            // user replied (so their reply appears in their Sent view).
             var threads = await _context.Threads
                 .Where(t => !t.EstArchive &&
-                    (t.Messages.Any(m => m.ExpediteurId == currentUserId)))
+                    t.Messages.Any(m => m.ExpediteurId == currentUserId))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.Destinataire)
+                        .ThenInclude(u => u!.Entreprise)
                 .Include(t => t.Participants)
+                    .ThenInclude(tp => tp.Utilisateur)
+                        .ThenInclude(u => u.Entreprise)
                 .ToListAsync();
 
             var sentSummaries = threads.Select(t =>
             {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
-                if (lastMessage == null) return null;
+                // Use the last message sent BY the current user as the representative for "Sent"
+                var lastSentMessage = t.Messages
+                    .Where(m => m.ExpediteurId == currentUserId)
+                    .OrderByDescending(m => m.DateEnvoi)
+                    .FirstOrDefault();
+
+                if (lastSentMessage == null) return null;
+
                 return new ThreadSummaryDto
                 {
                     ThreadId = t.Id,
                     Objet = t.Objet,
-                    DerniereActivite = lastMessage.DateEnvoi,
-                    DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = lastMessage.Expediteur != null
-                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
-                        : "Inconnu",
+                    DerniereActivite = lastSentMessage.DateEnvoi,
+                    DernierMessageCorps = lastSentMessage.Corps,
+                    // For the Sent view show the recipient's name (not the sender's own name)
+                    DernierExpediteurNom = lastSentMessage.Destinataire != null
+                        ? $"{lastSentMessage.Destinataire.Prenom} {lastSentMessage.Destinataire.Nom}"
+                        : t.Participants
+                            .Where(tp => tp.UserId != currentUserId)
+                            .Select(tp => $"{tp.Utilisateur.Prenom} {tp.Utilisateur.Nom}")
+                            .FirstOrDefault() ?? "Inconnu",
                     ADesMessagesNonLus = false,
                     EstArchive = t.EstArchive,
                     EstGroupe = t.EstGroupe,
