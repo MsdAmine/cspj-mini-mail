@@ -244,25 +244,25 @@ export default function ManageUsers() {
           <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-wider">
-                  <th className="px-6 py-4">Nom / Prénom</th>
-                  <th className="px-6 py-4">Adresse Email</th>
-                  <th className="px-6 py-4">Structure</th>
-                  <th className="px-6 py-4">Rôle</th>
-                  <th className="px-6 py-4 text-center">Statut (Actif)</th>
-                  <th className="px-6 py-4 text-right">Actions</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
+                  <th className="px-4 py-3">Nom / Prénom</th>
+                  <th className="px-4 py-3">Adresse Email</th>
+                  <th className="px-4 py-3">Structure</th>
+                  <th className="px-4 py-3">Rôle</th>
+                  <th className="px-4 py-3 text-center">Statut</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
                 {filteredUsers.map((u) => (
                     <tr
                       key={u.id}
-                      className="hover:bg-slate-50/50 transition duration-150"
+                      className="hover:bg-slate-50/80 transition duration-150"
                     >
                       {/* Name / Firstname */}
-                      <td className="px-6 py-4.5 font-semibold text-slate-800">
+                      <td className="px-4 py-2.5 font-semibold text-slate-800">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center border border-slate-800 shadow-sm uppercase font-mono">
+                          <div className="w-7 h-7 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center border border-slate-800 shadow-sm uppercase">
                             {u.prenom ? u.prenom.charAt(0) : 'U'}
                           </div>
                           <div>
@@ -274,32 +274,32 @@ export default function ManageUsers() {
                       </td>
 
                       {/* Email */}
-                      <td className="px-6 py-4.5 text-slate-600 font-medium">
+                      <td className="px-4 py-2.5 text-slate-600 font-medium">
                         {u.email}
                       </td>
 
                       {/* Enterprise/Structure */}
-                      <td className="px-6 py-4.5">
+                      <td className="px-4 py-2.5">
                         <span className="text-xs font-semibold text-slate-700">
                           {u.entrepriseNom || "Non définie"}
                         </span>
                       </td>
 
                       {/* Role Badge */}
-                      <td className="px-6 py-4.5">
-                        <span className={`inline-block px-2.5 py-1 text-[10px] font-bold rounded-lg border uppercase tracking-wider font-mono ${
+                      <td className="px-4 py-2.5">
+                        <span className={`inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded border tracking-wide ${
                           u.role === 'Administrateur'
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : u.role === 'Fonctionnaire'
                             ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-amber-50 text-amber-800 border-amber-200'
+                            : u.role === 'Association'
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-slate-100 text-slate-700 border-slate-200'
                         }`}>
-                          {u.role}
+                          {u.role === 'Administrateur' ? 'مدير النظام' : u.role === 'Fonctionnaire' ? 'موظف' : u.role === 'Association' ? 'جمعية' : u.role}
                         </span>
                       </td>
 
                       {/* Toggle status switch */}
-                      <td className="px-6 py-4.5 text-center">
+                      <td className="px-4 py-2.5 text-center">
                         <div className="flex items-center justify-center">
                           <button
                             type="button"
@@ -320,14 +320,14 @@ export default function ManageUsers() {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4.5 text-right">
+                      <td className="px-4 py-2.5 text-right">
                         <button
                           type="button"
                           onClick={() => setDeletingUser(u)}
-                          className="p-2 text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-lg transition border border-rose-200 hover:border-rose-500 cursor-pointer"
+                          className="p-1.5 text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-md transition border border-rose-200 hover:border-rose-500 cursor-pointer"
                           title="Supprimer cet utilisateur"
                         >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
