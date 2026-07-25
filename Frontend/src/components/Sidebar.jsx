@@ -7,8 +7,9 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
   const { user, logout } = useAuth();
 
   const folders = [
-    { id: 'inbox', label: 'العلبة الواردة' },
-    { id: 'sent', label: 'الرسائل المرسلة' },
+    { id: 'inbox',    label: 'العلبة الواردة' },
+    { id: 'sent',     label: 'الرسائل المرسلة' },
+    { id: 'groups',   label: 'المجموعات' },
     { id: 'archived', label: 'الأرشيف' },
   ];
 

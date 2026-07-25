@@ -8,7 +8,7 @@ export const MailProvider = ({ children }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
-  const [activeFolder, setActiveFolder] = useState('inbox'); // 'inbox' | 'sent' | 'archived'
+  const [activeFolder, setActiveFolder] = useState('inbox'); // 'inbox' | 'sent' | 'archived' | 'groups' | 'direct'
   const [searchQuery, setSearchQuery] = useState('');
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,6 +25,10 @@ export const MailProvider = ({ children }) => {
         endpoint = '/messages/sent';
       } else if (activeFolder === 'archived') {
         endpoint = '/messages/archive';
+      } else if (activeFolder === 'groups') {
+        endpoint = '/messages/groups';
+      } else if (activeFolder === 'direct') {
+        endpoint = '/messages/direct';
       }
       
       const response = await api.get(endpoint);
@@ -86,12 +90,10 @@ export const MailProvider = ({ children }) => {
       const isBroadcast = estDiffusion  && receiverIds && receiverIds.length >= 1;
 
       if (isGroup || isBroadcast) {
-        // Multi-recipient: append each ID under the array field name
         receiverIds.forEach(id => formData.append('destinataireIds', id));
         if (isGroup && titreGroupe) formData.append('titreGroupe', titreGroupe.trim());
         if (isBroadcast)            formData.append('estDiffusion', 'true');
       } else {
-        // 1-to-1: use the singular field
         const singleId = receiverIds?.[0] ?? receiverId;
         formData.append('destinataireId', parseInt(singleId, 10));
       }
@@ -107,6 +109,22 @@ export const MailProvider = ({ children }) => {
     } catch (err) {
       const msg = err.response?.data || "Erreur lors de l'envoi du message.";
       throw new Error(msg);
+    }
+  };
+
+  // Create a group thread via the dedicated JSON endpoint (Groups page)
+  const createGroupThread = async ({ groupTitle, corps, participantIds }) => {
+    try {
+      const response = await api.post('/messages/groups/create', {
+        groupTitle: groupTitle.trim(),
+        corps: corps.trim(),
+        participantIds
+      });
+      await loadMailbox();
+      return response.data;
+    } catch (err) {
+      const msg = err.response?.data || "حدث خطأ أثناء إنشاء المجموعة.";
+      throw new Error(typeof msg === 'string' ? msg : JSON.stringify(msg));
     }
   };
 
@@ -155,10 +173,11 @@ export const MailProvider = ({ children }) => {
       activeFolder,
       setActiveFolder,
       selectedMessage,
-      setSelectedMessage: selectMessage, // Override with API load function
+      setSelectedMessage: selectMessage,
       searchQuery,
       setSearchQuery,
       sendNewMessage,
+      createGroupThread,
       replyToThread,
       toggleArchiveMessage,
       markAsReadMessage,

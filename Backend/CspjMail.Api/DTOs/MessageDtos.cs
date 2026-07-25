@@ -158,4 +158,20 @@ namespace CspjMail.Api.DTOs
         public string Utilisateur { get; set; } = null!;
         public string Description { get; set; } = null!;
     }
+
+    /// <summary>
+    /// Payload for the dedicated POST /messages/groups/create endpoint.
+    /// Accepts JSON (not multipart/form-data) — attachments can be added via reply.
+    /// </summary>
+    public class CreateGroupThreadDto
+    {
+        /// <summary>Display name for the group (required).</summary>
+        public string GroupTitle { get; set; } = null!;
+
+        /// <summary>Initial message body (HTML allowed).</summary>
+        public string Corps { get; set; } = null!;
+
+        /// <summary>IDs of participants to add (excluding the creator, who is auto-added).</summary>
+        public List<int> ParticipantIds { get; set; } = new();
+    }
 }

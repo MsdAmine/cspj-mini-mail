@@ -836,5 +836,207 @@ namespace CspjMail.Api.Controllers
 
             return PhysicalFile(physicalPath, contentType, attachment.NomFichier);
         }
+
+        // ─── 11. GET: api/messages/direct ─────────────────────────────────────────
+        /// <summary>
+        /// Returns all non-group (1-to-1) threads the current user participates in,
+        /// ordered by most recent activity. Uses EstGroupe == false as the discriminator.
+        /// </summary>
+        [HttpGet("direct")]
+        public async Task<IActionResult> GetDirectMessages()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            var threads = await _context.Threads
+                .Where(t => !t.EstArchive &&
+                            !t.EstGroupe &&
+                            (
+                                t.Participants.Any(tp => tp.UserId == currentUserId) ||
+                                t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)
+                            ))
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Participants)
+                .ToListAsync();
+
+            var summaries = threads.Select(t =>
+            {
+                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
+                if (lastMessage == null) return null;
+
+                return new ThreadSummaryDto
+                {
+                    ThreadId = t.Id,
+                    Objet = t.Objet,
+                    DerniereActivite = lastMessage.DateEnvoi,
+                    DernierMessageCorps = lastMessage.Corps,
+                    DernierExpediteurNom = lastMessage.Expediteur != null
+                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
+                        : "Inconnu",
+                    ADesMessagesNonLus = t.Messages.Any(m =>
+                        m.ExpediteurId != currentUserId && !m.EstLu &&
+                        (m.DestinataireId == currentUserId ||
+                         t.Participants.Any(tp => tp.UserId == currentUserId))),
+                    EstArchive = t.EstArchive,
+                    EstGroupe = false,
+                    TitreGroupe = null,
+                    NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
+                };
+            })
+            .Where(s => s != null)
+            .OrderByDescending(s => s!.DerniereActivite)
+            .ToList();
+
+            return Ok(summaries);
+        }
+
+        // ─── 12. GET: api/messages/groups ─────────────────────────────────────────
+        /// <summary>
+        /// Returns all group threads (EstGroupe == true) the current user participates in,
+        /// ordered by most recent activity. Includes participant count and group title.
+        /// </summary>
+        [HttpGet("groups")]
+        public async Task<IActionResult> GetGroupMessages()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            var threads = await _context.Threads
+                .Where(t => !t.EstArchive &&
+                            t.EstGroupe &&
+                            t.Participants.Any(tp => tp.UserId == currentUserId))
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.Expediteur)
+                .Include(t => t.Participants)
+                    .ThenInclude(tp => tp.Utilisateur)
+                .ToListAsync();
+
+            var summaries = threads.Select(t =>
+            {
+                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
+                if (lastMessage == null) return null;
+
+                return new ThreadSummaryDto
+                {
+                    ThreadId = t.Id,
+                    Objet = t.Objet,
+                    DerniereActivite = lastMessage.DateEnvoi,
+                    DernierMessageCorps = lastMessage.Corps,
+                    DernierExpediteurNom = lastMessage.Expediteur != null
+                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
+                        : "Inconnu",
+                    ADesMessagesNonLus = t.Messages.Any(m =>
+                        m.ExpediteurId != currentUserId && !m.EstLu &&
+                        t.Participants.Any(tp => tp.UserId == currentUserId)),
+                    EstArchive = t.EstArchive,
+                    EstGroupe = true,
+                    TitreGroupe = t.TitreGroupe,
+                    NombreParticipants = t.Participants.Count
+                };
+            })
+            .Where(s => s != null)
+            .OrderByDescending(s => s!.DerniereActivite)
+            .ToList();
+
+            return Ok(summaries);
+        }
+
+        // ─── 13. POST: api/messages/groups/create ─────────────────────────────────
+        /// <summary>
+        /// Dedicated endpoint for creating a group thread from the Groups page.
+        /// Accepts JSON (not multipart/form-data). At least 1 participant ID is required
+        /// in addition to the creator. The creator is always auto-added as participant.
+        /// </summary>
+        [HttpPost("groups/create")]
+        public async Task<IActionResult> CreateGroupThread([FromBody] CreateGroupThreadDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(dto.GroupTitle))
+                return BadRequest("اسم المجموعة مطلوب.");
+
+            if (string.IsNullOrWhiteSpace(dto.Corps))
+                return BadRequest("نص الرسالة مطلوب.");
+
+            if (dto.ParticipantIds == null || dto.ParticipantIds.Count < 1)
+                return BadRequest("يجب اختيار مشارك واحد على الأقل.");
+
+            // Deduplicate and exclude the creator
+            var participantIds = dto.ParticipantIds
+                .Distinct()
+                .Where(id => id != currentUserId)
+                .ToList();
+
+            if (participantIds.Count == 0)
+                return BadRequest("يجب اختيار مشارك صالح على الأقل.");
+
+            // Validate all participant IDs exist
+            foreach (var pid in participantIds)
+            {
+                var exists = await _context.Utilisateurs.AnyAsync(u => u.Id == pid && u.Actif && !u.IsDeleted);
+                if (!exists)
+                    return BadRequest($"المستخدم (ID {pid}) غير موجود أو غير نشط.");
+            }
+
+            // ── Create thread ────────────────────────────────────────────────────
+            var newThread = new Models.Thread
+            {
+                Objet        = dto.GroupTitle.Trim(),
+                DateCreation = DateTime.UtcNow,
+                EstArchive   = false,
+                EstGroupe    = true,
+                TitreGroupe  = dto.GroupTitle.Trim()
+            };
+            _context.Threads.Add(newThread);
+            await _context.SaveChangesAsync();
+
+            // ── Record all participants (creator + supplied list) ─────────────────
+            var allParticipantIds = new List<int> { currentUserId };
+            allParticipantIds.AddRange(participantIds);
+
+            foreach (var pid in allParticipantIds)
+            {
+                _context.ThreadParticipants.Add(new ThreadParticipant
+                {
+                    ThreadId = newThread.Id,
+                    UserId   = pid
+                });
+            }
+            await _context.SaveChangesAsync();
+
+            // ── Create the initial message ────────────────────────────────────────
+            var initialMessage = new Message
+            {
+                ThreadId       = newThread.Id,
+                ExpediteurId   = currentUserId,
+                DestinataireId = null, // group message — no single recipient
+                Corps          = dto.Corps,
+                DateEnvoi      = DateTime.UtcNow,
+                EstLu          = false
+            };
+            _context.Messages.Add(initialMessage);
+            await _context.SaveChangesAsync();
+
+            // ── Audit log ─────────────────────────────────────────────────────────
+            var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
+            _context.AuditLogs.Add(new AuditLog
+            {
+                DateHeure   = DateTime.UtcNow,
+                TypeAction  = "CREATE_GROUP_THREAD",
+                Utilisateur = currentUser?.Email ?? "Inconnu",
+                Description = $"مجموعة جديدة: « {dto.GroupTitle.Trim()} » ({allParticipantIds.Count} مشاركين)"
+            });
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                ThreadId         = newThread.Id,
+                TitreGroupe      = newThread.TitreGroupe,
+                NombreParticipants = allParticipantIds.Count,
+                Message          = "تم إنشاء المجموعة بنجاح."
+            });
+        }
     }
 }
