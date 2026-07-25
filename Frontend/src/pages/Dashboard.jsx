@@ -198,7 +198,7 @@ export default function Dashboard() {
 
   if (isProfileOpen) {
     return (
-      <div dir={layoutDir} className="flex h-screen w-screen bg-slate-50 overflow-hidden font-sans text-slate-800">
+      <div dir={layoutDir} className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800">
         <Sidebar 
           onComposeOpen={() => setIsComposeOpen(true)} 
           isAdminView={isAdminView}
@@ -212,7 +212,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div dir={layoutDir} className="flex h-screen w-screen bg-slate-50 overflow-hidden font-sans text-slate-800">
+    <div dir={layoutDir} className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans text-slate-800">
       
       <Sidebar 
         onComposeOpen={() => setIsComposeOpen(true)} 
@@ -225,8 +225,8 @@ export default function Dashboard() {
       <div className="flex flex-col flex-1 min-w-0">
         
         {/* En-tête épuré avec barre de recherche et profil utilisateur */}
-        <header dir="ltr" className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shadow-sm">
-          <div className="w-96">
+        <header dir="ltr" className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6 shadow-sm flex-shrink-0">
+          <div className="flex-1 max-w-xs md:max-w-sm">
             {!isAdminView && (
               <input
                 type="text"
@@ -545,14 +545,17 @@ export default function Dashboard() {
         ) : activeFolder === 'groups' ? (
           <Groups />
         ) : (
-          <div className="flex flex-1 min-h-0 divide-x divide-slate-200" dir="rtl">
-            <div className="w-80 lg:w-96 bg-white flex-shrink-0">
+          <div className="flex flex-1 min-h-0 overflow-hidden divide-x divide-slate-200" dir="rtl">
+            {/* Mail list — hidden on small screens when a thread is open */}
+            <div className={`w-full md:w-80 lg:w-96 bg-white flex-shrink-0 flex flex-col ${
+              selectedMessage ? 'hidden md:flex' : 'flex'
+            }`}>
               <MailList />
             </div>
             
-            <div className="flex-1 bg-slate-50">
+            <div className="flex-1 min-w-0 bg-slate-50">
               {selectedMessage ? (
-                <div className="flex flex-col h-full bg-white animate-fade-in text-right">
+                <div className="flex flex-col h-full min-w-0 bg-white animate-fade-in text-right">
                   {/* Header principal - Objet et participants */}
                   <div className="px-6 py-5 border-b border-slate-200 bg-white">
                     <div className="flex items-start justify-between gap-4">
@@ -762,7 +765,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                <div className="hidden md:flex flex-col items-center justify-center h-full text-slate-400">
                   <p className="text-sm font-medium">اختر محادثة لعرض سلسلة الرسائل.</p>
                 </div>
               )}

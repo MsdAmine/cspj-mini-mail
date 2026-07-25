@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, adminTab, setAdminTab }) {
   const { activeFolder, setActiveFolder } = useMail();
   const { user, logout } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const folders = [
     { id: 'inbox',    label: 'العلبة الواردة',    icon: (
@@ -70,113 +71,151 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
 
   const isUserAdmin = user?.role === 'Administrateur';
 
+  // Close sidebar after nav interaction on mobile
+  const handleNavClick = (action) => {
+    action();
+    setMobileOpen(false);
+  };
+
   return (
-    <div
-      className={`w-64 bg-white flex flex-col h-full justify-between font-sans ${
-        isUserAdmin ? 'border-r border-slate-200' : 'border-l border-slate-200'
-      }`}
-    >
-      {/* ── Brand Header ── */}
-      <div className="px-5 py-4 border-b border-slate-100">
-        <div className="flex items-center gap-2.5">
-          {/* Logo mark */}
-          <div className="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="font-bold text-sm text-slate-900 leading-none tracking-tight">CSPJ Mail</h1>
-            <p className="text-[10px] text-slate-400 leading-none mt-0.5 tracking-widest uppercase">
-              {isUserAdmin ? 'Administration' : 'Système interne'}
-            </p>
+    <>
+      {/* ── Mobile hamburger trigger (visible only on small screens) ── */}
+      <button
+        className="md:hidden fixed top-4 z-50 p-2 bg-white border border-slate-200 rounded-lg shadow-sm text-slate-600 hover:bg-slate-50 transition"
+        style={{ [isUserAdmin ? 'left' : 'right']: '1rem' }}
+        onClick={() => setMobileOpen(v => !v)}
+        aria-label="Toggle sidebar"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          {mobileOpen
+            ? <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            : <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          }
+        </svg>
+      </button>
+
+      {/* ── Mobile backdrop ── */}
+      {mobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar panel ── */}
+      <div
+        className={`
+          fixed md:relative z-40 md:z-auto
+          flex flex-col h-full
+          w-64 flex-shrink-0
+          bg-white font-sans
+          ${isUserAdmin ? 'border-r border-slate-200' : 'border-l border-slate-200'}
+          transition-transform duration-200 ease-in-out
+          ${mobileOpen ? 'translate-x-0' : (isUserAdmin ? '-translate-x-full md:translate-x-0' : 'translate-x-full md:translate-x-0')}
+        `}
+      >
+        {/* ── Brand Header ── */}
+        <div className="px-5 py-4 border-b border-slate-100 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            {/* Logo mark */}
+            <div className="w-7 h-7 rounded-md bg-slate-900 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div>
+              <h1 className="font-bold text-sm text-slate-900 leading-none tracking-tight">CSPJ Mail</h1>
+              <p className="text-[10px] text-slate-400 leading-none mt-0.5 tracking-widest uppercase">
+                {isUserAdmin ? 'Administration' : 'Système interne'}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Main Navigation ── */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+        {/* ── Main Navigation ── */}
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
 
-        {/* Mail nav — non-admin users */}
-        {!isUserAdmin && (
-          <>
-            <button
-              onClick={onComposeOpen}
-              className="w-full mb-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              رسالة جديدة
-            </button>
+          {/* Mail nav — non-admin users */}
+          {!isUserAdmin && (
+            <>
+              <button
+                onClick={() => handleNavClick(onComposeOpen)}
+                className="w-full mb-4 py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 active:scale-[0.98] transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                رسالة جديدة
+              </button>
 
-            <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">المجلدات</p>
+              <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">المجلدات</p>
 
-            <nav className="space-y-0.5" dir="rtl">
-              {folders.map((folder) => {
-                const isActive = activeFolder === folder.id && !isAdminView;
+              <nav className="space-y-0.5" dir="rtl">
+                {folders.map((folder) => {
+                  const isActive = activeFolder === folder.id && !isAdminView;
+                  return (
+                    <button
+                      key={folder.id}
+                      onClick={() => handleNavClick(() => {
+                        setIsAdminView(false);
+                        setActiveFolder(folder.id);
+                      })}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
+                        isActive
+                          ? 'bg-slate-100 text-blue-600 font-semibold border-r-2 border-blue-500'
+                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                      }`}
+                    >
+                      <span className={isActive ? 'text-blue-500' : 'text-slate-400'}>{folder.icon}</span>
+                      <span>{folder.label}</span>
+                    </button>
+                  );
+                })}
+              </nav>
+            </>
+          )}
+
+          {/* Admin nav — LTR French */}
+          {isUserAdmin && (
+            <nav className="space-y-0.5" dir="ltr">
+              <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Administration</p>
+              {adminNavItems.map((item) => {
+                const isActive = adminTab === item.id;
                 return (
                   <button
-                    key={folder.id}
-                    onClick={() => {
-                      setIsAdminView(false);
-                      setActiveFolder(folder.id);
-                    }}
+                    key={item.id}
+                    onClick={() => handleNavClick(() => setAdminTab(item.id))}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
                       isActive
-                        ? 'bg-slate-100 text-blue-600 font-semibold border-r-2 border-blue-500'
+                        ? 'bg-slate-100 text-blue-600 font-semibold border-l-2 border-blue-500'
                         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
                     }`}
                   >
-                    <span className={isActive ? 'text-blue-500' : 'text-slate-400'}>{folder.icon}</span>
-                    <span>{folder.label}</span>
+                    <span className={isActive ? 'text-blue-500' : 'text-slate-400'}>{item.icon}</span>
+                    <span>{item.label}</span>
                   </button>
                 );
               })}
             </nav>
-          </>
-        )}
+          )}
+        </div>
 
-        {/* Admin nav — LTR French */}
-        {isUserAdmin && (
-          <nav className="space-y-0.5" dir="ltr">
-            <p className="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Administration</p>
-            {adminNavItems.map((item) => {
-              const isActive = adminTab === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setAdminTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 cursor-pointer ${
-                    isActive
-                      ? 'bg-slate-100 text-blue-600 font-semibold border-l-2 border-blue-500'
-                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800'
-                  }`}
-                >
-                  <span className={isActive ? 'text-blue-500' : 'text-slate-400'}>{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </nav>
-        )}
+        {/* ── Footer / Logout ── */}
+        <div className="px-3 py-3 border-t border-slate-100 flex-shrink-0">
+          <button
+            onClick={logout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-rose-600 bg-transparent hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-lg transition-all duration-150 cursor-pointer"
+            title={isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج من النظام'}
+          >
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span className="font-semibold tracking-wide">
+              {isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج'}
+            </span>
+          </button>
+        </div>
       </div>
-
-      {/* ── Footer / Logout ── */}
-      <div className="px-3 py-3 border-t border-slate-100">
-        <button
-          onClick={logout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-rose-600 bg-transparent hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-lg transition-all duration-150 cursor-pointer"
-          title={isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج من النظام'}
-        >
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          <span className="font-semibold tracking-wide">
-            {isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج'}
-          </span>
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
