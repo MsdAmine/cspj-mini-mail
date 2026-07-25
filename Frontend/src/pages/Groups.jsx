@@ -299,10 +299,12 @@ export default function Groups() {
   );
 
   return (
-    <div className="flex flex-1 min-h-0" dir="rtl">
+    <div className="flex flex-1 min-h-0 overflow-hidden" dir="rtl">
 
       {/* ── Left panel: group list ─────────────────────────────────────────── */}
-      <div className="w-80 lg:w-96 bg-white border-l border-slate-200 flex flex-col flex-shrink-0">
+      <div className={`w-full md:w-80 lg:w-96 bg-white border-l border-slate-200 flex flex-col flex-shrink-0 ${
+        selectedThread ? 'hidden md:flex' : 'flex'
+      }`}>
 
         {/* Panel header */}
         <div className="px-4 py-4 border-b border-slate-100 bg-gradient-to-b from-slate-50 to-white">
@@ -417,7 +419,7 @@ export default function Groups() {
       </div>
 
       {/* ── Right panel: thread detail ─────────────────────────────────────── */}
-      <div className="flex-1 bg-slate-50 flex flex-col min-h-0">
+      <div className="flex-1 min-w-0 bg-slate-50 flex flex-col min-h-0">
         {selectedThread ? (
           <div className="flex flex-col h-full bg-white">
 

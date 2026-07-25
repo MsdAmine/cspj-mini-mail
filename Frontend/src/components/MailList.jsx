@@ -17,7 +17,7 @@ export default function MailList() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* رأس القائمة */}
       <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
@@ -84,20 +84,20 @@ export default function MailList() {
 
                 {/* محتوى المعاينة */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-baseline mb-0.5">
-                    <div className="flex items-center gap-1.5 min-w-0">
+                  <div className="flex justify-between items-baseline gap-2 mb-0.5">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       {isGroup && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-violet-100 text-violet-700 border border-violet-200 flex-shrink-0">
                           مجموعة
                         </span>
                       )}
-                      <h4 className={`text-sm truncate pl-4 ${showUnreadDot ? "font-bold text-slate-900" : "text-slate-700"}`}>
+                      <h4 className={`text-sm truncate ${showUnreadDot ? "font-bold text-slate-900" : "text-slate-700"}`}>
                         {isGroup
                           ? msg.titreGroupe || "محادثة جماعية"
                           : msg.dernierExpediteurNom}
                       </h4>
                     </div>
-                    <span className="text-xxs text-slate-400 font-mono whitespace-nowrap flex-shrink-0">
+                    <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap flex-shrink-0">
                       {new Date(msg.derniereActivite).toLocaleDateString('ar-MA', {
                         month: "short",
                         day: "numeric",
