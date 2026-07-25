@@ -143,35 +143,35 @@ export default function ManageLogs() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50/75 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-wider">
-                  <th className="px-6 py-4 w-44">Date / Heure</th>
-                  <th className="px-6 py-4 w-48">Type d'Action</th>
-                  <th className="px-6 py-4 w-52">Utilisateur</th>
-                  <th className="px-6 py-4">Description</th>
+                <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
+                  <th className="px-4 py-3 w-44">Date / Heure</th>
+                  <th className="px-4 py-3 w-48">Type d'Action</th>
+                  <th className="px-4 py-3 w-52">Utilisateur</th>
+                  <th className="px-4 py-3">Description</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
                 {filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50/50 transition duration-150">
+                  <tr key={log.id} className="hover:bg-slate-50/80 transition duration-150">
                     {/* Timestamp */}
-                    <td className="px-6 py-4 font-mono font-medium text-slate-500 whitespace-nowrap">
+                    <td className="px-4 py-2.5 font-mono font-medium text-slate-500 whitespace-nowrap">
                       {formatTimestamp(log.dateHeure)}
                     </td>
 
                     {/* Action Type Badge */}
-                    <td className="px-6 py-4">
-                      <span className={`inline-block px-2.5 py-1 text-[10px] font-bold rounded-lg border uppercase tracking-wider font-mono ${getActionBadgeColor(log.typeAction)}`}>
+                    <td className="px-4 py-2.5">
+                      <span className={`inline-block px-2.5 py-0.5 text-[10px] font-bold rounded border uppercase tracking-wider font-mono ${getActionBadgeColor(log.typeAction)}`}>
                         {log.typeAction}
                       </span>
                     </td>
 
                     {/* User Email */}
-                    <td className="px-6 py-4 font-medium text-slate-700 whitespace-nowrap">
+                    <td className="px-4 py-2.5 font-medium text-slate-700 whitespace-nowrap">
                       {log.utilisateur}
                     </td>
 
                     {/* Description */}
-                    <td className="px-6 py-4 text-slate-600 font-normal leading-relaxed">
+                    <td className="px-4 py-2.5 text-slate-600 font-normal leading-relaxed">
                       {log.description}
                     </td>
                   </tr>

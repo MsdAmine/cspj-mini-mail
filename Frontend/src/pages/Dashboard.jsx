@@ -198,7 +198,7 @@ export default function Dashboard() {
 
   if (isProfileOpen) {
     return (
-      <div dir={layoutDir} className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
+      <div dir={layoutDir} className="flex h-screen w-screen bg-slate-50 overflow-hidden font-sans text-slate-800">
         <Sidebar 
           onComposeOpen={() => setIsComposeOpen(true)} 
           isAdminView={isAdminView}
@@ -212,7 +212,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div dir={layoutDir} className="flex h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
+    <div dir={layoutDir} className="flex h-screen w-screen bg-slate-50 overflow-hidden font-sans text-slate-800">
       
       <Sidebar 
         onComposeOpen={() => setIsComposeOpen(true)} 
@@ -249,7 +249,13 @@ export default function Dashboard() {
                 <p className="text-sm font-semibold text-slate-700 group-hover:text-blue-600 transition">
                   {user ? `${user.prenom} ${user.nom}` : ''}
                 </p>
-                <p className="text-[10px] text-amber-600 font-mono font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 inline-block">
+                <p className={`text-[10px] font-semibold px-2 py-0.5 rounded border inline-block ${
+                  user?.role === 'Administrateur' || user?.role?.toLowerCase() === 'admin'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : user?.role === 'Association'
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                }`}>
                   {getRoleArabicLabel(user?.role)}
                 </p>
               </div>
@@ -264,7 +270,7 @@ export default function Dashboard() {
 
         {/* Contenu alternatif (Gestion Admin ou Messagerie) */}
         {isAdminView ? (
-          <div dir="ltr" className="flex-1 bg-slate-50 p-8 overflow-y-auto flex flex-col items-center text-left">
+          <div dir="ltr" className="flex-1 bg-slate-50/70 p-8 overflow-y-auto flex flex-col items-center text-left">
             {adminTab === 'stats' ? (
               <div className="w-full max-w-4xl space-y-8 animate-fade-in">
                 {/* En-tête du tableau de bord */}
@@ -276,23 +282,23 @@ export default function Dashboard() {
                 {/* Grille des indicateurs de statistiques */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Carte : Utilisateurs */}
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-blue-600 transition hover:shadow-md">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Comptes Utilisateurs</p>
-                    <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.totalUsers}</p>
+                  <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm border-l-[3px] border-l-blue-500 transition hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Comptes Utilisateurs</p>
+                    <p className="text-2xl font-extrabold text-slate-900 mt-2 tabular-nums">{stats.totalUsers}</p>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">Profils enregistrés et habilités sur le réseau interne.</p>
                   </div>
 
                   {/* Carte : Discussions */}
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-indigo-600 transition hover:shadow-md">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Discussions Initiées</p>
-                    <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.totalThreads}</p>
+                  <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm border-l-[3px] border-l-indigo-500 transition hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discussions Initiées</p>
+                    <p className="text-2xl font-extrabold text-slate-900 mt-2 tabular-nums">{stats.totalThreads}</p>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">Fils de discussion distincts créés par les utilisateurs.</p>
                   </div>
 
                   {/* Carte : Messages */}
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm border-l-4 border-slate-600 transition hover:shadow-md">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Messages Acheminés</p>
-                    <p className="text-3xl font-extrabold text-slate-900 mt-2">{stats.totalMessagesSent}</p>
+                  <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm border-l-[3px] border-l-slate-500 transition hover:shadow-md">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Messages Acheminés</p>
+                    <p className="text-2xl font-extrabold text-slate-900 mt-2 tabular-nums">{stats.totalMessagesSent}</p>
                     <p className="text-xs text-slate-500 mt-2 leading-relaxed">Volume total de messages transmis de bout en bout.</p>
                   </div>
                 </div>
@@ -526,7 +532,7 @@ export default function Dashboard() {
                     <div className="pt-4">
                       <button
                         type="submit"
-                        className="w-full py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 active:scale-[0.99] transition duration-150 shadow-sm cursor-pointer"
+                        className="w-full py-2.5 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 active:scale-[0.99] transition duration-150 shadow-sm cursor-pointer focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 outline-none"
                       >
                         Créer le compte utilisateur
                       </button>
@@ -642,12 +648,12 @@ export default function Dashboard() {
                                       {isOwnMessage ? "أنا" : msg.expediteurNomComplet}
                                     </span>
                                     {/* Badge rôle */}
-                                    <span className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded ${
+                                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
                                       msg.expediteurRole === 'Administrateur' 
-                                        ? 'bg-amber-100 text-amber-700 border border-amber-200' 
-                                        : msg.expediteurRole === 'Fonctionnaire'
-                                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                        : 'bg-slate-100 text-slate-600 border border-slate-200'
+                                        ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                                        : msg.expediteurRole === 'Association'
+                                        ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                        : 'bg-slate-100 text-slate-700 border-slate-200'
                                     }`}>
                                       {getRoleArabicLabel(msg.expediteurRole)}
                                     </span>
