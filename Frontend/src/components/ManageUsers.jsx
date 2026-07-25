@@ -152,20 +152,54 @@ export default function ManageUsers() {
     );
   });
 
+  // Role badge helper
+  const getRoleBadge = (role) => {
+    if (role === 'Administrateur') {
+      return {
+        label: 'مدير النظام',
+        className: 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200/60',
+        dot: 'bg-blue-500',
+      };
+    }
+    if (role === 'Association') {
+      return {
+        label: 'جمعية',
+        className: 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/60',
+        dot: 'bg-amber-500',
+      };
+    }
+    return {
+      label: 'موظف',
+      className: 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200',
+      dot: 'bg-slate-400',
+    };
+  };
+
   return (
     <div dir="ltr" className="w-full max-w-6xl space-y-6 animate-fade-in pb-12 text-left">
-      {/* Title & Stats summary */}
-      <div className="border-b border-slate-200 pb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+      {/* ── Page Header ── */}
+      <div className="border-b border-slate-200/80 pb-5 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-900">Gestion des Utilisateurs</h2>
-          <p className="text-slate-500 text-xs mt-1">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1 h-5 rounded-full bg-gradient-to-b from-blue-500 to-indigo-600" />
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">Gestion des Utilisateurs</h2>
+          </div>
+          <p className="text-slate-500 text-xs mt-1 ml-3">
             Visualisez, recherchez, activez/désactivez ou supprimez les comptes utilisateurs de la plateforme.
           </p>
         </div>
-        <div className="flex space-x-2">
+        <div className="flex items-center gap-3">
+          {/* User count pill */}
+          {!loading && (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200/80 text-xs font-semibold text-slate-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {filteredUsers.length} utilisateur{filteredUsers.length !== 1 ? 's' : ''}
+            </div>
+          )}
           <button
             onClick={fetchUsers}
-            className="px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 active:scale-[0.98] transition cursor-pointer shadow-sm flex items-center gap-1.5"
+            className="px-3.5 py-2 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 active:scale-95 transition-all duration-150 cursor-pointer shadow-sm flex items-center gap-1.5 hover:shadow-md"
           >
             <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.5" />
@@ -175,10 +209,10 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* Global Alerts */}
+      {/* ── Global Alerts ── */}
       {error && (
         <div className="p-4 rounded-xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 shadow-sm animate-fade-in flex items-center gap-2">
-          <svg className="w-4 h-4 text-rose-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-4 h-4 text-rose-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
           </svg>
           <span>{error}</span>
@@ -187,15 +221,15 @@ export default function ManageUsers() {
 
       {success && (
         <div className="p-4 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shadow-sm animate-fade-in flex items-center gap-2">
-          <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
           <span>{success}</span>
         </div>
       )}
 
-      {/* Search Bar section */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+      {/* ── Search Bar ── */}
+      <div className="bg-white/90 backdrop-blur-md p-4 rounded-xl border border-slate-200/80 shadow-sm flex items-center gap-3">
         <div className="relative flex-1">
           <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
             <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -207,44 +241,48 @@ export default function ManageUsers() {
             placeholder="Rechercher par nom, prénom, email, rôle ou structure..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-250 rounded-lg text-sm focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
           />
         </div>
         {searchQuery && (
           <button
             onClick={() => setSearchQuery('')}
-            className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition px-2 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer"
+            className="text-xs font-semibold text-slate-500 hover:text-slate-800 transition px-2 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-md cursor-pointer active:scale-95 duration-150"
           >
             Effacer
           </button>
         )}
       </div>
 
-      {/* Table Container */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* ── Table Container ── */}
+      <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-200">
+
+        {/* Accent top bar */}
+        <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
+
         {loading ? (
           <div className="p-16 flex flex-col items-center justify-center space-y-4">
-            <svg className="animate-spin h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-8 w-8 text-blue-500" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <p className="text-slate-500 text-xs font-medium">Chargement des utilisateurs en cours...</p>
+            <p className="text-slate-400 text-xs font-medium">Chargement des utilisateurs en cours...</p>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-16 text-center">
-            <svg className="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-12 h-12 text-slate-200 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
             </svg>
-            <h3 className="font-semibold text-slate-800 text-sm">Aucun utilisateur trouvé</h3>
+            <h3 className="font-semibold text-slate-700 text-sm">Aucun utilisateur trouvé</h3>
             <p className="text-slate-400 text-xs mt-1">
               {searchQuery ? "Ajustez vos filtres de recherche ou réinitialisez le champ." : "Aucun utilisateur n'est inscrit dans le système."}
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
+            <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-slate-50 border-b border-slate-200 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
+                <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
                   <th className="px-4 py-3">Nom / Prénom</th>
                   <th className="px-4 py-3">Adresse Email</th>
                   <th className="px-4 py-3">Structure</th>
@@ -254,15 +292,17 @@ export default function ManageUsers() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-600">
-                {filteredUsers.map((u) => (
+                {filteredUsers.map((u, idx) => {
+                  const badge = getRoleBadge(u.role);
+                  return (
                     <tr
                       key={u.id}
-                      className="hover:bg-slate-50/80 transition duration-150"
+                      className={`hover:bg-blue-50/30 transition-colors duration-150 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}
                     >
                       {/* Name / Firstname */}
-                      <td className="px-4 py-2.5 font-semibold text-slate-800">
+                      <td className="px-4 py-3 font-semibold text-slate-800">
                         <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-full bg-slate-900 text-white font-bold text-xs flex items-center justify-center border border-slate-800 shadow-sm uppercase">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-white font-bold text-xs flex items-center justify-center shadow-sm uppercase flex-shrink-0">
                             {u.prenom ? u.prenom.charAt(0) : 'U'}
                           </div>
                           <div>
@@ -274,38 +314,33 @@ export default function ManageUsers() {
                       </td>
 
                       {/* Email */}
-                      <td className="px-4 py-2.5 text-slate-600 font-medium">
+                      <td className="px-4 py-3 text-slate-600 font-medium font-mono text-[11px]">
                         {u.email}
                       </td>
 
                       {/* Enterprise/Structure */}
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3">
                         <span className="text-xs font-semibold text-slate-700">
                           {u.entrepriseNom || "Non définie"}
                         </span>
                       </td>
 
-                      {/* Role Badge */}
-                      <td className="px-4 py-2.5">
-                        <span className={`inline-block px-2.5 py-0.5 text-[10px] font-semibold rounded border tracking-wide ${
-                          u.role === 'Administrateur'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : u.role === 'Association'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}>
-                          {u.role === 'Administrateur' ? 'مدير النظام' : u.role === 'Fonctionnaire' ? 'موظف' : u.role === 'Association' ? 'جمعية' : u.role}
+                      {/* Role Badge — modern pill with dot */}
+                      <td className="px-4 py-3">
+                        <span className={badge.className}>
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${badge.dot}`} />
+                          {badge.label}
                         </span>
                       </td>
 
                       {/* Toggle status switch */}
-                      <td className="px-4 py-2.5 text-center">
+                      <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center">
                           <button
                             type="button"
                             onClick={() => handleToggleStatus(u)}
                             className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2 ${
-                              u.actif ? 'bg-emerald-500' : 'bg-slate-300'
+                              u.actif ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30' : 'bg-slate-300'
                             }`}
                             aria-checked={u.actif}
                             title={u.actif ? "Désactiver le compte" : "Activer le compte"}
@@ -320,11 +355,11 @@ export default function ManageUsers() {
                       </td>
 
                       {/* Actions */}
-                      <td className="px-4 py-2.5 text-right">
+                      <td className="px-4 py-3 text-right">
                         <button
                           type="button"
                           onClick={() => setDeletingUser(u)}
-                          className="p-1.5 text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 rounded-md transition border border-rose-200 hover:border-rose-500 cursor-pointer"
+                          className="p-1.5 text-rose-500 hover:text-white bg-rose-50 hover:bg-rose-500 rounded-lg transition-all duration-150 border border-rose-200 hover:border-rose-500 cursor-pointer active:scale-95 hover:shadow-sm hover:shadow-rose-500/20"
                           title="Supprimer cet utilisateur"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -333,20 +368,21 @@ export default function ManageUsers() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {/* Confirmation Modal for Deletion */}
+      {/* ── Confirmation Modal for Deletion ── */}
       {deletingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden m-4">
+          <div className="w-full max-w-md bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/80 overflow-hidden m-4">
 
             {/* Modal Header */}
-            <div className="bg-rose-600 text-white px-5 py-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-rose-500 to-rose-600 text-white px-5 py-4 flex items-center justify-between">
               <h3 className="font-bold tracking-wide text-sm uppercase flex items-center gap-2">
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -355,7 +391,7 @@ export default function ManageUsers() {
               </h3>
               <button
                 onClick={() => setDeletingUser(null)}
-                className="text-white hover:text-slate-200 transition text-lg outline-none cursor-pointer"
+                className="text-white/80 hover:text-white transition text-lg outline-none cursor-pointer active:scale-95 duration-150"
                 disabled={isDeleteLoading}
               >
                 ✕
@@ -368,7 +404,7 @@ export default function ManageUsers() {
                 Êtes-vous absolument sûr de vouloir supprimer définitivement le compte de <strong>{deletingUser.prenom} {deletingUser.nom}</strong> ?
               </p>
 
-              <div className="p-3.5 bg-rose-50 text-rose-900 border border-rose-100 rounded-lg text-xs leading-relaxed space-y-2">
+              <div className="p-3.5 bg-rose-50 text-rose-900 border border-rose-100 rounded-xl text-xs leading-relaxed space-y-2">
                 <p className="font-bold uppercase tracking-wider flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -386,11 +422,11 @@ export default function ManageUsers() {
             </div>
 
             {/* Modal Footer */}
-            <div className="flex items-center justify-end space-x-3 px-6 py-4 bg-slate-50 border-t border-slate-100">
+            <div className="flex items-center justify-end space-x-3 px-6 py-4 bg-slate-50/80 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setDeletingUser(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 rounded-lg transition border border-slate-200 cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 rounded-xl transition-all duration-150 border border-slate-200 cursor-pointer active:scale-95"
                 disabled={isDeleteLoading}
               >
                 Annuler
@@ -398,7 +434,7 @@ export default function ManageUsers() {
               <button
                 type="button"
                 onClick={handleDeleteConfirm}
-                className="px-5 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-lg shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                className="px-5 py-2 text-xs font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl shadow-md shadow-rose-500/20 transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-95"
                 disabled={isDeleteLoading}
               >
                 {isDeleteLoading ? (
