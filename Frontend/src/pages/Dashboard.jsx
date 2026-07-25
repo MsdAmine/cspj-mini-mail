@@ -10,6 +10,7 @@ import ProfilePage from './ProfilePage';
 import ManageUsers from '../components/ManageUsers';
 import ManageLogs from '../components/ManageLogs';
 import TiptapEditor from '../components/TiptapEditor';
+import Groups from './Groups';
 import { Send } from 'lucide-react';
 
 // ── Role → Arabic label helper (shared across this page) ─────────────────────
@@ -534,6 +535,8 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+        ) : activeFolder === 'groups' ? (
+          <Groups />
         ) : (
           <div className="flex flex-1 min-h-0 divide-x divide-slate-200" dir="rtl">
             <div className="w-80 lg:w-96 bg-white flex-shrink-0">
