@@ -71,11 +71,9 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
 
   const isUserAdmin = user?.role === 'Administrateur';
 
-  // Close sidebar after nav interaction on mobile
-  const handleNavClick = (action) => {
-    action();
-    setMobileOpen(false);
-  };
+  // Close mobile sidebar (called separately from state updates so there is
+  // no closure overhead blocking the synchronous highlight switch).
+  const closeMobile = () => setMobileOpen(false);
 
   return (
     <>
@@ -140,7 +138,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
           {!isUserAdmin && (
             <>
               <button
-                onClick={() => handleNavClick(onComposeOpen)}
+                onClick={() => { onComposeOpen(); closeMobile(); }}
                 className="w-full mb-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-xl text-sm font-semibold hover:from-slate-700 hover:to-slate-800 active:scale-95 transition-all duration-150 shadow-md shadow-slate-900/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -157,10 +155,12 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
                   return (
                     <button
                       key={folder.id}
-                      onClick={() => handleNavClick(() => {
+                      onClick={() => {
+                        // Synchronous state updates — no deferred wrappers
                         setIsAdminView(false);
                         setActiveFolder(folder.id);
-                      })}
+                        closeMobile();
+                      }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
                         isActive
                           ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100'
@@ -188,7 +188,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
                 return (
                   <button
                     key={item.id}
-                    onClick={() => handleNavClick(() => setAdminTab(item.id))}
+                    onClick={() => { setAdminTab(item.id); closeMobile(); }}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
                       isActive
                         ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100'

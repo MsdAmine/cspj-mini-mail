@@ -13,13 +13,23 @@ import TiptapEditor from '../components/TiptapEditor';
 import Groups from './Groups';
 import { Send } from 'lucide-react';
 
-// ── Role → Arabic label helper (shared across this page) ─────────────────────
+// ── Role → Arabic label helper (used in message thread view) ─────────────────
 const getRoleArabicLabel = (role) => {
   if (!role) return '';
   const lower = role.toString().toLowerCase();
   if (lower === 'fonctionnaire') return 'موظف';
   if (lower === 'association')   return 'جمعية';
   if (lower === 'admin' || lower === 'administrateur') return 'مدير النظام';
+  return role;
+};
+
+// ── Role → French label helper (used in admin header badge) ──────────────────
+const getRoleFrenchLabel = (role) => {
+  if (!role) return '';
+  const lower = role.toString().toLowerCase();
+  if (lower === 'fonctionnaire') return 'Fonctionnaire';
+  if (lower === 'association')   return 'Association';
+  if (lower === 'admin' || lower === 'administrateur') return 'Administrateur';
   return role;
 };
 
@@ -60,6 +70,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ totalUsers: 0, totalThreads: 0, totalMessagesSent: 0 });
   const [threads, setThreads] = useState([]);
   const [entreprises, setEntreprises] = useState([]);
+  const [recentLogs, setRecentLogs] = useState(null); // null = loading, [] = empty
 
   const fetchEntreprises = async () => {
     try {
@@ -102,6 +113,18 @@ export default function Dashboard() {
     }
   };
 
+  const fetchRecentLogs = async () => {
+    try {
+      const response = await api.get('/admin/audit-logs');
+      const all = response.data || [];
+      // Show the 5 most recent entries
+      setRecentLogs(all.slice(0, 5));
+    } catch (err) {
+      console.error("Erreur lors de la récupération des activités récentes :", err);
+      setRecentLogs([]);
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'Administrateur') {
       setIsAdminView(true);
@@ -115,6 +138,7 @@ export default function Dashboard() {
       fetchStats();
       fetchThreads();
       fetchEntreprises();
+      fetchRecentLogs();
     }
   }, [isAdminView, user]);
 
@@ -260,7 +284,8 @@ export default function Dashboard() {
                     user?.role === 'Administrateur' || user?.role?.toLowerCase() === 'admin' ? 'bg-blue-500' :
                     user?.role === 'Association' ? 'bg-amber-500' : 'bg-slate-400'
                   }`} />
-                  {getRoleArabicLabel(user?.role)}
+                  {/* Show French label in Admin interface, Arabic otherwise */}
+                  {isAdmin ? getRoleFrenchLabel(user?.role) : getRoleArabicLabel(user?.role)}
                 </span>
               </div>
 
@@ -416,65 +441,108 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Tableau des habilitations système */}
+                {/* ── Dernières Activités Systèmes ── */}
                 <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                  <div className="h-0.5 w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
-                  <div className="px-6 py-4 bg-slate-50/60 border-b border-slate-100">
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Matrice des habilitations d'accès</h3>
+                  <div className="h-0.5 w-full bg-gradient-to-r from-violet-500 via-indigo-500 to-blue-500" />
+                  <div className="px-6 py-4 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Dernières Activités Systèmes</h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Aperçu des 5 dernières entrées du journal d'audit.</p>
+                    </div>
+                    <button
+                      onClick={() => setAdminTab('audit-logs')}
+                      className="text-[10px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition cursor-pointer flex items-center gap-1"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      Journal d'audit
+                    </button>
                   </div>
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
-                        <th className="px-6 py-3">Rôle Système</th>
-                        <th className="px-6 py-3">Périmètre Applicatif</th>
-                        <th className="px-6 py-3">Statut Réseau</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-600">
-                      <tr className="hover:bg-blue-50/30 transition-colors duration-150">
-                        <td className="px-6 py-3.5">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200/60">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                            مدير النظام
-                          </span>
-                        </td>
-                        <td className="px-6 py-3.5 text-slate-600">Création et audit des comptes utilisateurs, consultation des statistiques de trafic.</td>
-                        <td className="px-6 py-3.5">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Actif
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-blue-50/30 transition-colors duration-150 bg-slate-50/40">
-                        <td className="px-6 py-3.5">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                            موظف
-                          </span>
-                        </td>
-                        <td className="px-6 py-3.5 text-slate-600">Messagerie professionnelle interne, communication sécurisée inter-services.</td>
-                        <td className="px-6 py-3.5">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Actif
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="hover:bg-blue-50/30 transition-colors duration-150">
-                        <td className="px-6 py-3.5">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200/60">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            جمعية
-                          </span>
-                        </td>
-                        <td className="px-6 py-3.5 text-slate-600">Accès externe restreint, envoi et réception de messages avec les services habilités.</td>
-                        <td className="px-6 py-3.5">
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />Actif
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+
+                  {/* Loading skeleton */}
+                  {recentLogs === null ? (
+                    <div className="p-8 flex items-center justify-center gap-3 text-slate-400">
+                      <svg className="animate-spin h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span className="text-xs font-medium">Chargement des activités...</span>
+                    </div>
+
+                  ) : recentLogs.length === 0 ? (
+                    /* Empty state */
+                    <div className="p-10 flex flex-col items-center justify-center text-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-600">Aucune activité enregistrée</p>
+                        <p className="text-xs text-slate-400 mt-0.5">Les événements système apparaîtront ici dès qu'ils seront produits.</p>
+                      </div>
+                      <button
+                        onClick={() => setAdminTab('audit-logs')}
+                        className="mt-1 text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline transition cursor-pointer"
+                      >
+                        Ouvrir le Journal d'audit →
+                      </button>
+                    </div>
+
+                  ) : (
+                    /* Activity table */
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
+                            <th className="px-4 py-3 w-44">Date / Heure</th>
+                            <th className="px-4 py-3 w-44">Action</th>
+                            <th className="px-4 py-3">Acteur</th>
+                            <th className="px-4 py-3">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 text-slate-600">
+                          {recentLogs.map((log, idx) => {
+                            // Resolve badge colour + French label for each action type
+                            const actionMeta = {
+                              CREATE_USER:        { label: 'Création',    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+                              SEND_MESSAGE:       { label: 'Envoi',       cls: 'bg-blue-50    text-blue-700    border-blue-200',    dot: 'bg-blue-500'    },
+                              LOGIN:              { label: 'Connexion',   cls: 'bg-indigo-50  text-indigo-700  border-indigo-200',  dot: 'bg-indigo-500'  },
+                              TOGGLE_USER_STATUS: { label: 'Statut',      cls: 'bg-amber-50   text-amber-700   border-amber-200',   dot: 'bg-amber-500'   },
+                              DELETE_USER:        { label: 'Suppression', cls: 'bg-rose-50    text-rose-700    border-rose-200',    dot: 'bg-rose-500'    },
+                              UPLOAD_ATTACHMENT:  { label: 'Pièce jointe',cls: 'bg-teal-50    text-teal-700    border-teal-200',    dot: 'bg-teal-500'    },
+                              ARCHIVE_DISCUSSION: { label: 'Archivage',   cls: 'bg-slate-100  text-slate-600   border-slate-300',   dot: 'bg-slate-400'   },
+                            };
+                            const meta = actionMeta[log.typeAction] || { label: log.typeAction, cls: 'bg-slate-50 text-slate-600 border-slate-200', dot: 'bg-slate-400' };
+
+                            const ts = (() => {
+                              try {
+                                return new Date(log.dateHeure).toLocaleString('fr-FR', {
+                                  day: '2-digit', month: '2-digit', year: 'numeric',
+                                  hour: '2-digit', minute: '2-digit'
+                                });
+                              } catch { return log.dateHeure; }
+                            })();
+
+                            return (
+                              <tr key={log.id} className={`hover:bg-blue-50/30 transition-colors duration-150 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
+                                <td className="px-4 py-3 font-mono text-slate-500 whitespace-nowrap">{ts}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider font-mono ${meta.cls}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${meta.dot}`} />
+                                    {meta.label}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 font-medium text-slate-700 whitespace-nowrap">{log.utilisateur}</td>
+                                <td className="px-4 py-3 text-slate-500 leading-relaxed max-w-xs truncate" title={log.description}>{log.description}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : adminTab === 'manage-users' ? (
