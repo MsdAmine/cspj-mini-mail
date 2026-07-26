@@ -672,37 +672,40 @@ export default function Dashboard() {
         ) : activeFolder === 'groups' ? (
           <Groups />
         ) : (
-          <div className="flex flex-1 min-h-0 overflow-hidden divide-x divide-slate-200" dir="rtl">
-            {/* Mail list — hidden on small screens when a thread is open */}
-            <div className={`w-full md:w-80 lg:w-96 bg-white flex-shrink-0 flex flex-col ${
+          <div className="flex flex-1 min-h-0 overflow-hidden" dir="rtl">
+            {/* ── Mail List column ── */}
+            <div className={`w-full md:w-80 lg:w-96 flex-shrink-0 flex flex-col border-l border-slate-200/80 ${
               selectedMessage ? 'hidden md:flex' : 'flex'
             }`}>
               <MailList />
             </div>
-            
-            <div className="flex-1 min-w-0 bg-slate-50">
+
+            {/* ── Thread detail / empty state ── */}
+            <div className="flex-1 min-w-0 bg-gradient-to-br from-slate-50 via-slate-100/30 to-slate-50">
               {selectedMessage ? (
-                <div className="flex flex-col h-full min-w-0 bg-white animate-fade-in text-right">
-                  {/* Header principal - Objet et participants */}
-                  <div className="px-6 py-5 border-b border-slate-200 bg-white">
+                <div className="flex flex-col h-full min-w-0 animate-fade-in text-right">
+
+                  {/* ── Thread Header ── */}
+                  <div className="px-6 py-4 border-b border-slate-200/80 bg-white/90 backdrop-blur-md flex-shrink-0">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
 
-                        {/* Group header */}
+                        {/* Group thread header */}
                         {selectedMessage.estGroupe ? (
                           <>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-violet-100 text-violet-700 border border-violet-200">
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                                 </svg>
+                              </div>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-violet-100 text-violet-700 border border-violet-200/80">
                                 مجموعة
                               </span>
                             </div>
-                            <h2 className="text-xl font-semibold text-slate-800 truncate mb-1">
+                            <h2 className="text-lg font-bold text-slate-900 truncate mb-1">
                               {selectedMessage.titreGroupe || selectedMessage.objet}
                             </h2>
-                            {/* Participant summary */}
                             {(() => {
                               const all = selectedMessage.tousLesParticipants || selectedMessage.destinataires || [];
                               const maxShow = 3;
@@ -710,8 +713,10 @@ export default function Dashboard() {
                               const remaining = all.length - maxShow;
                               return (
                                 <p className="text-xs text-slate-500">
-                                  <span className="font-medium text-slate-600">المشاركون:</span>{' '}
-                                  {shown}{remaining > 0 && ` +${remaining} آخر`}
+                                  <span className="font-semibold text-slate-600">المشاركون:</span>{' '}
+                                  {shown}{remaining > 0 && (
+                                    <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-slate-100 text-slate-500 font-mono">+{remaining}</span>
+                                  )}
                                 </p>
                               );
                             })()}
@@ -719,33 +724,53 @@ export default function Dashboard() {
                         ) : (
                           /* Individual thread header */
                           <>
-                            <h2 className="text-xl font-semibold text-slate-800 truncate mb-2">{selectedMessage.objet}</h2>
-                            <div className="flex items-center gap-2 text-sm text-slate-600">
-                              <span className="font-medium">من:</span>
-                              <span className="text-slate-700">
+                            <h2 className="text-lg font-bold text-slate-900 truncate mb-1.5">{selectedMessage.objet}</h2>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                              <span className="font-semibold text-slate-500">من:</span>
+                              <span className="font-medium text-slate-800">
                                 {selectedMessage.messages?.[0]?.expediteurNomComplet || 'Inconnu'}
-                                <span className="text-xs font-mono text-slate-500 ml-1">({getRoleArabicLabel(selectedMessage.messages?.[0]?.expediteurRole)})</span>
                               </span>
-                              <span className="text-slate-400">إلى</span>
-                              <span className="text-slate-700">
+                              {/* Sender role badge */}
+                              {selectedMessage.messages?.[0]?.expediteurRole && (() => {
+                                const role = selectedMessage.messages[0].expediteurRole;
+                                const cls = role === 'Administrateur'
+                                  ? 'bg-blue-50 text-blue-800 border-blue-200/60'
+                                  : role === 'Association'
+                                  ? 'bg-amber-50 text-amber-800 border-amber-200/60'
+                                  : 'bg-slate-100 text-slate-700 border-slate-200';
+                                const dot = role === 'Administrateur' ? 'bg-blue-500' : role === 'Association' ? 'bg-amber-500' : 'bg-slate-400';
+                                return (
+                                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${cls}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                                    {getRoleArabicLabel(role)}
+                                  </span>
+                                );
+                              })()}
+                              <span className="text-slate-300">•</span>
+                              <span className="font-semibold text-slate-500">إلى:</span>
+                              <span className="font-medium text-slate-800 truncate">
                                 {selectedMessage.destinataires?.map(d => d.nomComplet).join(', ') || 'Destinataires'}
                               </span>
                             </div>
                           </>
                         )}
-
                       </div>
+
+                      {/* Archive action button */}
                       <button
                         onClick={() => toggleArchiveMessage(selectedMessage.threadId)}
-                        className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 hover:border-slate-400 shadow-sm transition flex items-center gap-2 flex-shrink-0"
+                        className="px-3.5 py-2 text-xs font-semibold text-slate-600 bg-white/90 border border-slate-200/80 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-sm active:scale-95 transition-all duration-150 flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
                       >
-                        {selectedMessage.estArchive ? "إلغاء الأرشفة" : "أرشفة المحادثة"}
+                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        {selectedMessage.estArchive ? "إلغاء الأرشفة" : "أرشفة"}
                       </button>
                     </div>
                   </div>
 
-                  {/* Fil de discussion - Style Outlook */}
-                  <div className="flex-1 overflow-y-auto bg-white">
+                  {/* ── Message thread (bubble-style) ── */}
+                  <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
                     {selectedMessage.messages?.map((msg, index) => {
                       const isOwnMessage = msg.expediteurId === user?.id;
                       const initials = msg.expediteurNomComplet
@@ -754,139 +779,137 @@ export default function Dashboard() {
                         .join('')
                         .toUpperCase()
                         .slice(0, 2) || '??';
-                      
+
+                      const roleClass = msg.expediteurRole === 'Administrateur'
+                        ? 'bg-blue-50 text-blue-800 border-blue-200/60'
+                        : msg.expediteurRole === 'Association'
+                        ? 'bg-amber-50 text-amber-800 border-amber-200/60'
+                        : 'bg-slate-100 text-slate-700 border-slate-200';
+                      const roleDot = msg.expediteurRole === 'Administrateur' ? 'bg-blue-500'
+                        : msg.expediteurRole === 'Association' ? 'bg-amber-500' : 'bg-slate-400';
+
                       return (
-                        <div 
-                          key={msg.messageId} 
-                          className={`border-b border-slate-200 ${index === 0 ? 'border-t' : ''}`}
+                        <div
+                          key={msg.messageId}
+                          className={`flex flex-col ${ isOwnMessage ? 'items-end' : 'items-start' }`}
                         >
-                          <div className="px-6 py-4">
-                            {/* En-tête du message */}
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                {/* Avatar/Initiales */}
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold uppercase font-mono ${
-                                  isOwnMessage 
-                                    ? 'bg-blue-600 text-white' 
-                                    : 'bg-slate-200 text-slate-700'
-                                }`}>
-                                  {isOwnMessage ? user?.prenom?.charAt(0) + user?.nom?.charAt(0) : initials}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-semibold text-slate-900 text-sm">
-                                    {isOwnMessage ? "أنا" : msg.expediteurNomComplet}
-                                  </span>
-                                  {/* Badge rôle — modern pill with dot */}
-                                  <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                                    msg.expediteurRole === 'Administrateur' 
-                                      ? 'bg-blue-50 text-blue-800 border-blue-200/60' 
-                                      : msg.expediteurRole === 'Association'
-                                      ? 'bg-amber-50 text-amber-800 border-amber-200/60'
-                                      : 'bg-slate-100 text-slate-700 border-slate-200'
-                                  }`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full ${
-                                      msg.expediteurRole === 'Administrateur' ? 'bg-blue-500' :
-                                      msg.expediteurRole === 'Association' ? 'bg-amber-500' : 'bg-slate-400'
-                                    }`} />
-                                    {getRoleArabicLabel(msg.expediteurRole)}
-                                  </span>
+                          {/* Sender meta row */}
+                          <div className={`flex items-center gap-2 mb-1.5 ${ isOwnMessage ? 'flex-row-reverse' : 'flex-row' }`}>
+                            {/* Avatar */}
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold uppercase shadow-sm flex-shrink-0 ${
+                              isOwnMessage
+                                ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white'
+                                : 'bg-slate-200 text-slate-700'
+                            }`}>
+                              {isOwnMessage
+                                ? (user?.prenom?.charAt(0) ?? '') + (user?.nom?.charAt(0) ?? '')
+                                : initials}
+                            </div>
+                            <span className="font-semibold text-slate-800 text-xs">
+                              {isOwnMessage ? 'أنا' : msg.expediteurNomComplet}
+                            </span>
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${roleClass}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${roleDot}`} />
+                              {getRoleArabicLabel(msg.expediteurRole)}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono" dir="ltr">
+                              {new Date(msg.dateEnvoi).toLocaleString('ar-MA', {
+                                day: '2-digit', month: '2-digit', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+
+                          {/* Bubble card */}
+                          <div className={`
+                            max-w-[85%] rounded-2xl shadow-sm border px-4 py-3
+                            ${ isOwnMessage
+                              ? 'bg-white/95 border-blue-100 rounded-tr-sm'
+                              : 'bg-white/90 backdrop-blur-sm border-slate-100/80 rounded-tl-sm'
+                            }
+                          `}>
+                            <div
+                              className="text-slate-700 text-sm leading-relaxed prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{ __html: msg.corps }}
+                            />
+
+                            {/* Attachments */}
+                            {msg.piecesJointes && msg.piecesJointes.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-slate-100">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                                  المرفقات ({msg.piecesJointes.length})
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  {msg.piecesJointes.map((file) => {
+                                    const sizeKb = (file.tailleOctets / 1024).toFixed(1);
+                                    const sizeMb = (file.tailleOctets / (1024 * 1024)).toFixed(2);
+                                    const displaySize = file.tailleOctets >= 1024 * 1024
+                                      ? `${sizeMb} Mo`
+                                      : `${sizeKb} Ko`;
+
+                                    const handleDownload = async (e) => {
+                                      e.preventDefault();
+                                      try {
+                                        // FIX 1-A: Use the centralized api service instead of a hardcoded
+                                        // localhost URL. This picks up the correct base URL in every
+                                        // environment and automatically attaches the JWT Bearer token.
+                                        const response = await api.get(
+                                          `/messages/attachments/download/${file.id}`,
+                                          { responseType: 'blob' }
+                                        );
+                                        const blob = response.data;
+                                        const url = URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = file.nomFichier;
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        a.remove();
+                                        URL.revokeObjectURL(url);
+                                      } catch {
+                                        alert('تعذّر تنزيل الملف.');
+                                      }
+                                    };
+
+                                    return (
+                                      <button
+                                        key={file.id}
+                                        type="button"
+                                        onClick={handleDownload}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 active:scale-95 transition-all duration-150 group cursor-pointer"
+                                        title={`تنزيل ${file.nomFichier}`}
+                                      >
+                                        <span className="text-slate-400 group-hover:text-blue-500 transition">📎</span>
+                                        <span className="max-w-[180px] truncate">{file.nomFichier}</span>
+                                        <span className="text-slate-400 text-[10px] font-mono">{displaySize}</span>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </div>
-                              <span className="text-xs text-slate-500 font-mono" dir="ltr">
-                                {new Date(msg.dateEnvoi).toLocaleString('ar-MA', { 
-                                  day: '2-digit', 
-                                  month: '2-digit', 
-                                  year: 'numeric',
-                                  hour: '2-digit', 
-                                  minute: '2-digit' 
-                                })}
-                              </span>
-                            </div>
-                            {/* Corps du message - Support HTML */}
-                            <div className="pr-11">
-                              <div 
-                                className="text-slate-700 text-sm leading-relaxed prose prose-sm max-w-none"
-                                dangerouslySetInnerHTML={{ __html: msg.corps }}
-                              />
-
-                              {/* Pièces jointes */}
-                              {msg.piecesJointes && msg.piecesJointes.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-slate-100">
-                                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                                    المرفقات ({msg.piecesJointes.length})
-                                  </p>
-                                  <div className="flex flex-wrap gap-2">
-                                    {msg.piecesJointes.map((file) => {
-                                      const sizeKb = (file.tailleOctets / 1024).toFixed(1);
-                                      const sizeMb = (file.tailleOctets / (1024 * 1024)).toFixed(2);
-                                      const displaySize = file.tailleOctets >= 1024 * 1024
-                                        ? `${sizeMb} Mo`
-                                        : `${sizeKb} Ko`;
-
-                                      const handleDownload = async (e) => {
-                                        e.preventDefault();
-                                        try {
-                                          // FIX 1-A: Use the centralized api service instead of a hardcoded
-                                          // localhost URL. This picks up the correct base URL in every
-                                          // environment and automatically attaches the JWT Bearer token.
-                                          const response = await api.get(
-                                            `/messages/attachments/download/${file.id}`,
-                                            { responseType: 'blob' }
-                                          );
-                                          const blob = response.data;
-                                          const url = URL.createObjectURL(blob);
-                                          const a = document.createElement('a');
-                                          a.href = url;
-                                          a.download = file.nomFichier;
-                                          document.body.appendChild(a);
-                                          a.click();
-                                          a.remove();
-                                          URL.revokeObjectURL(url);
-                                        } catch {
-                                          alert('تعذّر تنزيل الملف.');
-                                        }
-                                      };
-
-                                      return (
-                                        <button
-                                          key={file.id}
-                                          type="button"
-                                          onClick={handleDownload}
-                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition duration-150 group cursor-pointer"
-                                          title={`تنزيل ${file.nomFichier}`}
-                                        >
-                                          <span className="text-slate-400 group-hover:text-blue-500 transition">📎</span>
-                                          <span className="max-w-[180px] truncate">{file.nomFichier}</span>
-                                          <span className="text-slate-400 text-[10px] font-mono">{displaySize}</span>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Zone de réponse - Mini éditeur de mail */}
-                  <div className="p-4 border-t border-slate-200 bg-slate-50">
-                    <form onSubmit={handleReplySubmit} className="space-y-3">
-                      {/* Éditeur de texte riche */}
-                      <TiptapEditor 
-                        content={replyBody} 
-                        onChange={setReplyBody} 
-                        placeholder="اكتب ردك هنا..."
-                      />
-                      {/* Bouton d'envoi */}
+                  {/* ── Reply box ── */}
+                  <div className="px-4 py-3 border-t border-slate-200/80 bg-white/90 backdrop-blur-md flex-shrink-0">
+                    <form onSubmit={handleReplySubmit} className="space-y-2.5">
+                      <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400 transition-all duration-150">
+                        <TiptapEditor
+                          content={replyBody}
+                          onChange={setReplyBody}
+                          placeholder="اكتب ردك هنا..."
+                        />
+                      </div>
                       <div className="flex justify-start">
-                        <button 
-                          type="submit" 
-                          className="px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
+                        <button
+                          type="submit"
+                          className="px-5 py-2.5 bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white rounded-xl text-sm font-semibold shadow-md shadow-slate-900/20 active:scale-95 transition-all duration-150 flex items-center gap-2 cursor-pointer"
                         >
-                          <Send size={16} />
+                          <Send size={15} />
                           الرد على المحادثة
                         </button>
                       </div>
@@ -894,8 +917,15 @@ export default function Dashboard() {
                   </div>
                 </div>
               ) : (
-                <div className="hidden md:flex flex-col items-center justify-center h-full text-slate-400">
-                  <p className="text-sm font-medium">اختر محادثة لعرض سلسلة الرسائل.</p>
+                /* Empty state */
+                <div className="hidden md:flex flex-col items-center justify-center h-full gap-3 text-slate-400">
+                  <div className="w-16 h-16 rounded-2xl bg-white/80 border border-slate-200/80 shadow-sm flex items-center justify-center">
+                    <svg className="w-7 h-7 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m13-4l-5 5-5-5" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-500">اختر محادثة لعرض سلسلة الرسائل.</p>
+                  <p className="text-xs text-slate-400">حدد محادثة من القائمة لفتحها هنا.</p>
                 </div>
               )}
             </div>
