@@ -10,11 +10,23 @@ export default function MailList() {
     selectedMessage,
     setSelectedMessage,
     loading,
+    searchQuery,
   } = useMail();
 
   const handleSelectMessage = (msg) => {
     setSelectedMessage(msg);
   };
+
+  const filteredMessages = messages.filter((msg) => {
+    if (!searchQuery?.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    
+    const subjectMatch = msg.objet?.toLowerCase().includes(q);
+    const senderMatch = msg.dernierExpediteurNom?.toLowerCase().includes(q) || msg.titreGroupe?.toLowerCase().includes(q);
+    const contentMatch = msg.dernierMessageCorps?.toLowerCase().includes(q);
+    
+    return subjectMatch || senderMatch || contentMatch;
+  });
 
   return (
     <div className="h-full flex flex-col bg-white/90 backdrop-blur-md overflow-hidden">
@@ -29,7 +41,7 @@ export default function MailList() {
           </span>
         </div>
         <span className="text-[10px] text-slate-400 font-mono bg-slate-100 px-2 py-0.5 rounded-full">
-          {messages.length}
+          {filteredMessages.length}
         </span>
       </div>
 
@@ -43,16 +55,18 @@ export default function MailList() {
             </svg>
             <span className="text-xs font-medium">جارٍ التحميل...</span>
           </div>
-        ) : messages.length === 0 ? (
-          <div className="p-10 flex flex-col items-center justify-center gap-2 text-slate-400">
-            <svg className="w-10 h-10 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        ) : filteredMessages.length === 0 ? (
+          <div className="p-10 flex flex-col items-center justify-center gap-2 text-slate-400 text-center">
+            <svg className="w-10 h-10 text-slate-200 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m13-4l-5 5-5-5" />
             </svg>
-            <p className="text-xs font-medium">لا توجد محادثات.</p>
+            <p className="text-xs font-medium">
+              {searchQuery ? "لا توجد نتائج تطابق بحثك" : "لا توجد محادثات."}
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-slate-100/80">
-            {messages.map((msg) => {
+            {filteredMessages.map((msg) => {
               const isSelected   = selectedMessage?.threadId === msg.threadId;
               const showUnreadDot = msg.aDesMessagesNonLus;
               const isGroup       = msg.estGroupe;
