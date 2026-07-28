@@ -8,29 +8,44 @@ export default function ManageEnterprises() {
   const { user: currentUser } = useAuth();
   const { addLog } = useLogs();
   const [enterprises, setEnterprises] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const fetchEnterprises = async () => {
+  const fetchEnterprisesAndUsers = async () => {
     setLoading(true);
     setError('');
     try {
-      const response = await api.get('/admin/entreprises');
-      setEnterprises(response.data || []);
+      const [enterprisesRes, usersRes] = await Promise.all([
+        api.get('/admin/entreprises'),
+        api.get('/admin/users')
+      ]);
+      setEnterprises(enterprisesRes.data || []);
+      setUsers(usersRes.data || []);
     } catch (err) {
       console.error(err);
-      setError("Erreur lors du chargement des entreprises.");
+      setError("Erreur lors du chargement des données.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEnterprises();
+    fetchEnterprisesAndUsers();
   }, []);
+
+  const getMemberCount = (enterprise) => {
+    if (!users || !Array.isArray(users)) return enterprise.membresCount || 0;
+    
+    return users.filter(user => 
+      user.entrepriseId === enterprise.id || 
+      user.entrepriseNom === enterprise.nom ||
+      user.structure === enterprise.nom
+    ).length;
+  };
 
   const handleToggleStatus = async (enterprise) => {
     setError('');
@@ -221,7 +236,7 @@ export default function ManageEnterprises() {
                           <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                           </svg>
-                          {e.membresCount ?? 0}
+                          {getMemberCount(e)}
                         </span>
                       </td>
                       <td className="px-5 py-4 text-center">
@@ -263,7 +278,7 @@ export default function ManageEnterprises() {
         <CreateEnterpriseModal
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
-            fetchEnterprises();
+            fetchEnterprisesAndUsers();
             setSuccess("Entreprise créée avec succès !");
             setTimeout(() => setSuccess(''), 3000);
           }}
