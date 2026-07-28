@@ -8,6 +8,7 @@ import MailList from '../components/MailList';
 import ComposeModal from '../components/ComposeModal';
 import ProfilePage from './ProfilePage';
 import ManageUsers from '../components/ManageUsers';
+import ManageEnterprises from '../components/ManageEnterprises';
 import ManageLogs from '../components/ManageLogs';
 import TiptapEditor from '../components/TiptapEditor';
 import Groups from './Groups';
@@ -591,6 +592,8 @@ export default function Dashboard() {
               </div>
             ) : adminTab === 'manage-users' ? (
               <ManageUsers />
+            ) : adminTab === 'enterprises' ? (
+              <ManageEnterprises />
             ) : adminTab === 'audit-logs' ? (
               <ManageLogs />
             ) : (
@@ -687,23 +690,25 @@ export default function Dashboard() {
                           className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
                         >
                           <option value="Fonctionnaire">Fonctionnaire</option>
-                          <option value="Association">Association</option>
+                          <option value="Association">Association (جمعية)</option>
                           <option value="Administrateur">Administrateur</option>
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Structure de rattachement</label>
-                        <select
-                          value={newEntrepriseId}
-                          onChange={(e) => setNewEntrepriseId(e.target.value)}
-                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
-                        >
-                          {entreprises.map(e => (
-                            <option key={e.id} value={e.id.toString()}>{e.nom}</option>
-                          ))}
-                        </select>
-                      </div>
+                      {newRole === 'Association' && (
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Sélectionner l'association de rattachement</label>
+                          <select
+                            value={newEntrepriseId}
+                            onChange={(e) => setNewEntrepriseId(e.target.value)}
+                            className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
+                          >
+                            {entreprises.map(e => (
+                              <option key={e.id} value={e.id.toString()}>{e.nom}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
 
                     <div className="pt-4">
