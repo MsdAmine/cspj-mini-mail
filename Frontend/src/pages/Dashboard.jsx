@@ -222,7 +222,7 @@ export default function Dashboard() {
 
   if (isProfileOpen) {
     return (
-      <div dir={layoutDir} className="flex h-screen w-full bg-gradient-to-br from-slate-50 via-slate-100/50 to-slate-50 overflow-hidden font-sans text-slate-800">
+      <div dir={layoutDir} className="flex h-screen w-full bg-[#f8fafc] overflow-hidden font-sans text-slate-800">
         <Sidebar 
           onComposeOpen={() => setIsComposeOpen(true)} 
           isAdminView={isAdminView}
@@ -236,7 +236,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div dir={layoutDir} className="flex h-screen w-full bg-gradient-to-br from-slate-50 via-slate-100/50 to-slate-50 overflow-hidden font-sans text-slate-800">
+    <div dir={layoutDir} className="flex h-screen w-full bg-[#f8fafc] overflow-hidden font-sans text-slate-800">
       
       <Sidebar 
         onComposeOpen={() => setIsComposeOpen(true)} 
@@ -311,73 +311,104 @@ export default function Dashboard() {
 
         {/* Contenu alternatif (Gestion Admin ou Messagerie) */}
         {isAdminView ? (
-          <div dir="ltr" className="flex-1 bg-gradient-to-br from-slate-50 via-slate-100/40 to-slate-50 p-8 overflow-y-auto flex flex-col items-center text-left">
+          <div dir="ltr" className="flex-1 bg-[#f8fafc] p-8 overflow-y-auto flex flex-col items-center text-left">
             {adminTab === 'stats' ? (
-              <div className="w-full max-w-4xl space-y-8 animate-fade-in">
-                {/* En-tête du tableau de bord */}
-                <div className="border-b border-slate-200/80 pb-5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="w-1 h-5 rounded-full bg-gradient-to-b from-blue-500 to-indigo-600" />
-                    <h2 className="text-lg font-bold tracking-tight text-slate-900">Tableau de bord administratif</h2>
+              <div className="w-full max-w-5xl space-y-8 animate-fade-in">
+
+                {/* ── Hero greeting header ── */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h2 className="text-2xl font-bold tracking-tight text-slate-900">Tableau de bord</h2>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Système Actif
+                      </span>
+                    </div>
+                    <p className="text-slate-500 text-sm">Données analytiques et statistiques globales d'activité sur le serveur de messagerie.</p>
                   </div>
-                  <p className="text-slate-500 text-xs mt-1 ml-3">Données analytiques et statistiques globales d'activité sur le serveur de messagerie.</p>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-white border border-slate-200/60 rounded-xl px-3 py-2 shadow-sm">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {new Date().toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </div>
                 </div>
 
-                {/* Grille des indicateurs de statistiques */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Carte : Utilisateurs */}
-                  <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                    <div className="h-1 w-full bg-gradient-to-r from-blue-500 to-indigo-500" />
-                    <div className="p-5">
+                {/* ── Stat cards ── */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  {/* Card: Users */}
+                  <div className="group bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0_0_0/_0.04),_0_1px_2px_-1px_rgb(0_0_0/_0.04)] hover:shadow-[0_8px_24px_-4px_rgb(59_130_246/_0.15)] hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+                    <div className="h-px w-full bg-gradient-to-r from-blue-500 to-indigo-500" />
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center group-hover:bg-blue-500 group-hover:border-blue-500 group-hover:shadow-md group-hover:shadow-blue-500/25 transition-all duration-300">
+                          <svg className="w-4.5 h-4.5 text-blue-500 group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                          </svg>
+                        </div>
+                      </div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Comptes Utilisateurs</p>
-                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-2 tabular-nums">{stats.totalUsers}</p>
+                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-1.5 tabular-nums">{stats.totalUsers}</p>
                       <p className="text-xs text-slate-500 mt-2 leading-relaxed">Profils enregistrés et habilités sur le réseau interne.</p>
                     </div>
                   </div>
 
-                  {/* Carte : Discussions */}
-                  <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                    <div className="h-1 w-full bg-gradient-to-r from-violet-500 to-purple-500" />
-                    <div className="p-5">
+                  {/* Card: Discussions */}
+                  <div className="group bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0_0_0/_0.04),_0_1px_2px_-1px_rgb(0_0_0/_0.04)] hover:shadow-[0_8px_24px_-4px_rgb(139_92_246/_0.15)] hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+                    <div className="h-px w-full bg-gradient-to-r from-violet-500 to-purple-500" />
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-violet-50 border border-violet-100 flex items-center justify-center group-hover:bg-violet-500 group-hover:border-violet-500 group-hover:shadow-md group-hover:shadow-violet-500/25 transition-all duration-300">
+                          <svg className="w-4.5 h-4.5 text-violet-500 group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                          </svg>
+                        </div>
+                      </div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Discussions Initiées</p>
-                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-2 tabular-nums">{stats.totalThreads}</p>
+                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-1.5 tabular-nums">{stats.totalThreads}</p>
                       <p className="text-xs text-slate-500 mt-2 leading-relaxed">Fils de discussion distincts créés par les utilisateurs.</p>
                     </div>
                   </div>
 
-                  {/* Carte : Messages */}
-                  <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                    <div className="h-1 w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
-                    <div className="p-5">
+                  {/* Card: Messages */}
+                  <div className="group bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0_0_0/_0.04),_0_1px_2px_-1px_rgb(0_0_0/_0.04)] hover:shadow-[0_8px_24px_-4px_rgb(16_185_129/_0.15)] hover:-translate-y-0.5 transition-all duration-300 overflow-hidden">
+                    <div className="h-px w-full bg-gradient-to-r from-emerald-500 to-teal-500" />
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:shadow-md group-hover:shadow-emerald-500/25 transition-all duration-300">
+                          <svg className="w-4.5 h-4.5 text-emerald-500 group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                        </div>
+                      </div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Messages Acheminés</p>
-                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-2 tabular-nums">{stats.totalMessagesSent}</p>
+                      <p className="text-3xl font-bold tracking-tight text-slate-900 mt-1.5 tabular-nums">{stats.totalMessagesSent}</p>
                       <p className="text-xs text-slate-500 mt-2 leading-relaxed">Volume total de messages transmis de bout en bout.</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Tableau de suivi des discussions */}
-                <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                  <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
-                  <div className="space-y-4 p-6">
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-100 pb-4">
+                {/* ── Threads surveillance table ── */}
+                <div className="bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0_0_0/_0.04),_0_4px_6px_-2px_rgb(0_0_0/_0.04)] hover:shadow-[0_4px_12px_-2px_rgb(0_0_0/_0.08)] transition-shadow duration-300 overflow-hidden">
+                  <div className="h-px w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
+                  <div className="px-6 py-4 bg-slate-50/60 border-b border-slate-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                       <h3 className="text-sm font-bold tracking-tight text-slate-900">Suivi des Discussions / Échanges</h3>
-                      <p className="text-slate-500 text-[11px] mt-0.5">Dernières conversations surveillées sur la plateforme (Juillet 2026).</p>
+                      <p className="text-slate-500 text-[11px] mt-0.5">Dernières conversations surveillées sur la plateforme.</p>
                     </div>
-                    
                     <div className="flex gap-2">
                       <input
                         type="text"
                         placeholder="Rechercher sujet, expéditeur..."
                         value={threadSearch}
                         onChange={(e) => setThreadSearch(e.target.value)}
-                        className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 w-48 md:w-56 transition"
+                        className="px-3 py-1.5 border border-slate-200/60 rounded-xl text-xs outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-50 w-48 md:w-56 transition bg-white"
                       />
                       <select
                         value={threadStatusFilter}
                         onChange={(e) => setThreadStatusFilter(e.target.value)}
-                        className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs outline-none bg-white cursor-pointer w-32 focus:border-blue-500 transition"
+                        className="px-3 py-1.5 border border-slate-200/60 rounded-xl text-xs outline-none bg-white cursor-pointer w-36 focus:border-blue-400 transition"
                       >
                         <option value="ALL">Tous les statuts</option>
                         <option value="EN_COURS">En cours</option>
@@ -387,57 +418,62 @@ export default function Dashboard() {
                   </div>
 
                   {filteredThreads.length === 0 ? (
-                    <div className="text-center py-8 text-slate-400 text-xs">
-                      Aucune discussion ne correspond aux critères de recherche.
+                    <div className="py-12 flex flex-col items-center gap-2">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      </div>
+                      <p className="text-slate-400 text-xs">Aucune discussion ne correspond aux critères de recherche.</p>
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
-                            <th className="px-4 py-3">Sujet / Objet</th>
-                            <th className="px-4 py-3">Expéditeur</th>
-                            <th className="px-4 py-3">Destinataire</th>
-                            <th className="px-4 py-3 text-center">Pièce Jointe</th>
-                            <th className="px-4 py-3 text-center">Lecture</th>
-                            <th className="px-4 py-3 text-center">Acheminement</th>
+                          <tr className="bg-slate-50/80 border-b border-slate-100/80 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
+                            <th className="px-5 py-3.5">Sujet / Objet</th>
+                            <th className="px-5 py-3.5">Expéditeur</th>
+                            <th className="px-5 py-3.5">Destinataire</th>
+                            <th className="px-5 py-3.5 text-center">Pièce Jointe</th>
+                            <th className="px-5 py-3.5 text-center">Lecture</th>
+                            <th className="px-5 py-3.5 text-center">Acheminement</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-slate-600">
+                        <tbody className="divide-y divide-slate-100/80 text-slate-600">
                           {filteredThreads.map((t, idx) => (
-                            <tr key={t.id} className={`hover:bg-blue-50/30 transition-colors duration-150 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
-                              <td className="px-4 py-3.5 font-semibold text-slate-800 max-w-xs truncate" title={t.objet}>
+                            <tr key={t.id} className="hover:bg-blue-50/25 transition-colors duration-150">
+                              <td className="px-5 py-4 font-semibold text-slate-800 max-w-xs truncate" title={t.objet}>
                                 {t.objet}
                               </td>
-                              <td className="px-4 py-3.5">
+                              <td className="px-5 py-4">
                                 <div className="font-medium text-slate-800">{t.expediteur}</div>
                                 <div className="text-[10px] text-slate-400 font-mono" dir="ltr">{t.expediteurEmail}</div>
                               </td>
-                              <td className="px-4 py-3.5">
+                              <td className="px-5 py-4">
                                 <div className="font-medium text-slate-800">{t.destinataire}</div>
                                 <div className="text-[10px] text-slate-400 font-mono" dir="ltr">{t.destinataireEmail}</div>
                               </td>
-                              <td className="px-4 py-3.5 text-center">
+                              <td className="px-5 py-4 text-center">
                                 {t.hasAttachment ? (
-                                  <span className="inline-flex items-center text-slate-500">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.586 6.586a6 6 0 108.486 8.486L20 13" /></svg>
+                                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-500">
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.586 6.586a6 6 0 108.486 8.486L20 13" /></svg>
                                   </span>
-                                ) : '-'}
+                                ) : <span className="text-slate-300">—</span>}
                               </td>
-                              <td className="px-4 py-3.5 text-center">
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                              <td className="px-5 py-4 text-center">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold rounded-full border ${
                                   t.statutLecture === 'Lu' 
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200 animate-pulse'
+                                    ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200/80' 
+                                    : 'bg-indigo-50/80 text-indigo-700 border-indigo-200/80'
                                 }`}>
-                                  <span className={`w-1.5 h-1.5 rounded-full ${t.statutLecture === 'Lu' ? 'bg-emerald-400' : 'bg-indigo-400'}`} />
+                                  <span className={`w-1.5 h-1.5 rounded-full ${t.statutLecture === 'Lu' ? 'bg-emerald-400' : 'bg-indigo-400 animate-pulse'}`} />
                                   {t.statutLecture}
                                 </span>
                               </td>
-                              <td className="px-4 py-3.5 text-center">
-                                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 text-[10px] font-bold rounded-full border uppercase tracking-wider font-mono ${
+                              <td className="px-5 py-4 text-center">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-semibold rounded-full border ${
                                   t.statutAcheminement === 'En cours'
-                                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                    ? 'bg-blue-50/80 text-blue-700 border-blue-200/80'
                                     : 'bg-slate-100 text-slate-600 border-slate-200'
                                 }`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${t.statutAcheminement === 'En cours' ? 'bg-blue-400' : 'bg-slate-400'}`} />
@@ -450,43 +486,39 @@ export default function Dashboard() {
                       </table>
                     </div>
                   )}
-                  </div>
                 </div>
 
                 {/* ── Dernières Activités Systèmes ── */}
-                <div className="bg-white/90 backdrop-blur-md rounded-xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-                  <div className="h-0.5 w-full bg-gradient-to-r from-violet-500 via-indigo-500 to-blue-500" />
+                <div className="bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0_0_0/_0.04),_0_4px_6px_-2px_rgb(0_0_0/_0.04)] hover:shadow-[0_4px_12px_-2px_rgb(0_0_0/_0.08)] transition-shadow duration-300 overflow-hidden">
+                  <div className="h-px w-full bg-gradient-to-r from-violet-500 via-indigo-500 to-blue-500" />
                   <div className="px-6 py-4 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
                     <div>
-                      <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Dernières Activités Systèmes</h3>
+                      <h3 className="text-sm font-bold tracking-tight text-slate-900">Dernières Activités Système</h3>
                       <p className="text-[11px] text-slate-500 mt-0.5">Aperçu des 5 dernières entrées du journal d'audit.</p>
                     </div>
                     <button
                       onClick={() => setAdminTab('audit-logs')}
-                      className="text-[10px] font-semibold text-blue-600 hover:text-blue-800 hover:underline transition cursor-pointer flex items-center gap-1"
+                      className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-blue-600 hover:text-blue-800 px-3 py-1.5 rounded-xl hover:bg-blue-50 transition-all duration-150 cursor-pointer"
                     >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                       </svg>
-                      Journal d'audit
+                      Voir tout le journal
                     </button>
                   </div>
 
                   {/* Loading skeleton */}
                   {recentLogs === null ? (
-                    <div className="p-8 flex items-center justify-center gap-3 text-slate-400">
-                      <svg className="animate-spin h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      <span className="text-xs font-medium">Chargement des activités...</span>
+                    <div className="p-10 flex items-center justify-center gap-3">
+                      <div className="w-5 h-5 rounded-full border-2 border-indigo-200 border-t-indigo-500 animate-spin" />
+                      <span className="text-xs font-medium text-slate-400">Chargement des activités...</span>
                     </div>
 
                   ) : recentLogs.length === 0 ? (
                     /* Empty state */
-                    <div className="p-10 flex flex-col items-center justify-center text-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="p-12 flex flex-col items-center justify-center text-center gap-3">
+                      <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-center">
+                        <svg className="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
                       </div>
@@ -503,28 +535,28 @@ export default function Dashboard() {
                     </div>
 
                   ) : (
-                    /* Activity table */
+                    /* Activity event feed */
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs border-collapse">
                         <thead>
-                          <tr className="bg-slate-50/80 border-b border-slate-100 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
-                            <th className="px-4 py-3 w-44">Date / Heure</th>
-                            <th className="px-4 py-3 w-44">Action</th>
-                            <th className="px-4 py-3">Acteur</th>
-                            <th className="px-4 py-3">Description</th>
+                          <tr className="bg-slate-50/80 border-b border-slate-100/80 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
+                            <th className="px-5 py-3.5 w-44">Date / Heure</th>
+                            <th className="px-5 py-3.5 w-36">Action</th>
+                            <th className="px-5 py-3.5">Acteur</th>
+                            <th className="px-5 py-3.5">Description</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 text-slate-600">
+                        <tbody className="divide-y divide-slate-100/80 text-slate-600">
                           {recentLogs.map((log, idx) => {
                             // Resolve badge colour + French label for each action type
                             const actionMeta = {
-                              CREATE_USER:        { label: 'Création',    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-                              SEND_MESSAGE:       { label: 'Envoi',       cls: 'bg-blue-50    text-blue-700    border-blue-200',    dot: 'bg-blue-500'    },
-                              LOGIN:              { label: 'Connexion',   cls: 'bg-indigo-50  text-indigo-700  border-indigo-200',  dot: 'bg-indigo-500'  },
-                              TOGGLE_USER_STATUS: { label: 'Statut',      cls: 'bg-amber-50   text-amber-700   border-amber-200',   dot: 'bg-amber-500'   },
-                              DELETE_USER:        { label: 'Suppression', cls: 'bg-rose-50    text-rose-700    border-rose-200',    dot: 'bg-rose-500'    },
-                              UPLOAD_ATTACHMENT:  { label: 'Pièce jointe',cls: 'bg-teal-50    text-teal-700    border-teal-200',    dot: 'bg-teal-500'    },
-                              ARCHIVE_DISCUSSION: { label: 'Archivage',   cls: 'bg-slate-100  text-slate-600   border-slate-300',   dot: 'bg-slate-400'   },
+                              CREATE_USER:        { label: 'Création',     cls: 'bg-emerald-50/80 text-emerald-700 border-emerald-200/80', dot: 'bg-emerald-500' },
+                              SEND_MESSAGE:       { label: 'Envoi',        cls: 'bg-blue-50/80 text-blue-700 border-blue-200/80',         dot: 'bg-blue-500'    },
+                              LOGIN:              { label: 'Connexion',    cls: 'bg-indigo-50/80 text-indigo-700 border-indigo-200/80',   dot: 'bg-indigo-500'  },
+                              TOGGLE_USER_STATUS: { label: 'Statut',       cls: 'bg-amber-50/80 text-amber-700 border-amber-200/80',      dot: 'bg-amber-500'   },
+                              DELETE_USER:        { label: 'Suppression',  cls: 'bg-rose-50/80 text-rose-700 border-rose-200/80',         dot: 'bg-rose-500'    },
+                              UPLOAD_ATTACHMENT:  { label: 'Pièce jointe',cls: 'bg-teal-50/80 text-teal-700 border-teal-200/80',         dot: 'bg-teal-500'    },
+                              ARCHIVE_DISCUSSION: { label: 'Archivage',    cls: 'bg-slate-100 text-slate-600 border-slate-200',           dot: 'bg-slate-400'   },
                             };
                             const meta = actionMeta[log.typeAction] || { label: log.typeAction, cls: 'bg-slate-50 text-slate-600 border-slate-200', dot: 'bg-slate-400' };
 
@@ -538,16 +570,16 @@ export default function Dashboard() {
                             })();
 
                             return (
-                              <tr key={log.id} className={`hover:bg-blue-50/30 transition-colors duration-150 ${idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}>
-                                <td className="px-4 py-3 font-mono text-slate-500 whitespace-nowrap">{ts}</td>
-                                <td className="px-4 py-3">
-                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border uppercase tracking-wider font-mono ${meta.cls}`}>
-                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${meta.dot}`} />
+                              <tr key={log.id} className="hover:bg-violet-50/20 transition-colors duration-150">
+                                <td className="px-5 py-4 font-mono text-slate-400 whitespace-nowrap text-[11px]">{ts}</td>
+                                <td className="px-5 py-4">
+                                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-semibold border ${meta.cls}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 shadow-sm ${meta.dot}`} />
                                     {meta.label}
                                   </span>
                                 </td>
-                                <td className="px-4 py-3 font-medium text-slate-700 whitespace-nowrap">{log.utilisateur}</td>
-                                <td className="px-4 py-3 text-slate-500 leading-relaxed max-w-xs truncate" title={log.description}>{log.description}</td>
+                                <td className="px-5 py-4 font-medium text-slate-700 whitespace-nowrap font-mono text-[11px]">{log.utilisateur}</td>
+                                <td className="px-5 py-4 text-slate-500 leading-relaxed max-w-xs truncate" title={log.description}>{log.description}</td>
                               </tr>
                             );
                           })}
@@ -562,16 +594,22 @@ export default function Dashboard() {
             ) : adminTab === 'audit-logs' ? (
               <ManageLogs />
             ) : (
-              <div className="w-full max-w-xl bg-white/90 backdrop-blur-md rounded-2xl border border-slate-200/80 shadow-md hover:shadow-lg transition-shadow duration-200 overflow-hidden animate-fade-in">
-                {/* Accent top bar */}
-                <div className="h-0.5 w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
-                {/* En-tête de la fiche de création */}
+              <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0_0_0/_0.04),_0_4px_6px_-2px_rgb(0_0_0/_0.04)] hover:shadow-[0_4px_16px_-4px_rgb(0_0_0/_0.1)] transition-shadow duration-300 overflow-hidden animate-fade-in">
+                {/* Prismatic accent bar */}
+                <div className="h-px w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
+                {/* Card header */}
                 <div className="px-6 py-5 bg-slate-50/60 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1 h-4 rounded-full bg-gradient-to-b from-blue-500 to-indigo-600" />
-                    <h2 className="text-base font-bold tracking-tight text-slate-900">Enregistrer un nouvel utilisateur</h2>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/25 flex-shrink-0">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2 className="text-base font-bold tracking-tight text-slate-900 leading-none">Enregistrer un nouvel utilisateur</h2>
+                      <p className="text-slate-500 text-xs mt-0.5">Le compte créé sera actif et recevra automatiquement ses accès sécurisés.</p>
+                    </div>
                   </div>
-                  <p className="text-slate-500 text-xs mt-1 ml-3">Le compte créé sera actif et recevra automatiquement ses accès sécurisés.</p>
                 </div>
 
                 <div className="p-6">
