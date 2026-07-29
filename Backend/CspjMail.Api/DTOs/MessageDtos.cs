@@ -97,7 +97,7 @@ namespace CspjMail.Api.DTOs
         public string Email { get; set; } = null!;
         public string NomComplet { get; set; } = null!;
         public string Role { get; set; } = null!;
-        public string EntrepriseNom { get; set; } = null!;
+        public string InstitutionNom { get; set; } = null!;
     }
 
     public class CreateUserDto
@@ -107,7 +107,13 @@ namespace CspjMail.Api.DTOs
         public string Nom { get; set; } = null!;
         public string Prenom { get; set; } = null!;
         public string Role { get; set; } = null!; // Administrateur, Fonctionnaire, Association
-        public int EntrepriseId { get; set; }
+        public int InstitutionId { get; set; }
+    }
+
+    public class CreateInstitutionDto
+    {
+        public string Nom { get; set; } = null!;
+        public bool EstAssociation { get; set; }
     }
 
     public class AdminStatsDto
@@ -124,8 +130,8 @@ namespace CspjMail.Api.DTOs
         public string Nom { get; set; } = null!;
         public string Prenom { get; set; } = null!;
         public string Role { get; set; } = null!;
-        public int EntrepriseId { get; set; }
-        public string EntrepriseNom { get; set; } = null!;
+        public int InstitutionId { get; set; }
+        public string InstitutionNom { get; set; } = null!;
         public bool Actif { get; set; }
         public DateTime DateCreation { get; set; }
     }

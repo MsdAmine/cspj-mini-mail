@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import api from '../services/api';
 
-export default function CreateEnterpriseModal({ onClose, onSuccess }) {
+export default function CreateInstitutionModal({ onClose, onSuccess }) {
   const [nom, setNom] = useState('');
   const [estAssociation, setEstAssociation] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -12,12 +12,12 @@ export default function CreateEnterpriseModal({ onClose, onSuccess }) {
     setError('');
 
     if (!nom.trim()) {
-      setError("Le nom de l'entreprise est obligatoire.");
+      setError("Le nom de l'institution est obligatoire.");
       return;
     }
     setLoading(true);
     try {
-      await api.post('/admin/entreprises', {
+      await api.post('/admin/institutions', {
         nom: nom.trim(),
         estAssociation
       });
@@ -28,7 +28,7 @@ export default function CreateEnterpriseModal({ onClose, onSuccess }) {
         typeof err.response?.data === 'string'
           ? err.response.data
           : err.response?.data?.message ||
-            "Une erreur est survenue lors de la création de l'entreprise.";
+            "Une erreur est survenue lors de la création de l'institution.";
       setError(msg);
     } finally {
       setLoading(false);
@@ -51,7 +51,7 @@ export default function CreateEnterpriseModal({ onClose, onSuccess }) {
               </svg>
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Nouvelle Entreprise / Association</h3>
+              <h3 className="font-bold text-slate-900 text-sm">Nouvelle Institution / Association</h3>
               <p className="text-xs text-slate-400 mt-0.5">Enregistrer une nouvelle structure dans le réseau CSPJ</p>
             </div>
           </div>
@@ -83,7 +83,7 @@ export default function CreateEnterpriseModal({ onClose, onSuccess }) {
             {/* Nom */}
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Nom de l'association / entreprise <span className="text-rose-500">*</span>
+                Nom de l'association / institution <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -110,7 +110,7 @@ export default function CreateEnterpriseModal({ onClose, onSuccess }) {
                 <label htmlFor="estAssociation" className="block text-sm font-semibold text-slate-700 cursor-pointer">
                   Il s'agit d'une association
                 </label>
-                <p className="text-[10px] text-slate-400 mt-0.5">Cochez cette case s'il s'agit d'une association et non d'une entreprise.</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Cochez cette case s'il s'agit d'une association et non d'une institution.</p>
               </div>
             </div>
           </div>
@@ -140,7 +140,7 @@ export default function CreateEnterpriseModal({ onClose, onSuccess }) {
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
-                  Créer l'entreprise
+                  Créer l'institution
                 </>
               )}
             </button>

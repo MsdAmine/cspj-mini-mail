@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 export default function ProfileModal({ onClose }) {
   const { user } = useAuth();
 
-  const getEntrepriseName = (id) => {
+  const getInstitutionName = (id) => {
     if (id === 1) return "CSPJ (Conseil)";
     if (id === 2) return "Association des Magistrats Marocains";
     return "Structure externe";
@@ -95,12 +95,12 @@ export default function ProfileModal({ onClose }) {
 
             <div>
               <label className="block text-[10px] font-bold uppercase text-slate-400 tracking-wider mb-1">
-                Structure / Entreprise
+                Structure / Institution
               </label>
               <input
                 type="text"
                 disabled
-                value={getEntrepriseName(user?.entrepriseId)}
+                value={getInstitutionName(user?.institutionId)}
                 className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-600 outline-none font-medium cursor-not-allowed"
               />
             </div>

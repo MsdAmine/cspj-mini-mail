@@ -8,7 +8,7 @@ import MailList from '../components/MailList';
 import ComposeModal from '../components/ComposeModal';
 import ProfilePage from './ProfilePage';
 import ManageUsers from '../components/ManageUsers';
-import ManageEnterprises from '../components/ManageEnterprises';
+import ManageInstitutions from '../components/ManageInstitutions';
 import ManageLogs from '../components/ManageLogs';
 import TiptapEditor from '../components/TiptapEditor';
 import Groups from './Groups';
@@ -60,7 +60,7 @@ export default function Dashboard() {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newRole, setNewRole] = useState('Fonctionnaire'); 
-  const [newEntrepriseId, setNewEntrepriseId] = useState('1'); // Par défaut 1 (CSPJ Conseil)
+  const [newInstitutionId, setNewInstitutionId] = useState('1'); // Par défaut 1 (CSPJ Conseil)
   const [adminMessage, setAdminMessage] = useState({ type: '', text: '' });
 
   // Suivi des discussions (Mock Data)
@@ -70,18 +70,18 @@ export default function Dashboard() {
   // Statistiques Administrateur
   const [stats, setStats] = useState({ totalUsers: 0, totalThreads: 0, totalMessagesSent: 0 });
   const [threads, setThreads] = useState([]);
-  const [entreprises, setEntreprises] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
   const [recentLogs, setRecentLogs] = useState(null); // null = loading, [] = empty
 
-  const fetchEntreprises = async () => {
+  const fetchInstitutions = async () => {
     try {
-      const response = await api.get('/admin/entreprises');
-      setEntreprises(response.data || []);
+      const response = await api.get('/admin/institutions');
+      setInstitutions(response.data || []);
       if (response.data && response.data.length > 0) {
-        setNewEntrepriseId(response.data[0].id.toString());
+        setNewInstitutionId(response.data[0].id.toString());
       }
     } catch (err) {
-      console.error("Erreur lors de la récupération des entreprises :", err);
+      console.error("Erreur lors de la récupération des institutions :", err);
     }
   };
 
@@ -138,7 +138,7 @@ export default function Dashboard() {
     if (isAdminView && user?.role === 'Administrateur') {
       fetchStats();
       fetchThreads();
-      fetchEntreprises();
+      fetchInstitutions();
       fetchRecentLogs();
     }
   }, [isAdminView, user]);
@@ -159,7 +159,7 @@ export default function Dashboard() {
         email: newEmail.trim().toLowerCase(),
         password: newPassword,
         role: newRole,
-        entrepriseId: parseInt(newEntrepriseId, 10)
+        institutionId: parseInt(newInstitutionId, 10)
       });
 
       setAdminMessage({ 
@@ -180,7 +180,7 @@ export default function Dashboard() {
       setNewEmail('');
       setNewPassword('');
       setNewRole('Fonctionnaire');
-      setNewEntrepriseId('1');
+      setNewInstitutionId('1');
 
       // Recharger les statistiques
       fetchStats();
@@ -592,8 +592,8 @@ export default function Dashboard() {
               </div>
             ) : adminTab === 'manage-users' ? (
               <ManageUsers />
-            ) : adminTab === 'enterprises' ? (
-              <ManageEnterprises />
+            ) : adminTab === 'institutions' ? (
+              <ManageInstitutions />
             ) : adminTab === 'audit-logs' ? (
               <ManageLogs />
             ) : (
@@ -699,11 +699,11 @@ export default function Dashboard() {
                         <div>
                           <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Sélectionner l'association de rattachement</label>
                           <select
-                            value={newEntrepriseId}
-                            onChange={(e) => setNewEntrepriseId(e.target.value)}
+                            value={newInstitutionId}
+                            onChange={(e) => setNewInstitutionId(e.target.value)}
                             className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
                           >
-                            {entreprises.map(e => (
+                            {institutions.map(e => (
                               <option key={e.id} value={e.id.toString()}>{e.nom}</option>
                             ))}
                           </select>

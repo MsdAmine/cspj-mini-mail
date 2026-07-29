@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLogs } from '../context/LogContext';
-import CreateEnterpriseModal from './CreateEnterpriseModal';
+import CreateInstitutionModal from './CreateInstitutionModal';
 
-export default function ManageEnterprises() {
+export default function ManageInstitutions() {
   const { user: currentUser } = useAuth();
   const { addLog } = useLogs();
-  const [enterprises, setEnterprises] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,15 +15,15 @@ export default function ManageEnterprises() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const fetchEnterprisesAndUsers = async () => {
+  const fetchInstitutionsAndUsers = async () => {
     setLoading(true);
     setError('');
     try {
-      const [enterprisesRes, usersRes] = await Promise.all([
-        api.get('/admin/entreprises'),
+      const [institutionsRes, usersRes] = await Promise.all([
+        api.get('/admin/institutions'),
         api.get('/admin/users')
       ]);
-      setEnterprises(enterprisesRes.data || []);
+      setInstitutions(institutionsRes.data || []);
       setUsers(usersRes.data || []);
     } catch (err) {
       console.error(err);
@@ -34,21 +34,21 @@ export default function ManageEnterprises() {
   };
 
   useEffect(() => {
-    fetchEnterprisesAndUsers();
+    fetchInstitutionsAndUsers();
   }, []);
 
-  const getMemberCount = (enterprise) => {
-    if (enterprise.utilisateurs) return enterprise.utilisateurs.length;
-    if (!users || !Array.isArray(users)) return enterprise.membresCount || 0;
+  const getMemberCount = (institution) => {
+    if (institution.utilisateurs) return institution.utilisateurs.length;
+    if (!users || !Array.isArray(users)) return institution.membresCount || 0;
     
     return users.filter(user => 
-      user.entrepriseId === enterprise.id || 
-      user.entrepriseNom === enterprise.nom ||
-      user.structure === enterprise.nom
+      user.institutionId === institution.id || 
+      user.institutionNom === institution.nom ||
+      user.structure === institution.nom
     ).length;
   };
 
-  const filteredEnterprises = enterprises.filter((e) => {
+  const filteredInstitutions = institutions.filter((e) => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
     return (e.nom || '').toLowerCase().includes(query);
@@ -66,7 +66,7 @@ export default function ManageEnterprises() {
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-slate-900 leading-none">Gestion des Entreprises & Associations</h2>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900 leading-none">Gestion des Institutions & Associations</h2>
               <p className="text-slate-500 text-xs mt-0.5">
                 Visualisez, recherchez et gérez les structures du réseau CSPJ.
               </p>
@@ -77,7 +77,7 @@ export default function ManageEnterprises() {
           {!loading && (
             <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white border border-slate-200/80 text-xs font-semibold text-slate-600 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              {filteredEnterprises.length} structure{filteredEnterprises.length !== 1 ? 's' : ''}
+              {filteredInstitutions.length} structure{filteredInstitutions.length !== 1 ? 's' : ''}
             </div>
           )}
           <button
@@ -87,7 +87,7 @@ export default function ManageEnterprises() {
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            Nouvelle Entreprise
+            Nouvelle Institution
           </button>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function ManageEnterprises() {
         <div className="px-6 py-4 bg-slate-50/60 border-b border-slate-100 flex items-center justify-between">
           <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Répertoire des structures</span>
           <span className="text-[10px] text-slate-400 font-mono">
-            {!loading && `${filteredEnterprises.length} / ${enterprises.length}`}
+            {!loading && `${filteredInstitutions.length} / ${institutions.length}`}
           </span>
         </div>
 
@@ -144,7 +144,7 @@ export default function ManageEnterprises() {
             <div className="w-10 h-10 rounded-full border-2 border-violet-200 border-t-violet-500 animate-spin" />
             <p className="text-slate-400 text-xs font-medium">Chargement en cours...</p>
           </div>
-        ) : filteredEnterprises.length === 0 ? (
+        ) : filteredInstitutions.length === 0 ? (
           <div className="p-16 flex flex-col items-center justify-center gap-3 text-center">
             <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-center">
               <svg className="w-7 h-7 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,7 +160,7 @@ export default function ManageEnterprises() {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-100/80 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
-                  <th className="px-5 py-3.5">Nom de l'Entreprise</th>
+                  <th className="px-5 py-3.5">Nom de l'Institution</th>
                   <th className="px-5 py-3.5">Type de Structure</th>
                   <th className="px-5 py-3.5 text-center">Membres Associés</th>
                   <th className="px-5 py-3.5 text-center">Date de Création</th>
@@ -168,7 +168,7 @@ export default function ManageEnterprises() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100/80 text-slate-600">
-                {filteredEnterprises.map((e) => {
+                {filteredInstitutions.map((e) => {
                   return (
                     <tr key={e.id} className="hover:bg-violet-50/25 transition-colors duration-150 group">
                       <td className="px-5 py-4 font-semibold text-slate-800">
@@ -191,7 +191,7 @@ export default function ManageEnterprises() {
                             ? 'bg-indigo-50/70 text-indigo-700 border-indigo-200/60'
                             : 'bg-violet-50/70 text-violet-700 border-violet-200/60'
                         }`}>
-                          {e.estAssociation ? "Association" : "Entreprise"}
+                          {e.estAssociation ? "Association" : "Institution"}
                         </span>
                       </td>
                       <td className="px-5 py-4 text-center">
@@ -225,11 +225,11 @@ export default function ManageEnterprises() {
       </div>
 
       {isCreateModalOpen && (
-        <CreateEnterpriseModal
+        <CreateInstitutionModal
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
-            fetchEnterprisesAndUsers();
-            setSuccess("Entreprise créée avec succès !");
+            fetchInstitutionsAndUsers();
+            setSuccess("Institution créée avec succès !");
             setTimeout(() => setSuccess(''), 3000);
           }}
         />

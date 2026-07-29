@@ -454,7 +454,7 @@ namespace CspjMail.Api.Controllers
                         Email = tp.Utilisateur.Email,
                         NomComplet = $"{tp.Utilisateur.Prenom} {tp.Utilisateur.Nom}",
                         Role = tp.Utilisateur.Role,
-                        EntrepriseNom = tp.Utilisateur.Entreprise?.Nom ?? "Structure inconnue"
+                        InstitutionNom = tp.Utilisateur.Entreprise?.Nom ?? "Structure inconnue"
                     }).ToList();
             }
             else
@@ -476,7 +476,7 @@ namespace CspjMail.Api.Controllers
                         Email = u.Email,
                         NomComplet = $"{u.Prenom} {u.Nom}",
                         Role = u.Role,
-                        EntrepriseNom = u.Entreprise != null ? u.Entreprise.Nom : "Structure inconnue"
+                        InstitutionNom = u.Entreprise != null ? u.Entreprise.Nom : "Structure inconnue"
                     }).ToListAsync();
             }
 
@@ -789,7 +789,7 @@ namespace CspjMail.Api.Controllers
                     Email = u.Email,
                     NomComplet = $"{u.Prenom} {u.Nom}",
                     Role = u.Role,
-                    EntrepriseNom = u.Entreprise != null ? u.Entreprise.Nom : "Structure inconnue"
+                    InstitutionNom = u.Entreprise != null ? u.Entreprise.Nom : "Structure inconnue"
                 })
                 .ToListAsync();
 

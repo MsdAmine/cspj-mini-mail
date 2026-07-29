@@ -115,7 +115,7 @@ namespace CspjMail.Api.Controllers
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim(ClaimTypes.GivenName, $"{user.Prenom} {user.Nom}"),
                 new Claim(ClaimTypes.Role, user.Role),
-                new Claim("EntrepriseId", user.EntrepriseId.ToString())
+                new Claim("InstitutionId", user.EntrepriseId.ToString())
             };
 
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -173,7 +173,7 @@ namespace CspjMail.Api.Controllers
                 nom = user.Nom,
                 email = user.Email,
                 role = user.Role,
-                entrepriseId = user.EntrepriseId
+                institutionId = user.EntrepriseId
             });
         }
 
