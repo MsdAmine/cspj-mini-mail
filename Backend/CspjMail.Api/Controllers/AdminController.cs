@@ -117,7 +117,15 @@ namespace CspjMail.Api.Controllers
         public async Task<IActionResult> GetInstitutions()
         {
             var institutions = await _context.Entreprises
-                .Select(e => new { id = e.Id, nom = e.Nom, estAssociation = e.EstAssociation, utilisateurs = e.Utilisateurs })
+                .Include(e => e.Utilisateurs)
+                .Select(e => new
+                {
+                    id = e.Id,
+                    nom = e.Nom,
+                    estAssociation = e.EstAssociation,
+                    dateCreation = e.DateCreation,
+                    utilisateursCount = e.Utilisateurs.Count(u => !u.IsDeleted)
+                })
                 .ToListAsync();
             return Ok(institutions);
         }

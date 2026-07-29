@@ -26,8 +26,10 @@ export default function ManageInstitutions() {
       setInstitutions(institutionsRes.data || []);
       setUsers(usersRes.data || []);
     } catch (err) {
-      console.error(err);
-      setError("Erreur lors du chargement des données.");
+      const status = err.response?.status;
+      const detail = err.response?.data || err.message;
+      console.error(`[ManageInstitutions] fetch failed — HTTP ${status ?? 'N/A'}:`, detail);
+      setError(`Erreur lors du chargement des données (HTTP ${status ?? 'ERR'}).`);
     } finally {
       setLoading(false);
     }
@@ -38,13 +40,13 @@ export default function ManageInstitutions() {
   }, []);
 
   const getMemberCount = (institution) => {
-    if (institution.utilisateurs) return institution.utilisateurs.length;
+    // Prefer the pre-computed count from the API
+    if (typeof institution.utilisateursCount === 'number') return institution.utilisateursCount;
+    // Fallback: count from the separately loaded users list
     if (!users || !Array.isArray(users)) return institution.membresCount || 0;
-    
-    return users.filter(user => 
-      user.institutionId === institution.id || 
-      user.institutionNom === institution.nom ||
-      user.structure === institution.nom
+    return users.filter(user =>
+      user.institutionId === institution.id ||
+      user.institutionNom === institution.nom
     ).length;
   };
 
