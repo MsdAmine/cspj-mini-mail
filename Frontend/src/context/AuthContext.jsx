@@ -60,7 +60,7 @@ export const AuthProvider = ({ children }) => {
       
       const decoded = parseJwt(token);
       const userId = decoded ? parseInt(decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"], 10) : null;
-      const entrepriseId = decoded ? parseInt(decoded["EntrepriseId"], 10) : null;
+      const institutionId = decoded ? parseInt(decoded["InstitutionId"], 10) : null;
 
       const userProfile = {
         id: userId,
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
         nom,
         prenom,
         role,
-        entrepriseId
+        institutionId
       };
 
       localStorage.setItem('cspj_token', token);
@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }) => {
       
       const decoded = parseJwt(token);
       const userId = decoded ? parseInt(decoded["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"], 10) : null;
-      const entrepriseId = decoded ? parseInt(decoded["EntrepriseId"], 10) : null;
+      const institutionId = decoded ? parseInt(decoded["InstitutionId"], 10) : null;
 
       const userProfile = {
         id: userId,
@@ -100,7 +100,7 @@ export const AuthProvider = ({ children }) => {
         nom,
         prenom,
         role,
-        entrepriseId
+        institutionId
       };
 
       localStorage.setItem('cspj_token', token);

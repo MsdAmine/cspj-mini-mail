@@ -29,7 +29,7 @@ function CreateGroupModal({ contacts, onClose, onCreate }) {
   const [loading,       setLoading]       = useState(false);
 
   const filtered = contacts.filter(c =>
-    `${c.nomComplet} ${c.email} ${c.entrepriseNom}`
+    `${c.nomComplet} ${c.email} ${c.institutionNom}`
       .toLowerCase()
       .includes(contactSearch.toLowerCase())
   );
@@ -184,7 +184,7 @@ function CreateGroupModal({ contacts, onClose, onCreate }) {
                         <p className="text-sm font-medium text-slate-800 truncate">{contact.nomComplet}</p>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${cls}`}>{label}</span>
-                          <span className="text-[10px] text-slate-400 truncate">{contact.entrepriseNom}</span>
+                          <span className="text-[10px] text-slate-400 truncate">{contact.institutionNom}</span>
                         </div>
                       </div>
                     </label>
@@ -468,7 +468,7 @@ export default function Groups() {
                       return (
                         <span
                           key={p.id}
-                          title={`${p.nomComplet} — ${p.entrepriseNom}`}
+                          title={`${p.nomComplet} — ${p.institutionNom}`}
                           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white border border-slate-200/80 text-xs font-medium text-slate-700 hover:bg-violet-50 hover:border-violet-200 shadow-sm transition-all duration-150"
                         >
                           <span className="w-5 h-5 rounded-full bg-slate-700 text-white text-[9px] font-bold flex items-center justify-center uppercase">

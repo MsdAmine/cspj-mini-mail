@@ -36,10 +36,10 @@ namespace CspjMail.Api.Controllers
             }
 
             // Verify the selected Enterprise/Association mapping target exists
-            var enterpriseExists = await _context.Entreprises.AnyAsync(e => e.Id == dto.EntrepriseId);
+            var enterpriseExists = await _context.Entreprises.AnyAsync(e => e.Id == dto.InstitutionId);
             if (!enterpriseExists)
             {
-                return BadRequest("The assigned enterprise or association structure does not exist.");
+                return BadRequest("The assigned institution or association structure does not exist.");
             }
 
             // Validate that the role matches the specification's nomenclature
@@ -56,7 +56,7 @@ namespace CspjMail.Api.Controllers
                 Nom = dto.Nom,
                 Prenom = dto.Prenom,
                 Role = dto.Role,
-                EntrepriseId = dto.EntrepriseId,
+                EntrepriseId = dto.InstitutionId,
                 Actif = true
             };
 
@@ -112,14 +112,31 @@ namespace CspjMail.Api.Controllers
             return Ok(stats);
         }
 
-        // 2.5 GET: api/admin/entreprises (Fetch structures)
-        [HttpGet("entreprises")]
-        public async Task<IActionResult> GetEntreprises()
+        // 2.5 GET: api/admin/institutions (Fetch structures)
+        [HttpGet("institutions")]
+        public async Task<IActionResult> GetInstitutions()
         {
-            var entreprises = await _context.Entreprises
-                .Select(e => new { id = e.Id, nom = e.Nom })
+            var institutions = await _context.Entreprises
+                .Select(e => new { id = e.Id, nom = e.Nom, estAssociation = e.EstAssociation, utilisateurs = e.Utilisateurs })
                 .ToListAsync();
-            return Ok(entreprises);
+            return Ok(institutions);
+        }
+
+        // 2.6 POST: api/admin/institutions (Create structures)
+        [HttpPost("institutions")]
+        public async Task<IActionResult> CreateInstitution([FromBody] CreateInstitutionDto dto)
+        {
+            var institution = new Entreprise
+            {
+                Nom = dto.Nom,
+                EstAssociation = dto.EstAssociation,
+                DateCreation = DateTime.UtcNow
+            };
+
+            _context.Entreprises.Add(institution);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { id = institution.Id, nom = institution.Nom, estAssociation = institution.EstAssociation });
         }
 
         // 3. GET: api/admin/users (Fetch all registered system users)
@@ -137,8 +154,8 @@ namespace CspjMail.Api.Controllers
                     Nom = u.Nom,
                     Prenom = u.Prenom,
                     Role = u.Role,
-                    EntrepriseId = u.EntrepriseId,
-                    EntrepriseNom = u.Entreprise.Nom,
+                    InstitutionId = u.EntrepriseId,
+                    InstitutionNom = u.Entreprise.Nom,
                     Actif = u.Actif,
                     DateCreation = u.DateCreation
                 })

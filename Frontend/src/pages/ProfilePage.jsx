@@ -16,7 +16,7 @@ export default function ProfilePage({ onBack }) {
   const isRTL   = !isAdmin; // Fonctionnaire + Association → Arabic RTL
 
   // ── Helper functions ────────────────────────────────────────────────────────
-  const getEntrepriseName = (id) => {
+  const getInstitutionName = (id) => {
     if (isAdmin) {
       if (id === 1) return 'CSPJ — Conseil Supérieur du Pouvoir Judiciaire';
       if (id === 2) return 'Association des Magistrats Marocains';
@@ -106,14 +106,14 @@ export default function ProfilePage({ onBack }) {
         { label: 'Nom',            value: user?.nom,                             editable: true,  key: 'nom' },
         { label: 'Adresse e-mail', value: user?.email,                           editable: true,  key: 'email' },
         { label: 'Rôle système',   value: getRoleLabel(user?.role),              editable: false, key: 'role' },
-        { label: 'Structure',      value: getEntrepriseName(user?.entrepriseId),  editable: false, key: 'structure' },
+        { label: 'Structure',      value: getInstitutionName(user?.institutionId),  editable: false, key: 'structure' },
       ]
     : [
         { label: 'الاسم الشخصي',      value: user?.prenom,                          editable: true,  key: 'prenom' },
         { label: 'الاسم العائلي',      value: user?.nom,                             editable: true,  key: 'nom' },
         { label: 'البريد الإلكتروني',  value: user?.email,                           editable: true,  key: 'email' },
         { label: 'الدور في النظام',    value: getRoleLabel(user?.role),              editable: false, key: 'role' },
-        { label: 'المؤسسة / الهيكل',  value: getEntrepriseName(user?.entrepriseId),  editable: false, key: 'structure' },
+        { label: 'المؤسسة / الهيكل',  value: getInstitutionName(user?.institutionId),  editable: false, key: 'structure' },
       ];
 
   const getEditValue = (key) => {

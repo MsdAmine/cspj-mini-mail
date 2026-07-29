@@ -100,7 +100,7 @@ export default function ComposeModal({ onClose }) {
   const [contactSearch, setContactSearch] = useState("");
 
   const filteredContacts = contacts.filter((c) =>
-    `${c.nomComplet} ${c.email} ${c.entrepriseNom}`
+    `${c.nomComplet} ${c.email} ${c.institutionNom}`
       .toLowerCase()
       .includes(contactSearch.toLowerCase())
   );
@@ -305,7 +305,7 @@ export default function ComposeModal({ onClose }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-slate-900 truncate">{contact.nomComplet}</p>
-                  <p className="text-[10px] text-slate-400 truncate">{getRoleArabicLabel(contact.role)} — {contact.entrepriseNom}</p>
+                  <p className="text-[10px] text-slate-400 truncate">{getRoleArabicLabel(contact.role)} — {contact.institutionNom}</p>
                 </div>
               </label>
             );
@@ -403,7 +403,7 @@ export default function ComposeModal({ onClose }) {
                 <option value="">اختر جهة اتصال...</option>
                 {contacts.map((contact) => (
                   <option key={contact.id} value={contact.id}>
-                    {contact.nomComplet} ({getRoleArabicLabel(contact.role)} — {contact.entrepriseNom})
+                    {contact.nomComplet} ({getRoleArabicLabel(contact.role)} — {contact.institutionNom})
                   </option>
                 ))}
               </select>

@@ -148,7 +148,7 @@ export default function ManageUsers() {
       user.prenom.toLowerCase().includes(query) ||
       user.email.toLowerCase().includes(query) ||
       user.role.toLowerCase().includes(query) ||
-      (user.entrepriseNom && user.entrepriseNom.toLowerCase().includes(query))
+      (user.institutionNom && user.institutionNom.toLowerCase().includes(query))
     );
   });
 
@@ -335,10 +335,10 @@ export default function ManageUsers() {
                         {u.email}
                       </td>
 
-                      {/* Enterprise/Structure */}
+                      {/* Institution/Structure */}
                       <td className="px-5 py-4">
                         <span className="text-xs font-medium text-slate-700 px-2.5 py-1 bg-slate-100/70 rounded-lg border border-slate-200/60">
-                          {u.entrepriseNom || "Non définie"}
+                          {u.institutionNom || "Non définie"}
                         </span>
                       </td>
 
