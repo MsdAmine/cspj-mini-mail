@@ -38,6 +38,7 @@ export default function ManageEnterprises() {
   }, []);
 
   const getMemberCount = (enterprise) => {
+    if (enterprise.utilisateurs) return enterprise.utilisateurs.length;
     if (!users || !Array.isArray(users)) return enterprise.membresCount || 0;
     
     return users.filter(user => 
@@ -47,48 +48,10 @@ export default function ManageEnterprises() {
     ).length;
   };
 
-  const handleToggleStatus = async (enterprise) => {
-    setError('');
-    setSuccess('');
-    // Assuming the backend has a status toggle endpoint, if not, we handle gracefully.
-    // Assuming property name `actif`, default to true if missing.
-    const currentStatus = enterprise.actif ?? true;
-    const newStatus = !currentStatus;
-
-    try {
-      // Optimistic update
-      setEnterprises(prev => prev.map(e => e.id === enterprise.id ? { ...e, actif: newStatus } : e));
-      
-      // Attempt API call (if this endpoint doesn't exist, we might need to adjust or skip)
-      // await api.put(`/admin/entreprises/${enterprise.id}/status`, { actif: newStatus });
-      // For now, if no such API exists, it might fail. We'll leave it optimistic or mock.
-      // If the backend has it:
-      await api.put(`/admin/entreprises/${enterprise.id}`, { ...enterprise, actif: newStatus });
-      
-      const statusLabel = newStatus ? 'Actif' : 'Inactif';
-      addLog(
-        'TOGGLE_ENTERPRISE_STATUS',
-        `L'administrateur a modifié le statut de l'entreprise ${enterprise.nom} à '${statusLabel}'.`,
-        currentUser?.email
-      );
-      setSuccess(`Le statut de l'entreprise ${enterprise.nom} a été mis à jour.`);
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      console.error(err);
-      // Revert status
-      setEnterprises(prev => prev.map(e => e.id === enterprise.id ? { ...e, actif: currentStatus } : e));
-      setError("Erreur lors de la mise à jour du statut.");
-    }
-  };
-
   const filteredEnterprises = enterprises.filter((e) => {
     const query = searchQuery.toLowerCase().trim();
     if (!query) return true;
-    return (
-      (e.nom || '').toLowerCase().includes(query) ||
-      (e.code || '').toLowerCase().includes(query) ||
-      (e.emailContact || '').toLowerCase().includes(query)
-    );
+    return (e.nom || '').toLowerCase().includes(query);
   });
 
   return (
@@ -158,7 +121,7 @@ export default function ManageEnterprises() {
           </span>
           <input
             type="text"
-            placeholder="Rechercher par nom ou code matricule..."
+            placeholder="Rechercher par nom..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50/80 border border-slate-200/60 rounded-xl text-sm focus:bg-white focus:border-violet-400 focus:ring-4 focus:ring-violet-50 outline-none transition duration-150"
@@ -198,15 +161,14 @@ export default function ManageEnterprises() {
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-100/80 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
                   <th className="px-5 py-3.5">Nom de l'Entreprise</th>
-                  <th className="px-5 py-3.5">Matricule / Code ID</th>
+                  <th className="px-5 py-3.5">Type de Structure</th>
                   <th className="px-5 py-3.5 text-center">Membres Associés</th>
-                  <th className="px-5 py-3.5 text-center">Statut</th>
+                  <th className="px-5 py-3.5 text-center">Date de Création</th>
                   <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100/80 text-slate-600">
                 {filteredEnterprises.map((e) => {
-                  const estActif = e.actif ?? true;
                   return (
                     <tr key={e.id} className="hover:bg-violet-50/25 transition-colors duration-150 group">
                       <td className="px-5 py-4 font-semibold text-slate-800">
@@ -220,15 +182,16 @@ export default function ManageEnterprises() {
                             <span className="block text-sm font-semibold text-slate-900 leading-tight">
                               {e.nom}
                             </span>
-                            <span className="text-[10px] text-slate-500 font-normal">
-                              {e.emailContact || "Aucun email"}
-                            </span>
                           </div>
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="text-xs font-mono font-medium text-slate-700 px-2.5 py-1 bg-slate-100/70 rounded-lg border border-slate-200/60">
-                          {e.code || "N/A"}
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-lg border ${
+                          e.estAssociation 
+                            ? 'bg-indigo-50/70 text-indigo-700 border-indigo-200/60'
+                            : 'bg-violet-50/70 text-violet-700 border-violet-200/60'
+                        }`}>
+                          {e.estAssociation ? "Association" : "Entreprise"}
                         </span>
                       </td>
                       <td className="px-5 py-4 text-center">
@@ -240,22 +203,9 @@ export default function ManageEnterprises() {
                         </span>
                       </td>
                       <td className="px-5 py-4 text-center">
-                        <div className="flex items-center justify-center">
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(e)}
-                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none focus:ring-2 focus:ring-violet-500/20 focus:ring-offset-2 ${
-                              estActif ? 'bg-emerald-500 shadow-sm shadow-emerald-500/30' : 'bg-slate-200'
-                            }`}
-                            aria-checked={estActif}
-                          >
-                            <span
-                              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                                estActif ? 'translate-x-5' : 'translate-x-0'
-                              }`}
-                            />
-                          </button>
-                        </div>
+                        <span className="text-xs text-slate-600 font-medium">
+                          {e.dateCreation ? new Date(e.dateCreation).toLocaleDateString() : 'N/A'}
+                        </span>
                       </td>
                       <td className="px-5 py-4 text-right">
                         <button className="inline-flex items-center gap-1.5 px-3 py-1.5 text-slate-600 bg-white hover:bg-slate-50 hover:text-violet-600 rounded-xl transition-all duration-150 border border-slate-200/80 cursor-pointer active:scale-[0.98] shadow-sm">

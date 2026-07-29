@@ -3,9 +3,7 @@ import api from '../services/api';
 
 export default function CreateEnterpriseModal({ onClose, onSuccess }) {
   const [nom, setNom] = useState('');
-  const [code, setCode] = useState('');
-  const [email, setEmail] = useState('');
-  const [description, setDescription] = useState('');
+  const [estAssociation, setEstAssociation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -17,18 +15,11 @@ export default function CreateEnterpriseModal({ onClose, onSuccess }) {
       setError("Le nom de l'entreprise est obligatoire.");
       return;
     }
-    if (!code.trim()) {
-      setError("Le code / identifiant unique est obligatoire.");
-      return;
-    }
-
     setLoading(true);
     try {
       await api.post('/admin/entreprises', {
         nom: nom.trim(),
-        code: code.trim().toUpperCase(),
-        emailContact: email.trim() || null,
-        description: description.trim() || null,
+        estAssociation
       });
       onSuccess?.();
       onClose();
@@ -105,51 +96,22 @@ export default function CreateEnterpriseModal({ onClose, onSuccess }) {
               />
             </div>
 
-            {/* Code */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Code / Identifiant Unique <span className="text-rose-500">*</span>
-              </label>
+            {/* Est Association */}
+            <div className="flex items-center gap-3 bg-slate-50/50 p-3.5 rounded-xl border border-slate-200">
               <input
-                type="text"
-                required
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="Ex: AMS-SUD-001"
+                type="checkbox"
+                id="estAssociation"
+                checked={estAssociation}
+                onChange={(e) => setEstAssociation(e.target.checked)}
                 disabled={loading}
-                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-violet-500 focus:ring-4 focus:ring-violet-50 outline-none transition duration-150 font-mono disabled:opacity-60"
+                className="w-4 h-4 text-violet-600 bg-white border-slate-300 rounded focus:ring-violet-500 focus:ring-2 disabled:opacity-60 cursor-pointer"
               />
-              <p className="text-[10px] text-slate-400 mt-1">Identifiant court unique, en majuscules. Ex: CSPJ-001</p>
-            </div>
-
-            {/* Email Contact */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Adresse électronique officielle / Contact
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Ex: contact@association.ma"
-                disabled={loading}
-                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-violet-500 focus:ring-4 focus:ring-violet-50 outline-none transition duration-150 disabled:opacity-60"
-              />
-            </div>
-
-            {/* Description */}
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Description / Périmètre d'activité
-              </label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Décrivez brièvement le périmètre et le rôle de cette structure au sein du réseau CSPJ..."
-                disabled={loading}
-                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-violet-500 focus:ring-4 focus:ring-violet-50 outline-none transition duration-150 resize-none disabled:opacity-60"
-              />
+              <div>
+                <label htmlFor="estAssociation" className="block text-sm font-semibold text-slate-700 cursor-pointer">
+                  Il s'agit d'une association
+                </label>
+                <p className="text-[10px] text-slate-400 mt-0.5">Cochez cette case s'il s'agit d'une association et non d'une entreprise.</p>
+              </div>
             </div>
           </div>
 
