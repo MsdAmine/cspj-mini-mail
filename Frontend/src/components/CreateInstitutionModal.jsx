@@ -1,11 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
-export default function CreateInstitutionModal({ onClose, onSuccess }) {
-  const [nom, setNom] = useState('');
+export default function CreateInstitutionModal({ onClose, onSuccess, institutionToEdit = null }) {
+  const isEditing = Boolean(institutionToEdit);
+
+  const [nom, setNom]                     = useState('');
   const [estAssociation, setEstAssociation] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading]             = useState(false);
+  const [error, setError]                 = useState('');
+
+  // Pre-fill fields when editing
+  useEffect(() => {
+    if (institutionToEdit) {
+      setNom(institutionToEdit.nom ?? '');
+      setEstAssociation(institutionToEdit.estAssociation ?? false);
+    } else {
+      setNom('');
+      setEstAssociation(false);
+    }
+    setError('');
+  }, [institutionToEdit]);
+
+  const handleClose = () => {
+    setNom('');
+    setEstAssociation(false);
+    setError('');
+    onClose();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,20 +36,30 @@ export default function CreateInstitutionModal({ onClose, onSuccess }) {
       setError("Le nom de l'institution est obligatoire.");
       return;
     }
+
     setLoading(true);
     try {
-      await api.post('/admin/institutions', {
-        nom: nom.trim(),
-        estAssociation
-      });
+      if (isEditing) {
+        await api.put(`/admin/institutions/${institutionToEdit.id}`, {
+          nom: nom.trim(),
+          estAssociation,
+        });
+      } else {
+        await api.post('/admin/institutions', {
+          nom: nom.trim(),
+          estAssociation,
+        });
+      }
       onSuccess?.();
-      onClose();
+      handleClose();
     } catch (err) {
       const msg =
         typeof err.response?.data === 'string'
           ? err.response.data
           : err.response?.data?.message ||
-            "Une erreur est survenue lors de la création de l'institution.";
+            (isEditing
+              ? "Une erreur est survenue lors de la mise à jour."
+              : "Une erreur est survenue lors de la création de l'institution.");
       setError(msg);
     } finally {
       setLoading(false);
@@ -45,18 +76,33 @@ export default function CreateInstitutionModal({ onClose, onSuccess }) {
         {/* Modal Header */}
         <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/25 flex-shrink-0">
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-md flex-shrink-0 ${
+              isEditing
+                ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/25'
+                : 'bg-gradient-to-br from-violet-500 to-indigo-600 shadow-violet-500/25'
+            }`}>
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                {isEditing ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                )}
               </svg>
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">Nouvelle Institution / Association</h3>
-              <p className="text-xs text-slate-400 mt-0.5">Enregistrer une nouvelle structure dans le réseau CSPJ</p>
+              <h3 className="font-bold text-slate-900 text-sm">
+                {isEditing ? `Modifier "${institutionToEdit.nom}"` : 'Nouvelle Institution / Association'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {isEditing
+                  ? 'Mettez à jour le nom et le type de cette structure.'
+                  : 'Enregistrer une nouvelle structure dans le réseau CSPJ.'}
+              </p>
             </div>
           </div>
           <button
-            onClick={onClose}
+            type="button"
+            onClick={handleClose}
             disabled={loading}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all duration-150 cursor-pointer active:scale-95 disabled:opacity-50"
           >
@@ -104,7 +150,7 @@ export default function CreateInstitutionModal({ onClose, onSuccess }) {
                 checked={estAssociation}
                 onChange={(e) => setEstAssociation(e.target.checked)}
                 disabled={loading}
-                className="w-4 h-4 text-violet-600 bg-white border-slate-300 rounded focus:ring-violet-500 focus:ring-2 disabled:opacity-60 cursor-pointer"
+                className="w-4 h-4 text-violet-600 bg-white border-slate-300 rounded focus:ring-violet-500 focus:ring-2 disabled:opacity-60 cursor-pointer accent-violet-600"
               />
               <div>
                 <label htmlFor="estAssociation" className="block text-sm font-semibold text-slate-700 cursor-pointer">
@@ -119,7 +165,7 @@ export default function CreateInstitutionModal({ onClose, onSuccess }) {
           <div className="flex items-center justify-end gap-3 px-6 py-4 bg-slate-50/60 border-t border-slate-100">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={loading}
               className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 rounded-xl transition-all duration-150 border border-slate-200 cursor-pointer active:scale-[0.98] disabled:opacity-50"
             >
@@ -128,19 +174,27 @@ export default function CreateInstitutionModal({ onClose, onSuccess }) {
             <button
               type="submit"
               disabled={loading}
-              className="px-5 py-2 text-xs font-semibold text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl shadow-md shadow-violet-500/20 transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-70"
+              className={`px-5 py-2 text-xs font-semibold text-white rounded-xl shadow-md transition-all duration-150 flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-70 ${
+                isEditing
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-amber-500/20'
+                  : 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-violet-500/20'
+              }`}
             >
               {loading ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  Enregistrement...
+                  {isEditing ? 'Mise à jour...' : 'Enregistrement...'}
                 </>
               ) : (
                 <>
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    {isEditing ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                    )}
                   </svg>
-                  Créer l'institution
+                  {isEditing ? 'Enregistrer les modifications' : "Créer l'institution"}
                 </>
               )}
             </button>
