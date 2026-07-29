@@ -147,6 +147,46 @@ namespace CspjMail.Api.Controllers
             return Ok(new { id = institution.Id, nom = institution.Nom, estAssociation = institution.EstAssociation });
         }
 
+        // 2.7 PUT: api/admin/institutions/{id} (Update name / type)
+        [HttpPut("institutions/{id}")]
+        public async Task<IActionResult> UpdateInstitution(int id, [FromBody] CreateInstitutionDto dto)
+        {
+            var institution = await _context.Entreprises.FindAsync(id);
+            if (institution == null)
+                return NotFound("Institution introuvable.");
+
+            if (string.IsNullOrWhiteSpace(dto.Nom))
+                return BadRequest("Le nom de l'institution est obligatoire.");
+
+            institution.Nom = dto.Nom.Trim();
+            institution.EstAssociation = dto.EstAssociation;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { id = institution.Id, nom = institution.Nom, estAssociation = institution.EstAssociation });
+        }
+
+        // 2.8 DELETE: api/admin/institutions/{id} (Delete institution — blocked if users are assigned)
+        [HttpDelete("institutions/{id}")]
+        public async Task<IActionResult> DeleteInstitution(int id)
+        {
+            var institution = await _context.Entreprises
+                .Include(e => e.Utilisateurs)
+                .FirstOrDefaultAsync(e => e.Id == id);
+
+            if (institution == null)
+                return NotFound("Institution introuvable.");
+
+            var activeMembers = institution.Utilisateurs.Count(u => !u.IsDeleted);
+            if (activeMembers > 0)
+                return BadRequest($"Impossible de supprimer cette structure : {activeMembers} membre(s) y sont encore rattaché(s). Réaffectez-les d'abord.");
+
+            _context.Entreprises.Remove(institution);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Structure supprimée avec succès." });
+        }
+
         // 3. GET: api/admin/users (Fetch all registered system users)
         [HttpGet("users")]
         public async Task<IActionResult> GetUsers()
