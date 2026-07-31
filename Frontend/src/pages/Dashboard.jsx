@@ -63,9 +63,11 @@ export default function Dashboard() {
   const [newInstitutionId, setNewInstitutionId] = useState('1'); // Par défaut 1 (CSPJ Conseil)
   const [adminMessage, setAdminMessage] = useState({ type: '', text: '' });
 
-  // Suivi des discussions (Mock Data)
+  // Suivi des discussions
   const [threadSearch, setThreadSearch] = useState('');
   const [threadStatusFilter, setThreadStatusFilter] = useState('ALL');
+  const [isThreadsLoading, setIsThreadsLoading] = useState(true);
+  const [threadError, setThreadError] = useState('');
 
   // Statistiques Administrateur
   const [stats, setStats] = useState({ totalUsers: 0, totalThreads: 0, totalMessagesSent: 0 });
@@ -105,12 +107,17 @@ export default function Dashboard() {
   };
 
   const fetchThreads = async () => {
+    setIsThreadsLoading(true);
+    setThreadError('');
     try {
       const response = await api.get('/admin/threads');
       setThreads(response.data || []);
     } catch (err) {
       console.error("Erreur lors de la récupération des discussions :", err);
+      setThreadError("Erreur lors de la récupération des discussions.");
       setThreads([]);
+    } finally {
+      setIsThreadsLoading(false);
     }
   };
 
@@ -417,7 +424,29 @@ export default function Dashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100/80 text-slate-600">
-                        {filteredThreads.length === 0 ? (
+                        {isThreadsLoading ? (
+                          <tr>
+                            <td colSpan="6">
+                              <div className="py-12 flex flex-col items-center gap-2">
+                                <div className="w-8 h-8 rounded-full border-2 border-indigo-200 border-t-indigo-500 animate-spin" />
+                                <p className="text-slate-400 text-xs mt-2">Chargement des discussions...</p>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : threadError ? (
+                          <tr>
+                            <td colSpan="6">
+                              <div className="py-12 flex flex-col items-center gap-2">
+                                <div className="p-4 rounded-xl text-xs font-semibold bg-rose-50 text-rose-800 border border-rose-200 shadow-sm flex items-center gap-2">
+                                  <svg className="w-4 h-4 text-rose-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                  </svg>
+                                  <span>{threadError}</span>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : filteredThreads.length === 0 ? (
                           <tr>
                             <td colSpan="6">
                               <div className="py-12 flex flex-col items-center gap-2">
