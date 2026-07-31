@@ -98,10 +98,19 @@ public partial class CspjMiniMailDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__Utilisat__3214EC07C448F6EE");
             entity.Property(e => e.Actif).HasDefaultValue(true);
+            entity.Property(e => e.IsDeleted).HasDefaultValue(false);
             entity.Property(e => e.DateCreation).HasDefaultValueSql("(getdate())");
             entity.HasOne(d => d.Entreprise).WithMany(p => p.Utilisateurs)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Utilisateurs_Entreprises");
+
+            // Filtered unique index: email must be unique only among non-deleted users.
+            // Soft-deleted users (IsDeleted = 1) are excluded from the uniqueness check,
+            // so the same email can be re-registered after a soft-delete.
+            entity.HasIndex(u => u.Email)
+                  .IsUnique()
+                  .HasFilter("[IsDeleted] = 0")
+                  .HasDatabaseName("UX_Utilisateurs_Email_Active");
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -143,6 +143,15 @@ export default function Dashboard() {
     }
   }, [isAdminView, user]);
 
+  // Re-fetch institutions every time the admin switches to the "create-user" tab,
+  // so the dropdown always reflects any institutions added from the Institutions tab
+  // without needing a manual page reload.
+  useEffect(() => {
+    if (adminTab === 'create-user' && isAdminView) {
+      fetchInstitutions();
+    }
+  }, [adminTab]);
+
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     setAdminMessage({ type: '', text: '' });

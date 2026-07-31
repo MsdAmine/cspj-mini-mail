@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CspjMail.Api.Models;
 
-[Index("Email", Name = "UQ__Utilisat__A9D1053454370B33", IsUnique = true)]
 public partial class Utilisateur
 {
     [Key]
