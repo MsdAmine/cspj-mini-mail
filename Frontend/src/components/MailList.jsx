@@ -29,55 +29,42 @@ export default function MailList() {
   });
   return (
     <div className="h-full flex flex-col bg-white/95 backdrop-blur-md overflow-hidden">
-      
-      {/* ── Communication Hub Header (Association Only) ── */}
-      {user?.role === 'Association' && (
-        <div className="px-5 py-5 border-b border-slate-100 bg-white shadow-sm flex flex-col gap-4 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white shadow-md shadow-amber-500/20">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-sm font-bold text-slate-900 tracking-tight">Hub de Communication</h2>
-              <p className="text-[11px] font-medium text-slate-500 mt-0.5">{user.institutionNom || 'Espace Association'}</p>
-            </div>
+      {/* ── Panel header with Search ── */}
+      <div className="px-4 py-3 border-b border-slate-100 bg-white flex flex-col gap-3 flex-shrink-0">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2.5">
+            <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
+            <span className="text-xs font-bold text-slate-800 tracking-wide">
+              {activeFolder === "inbox"    && "العلبة الواردة"}
+              {activeFolder === "sent"     && "الرسائل المرسلة"}
+              {activeFolder === "archived" && "المحادثات المؤرشفة"}
+            </span>
           </div>
-          
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-amber-50/80 border border-amber-200/60 rounded-xl px-3.5 py-2.5 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700 uppercase tracking-widest">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                En attente
-              </div>
-              <span className="text-sm font-bold text-amber-900">{messages.filter(m => m.statutAcheminement === 'En cours').length}</span>
-            </div>
-            <div className="bg-emerald-50/80 border border-emerald-200/60 rounded-xl px-3.5 py-2.5 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-widest">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Traités
-              </div>
-              <span className="text-sm font-bold text-emerald-900">{messages.filter(m => m.statutAcheminement === 'Clôturé').length}</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Panel header ── */}
-      <div className="px-5 py-3.5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center flex-shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-1 h-4 rounded-full bg-gradient-to-b from-indigo-500 to-violet-600" />
-          <span className="text-[11px] font-bold text-slate-700 uppercase tracking-widest">
-            {activeFolder === "inbox"    && "العلبة الواردة"}
-            {activeFolder === "sent"     && "الرسائل المرسلة"}
-            {activeFolder === "archived" && "المحادثات المؤرشفة"}
+          <span className="text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-200 shadow-sm px-2 py-0.5 rounded-full">
+            {filteredMessages.length}
           </span>
         </div>
-        <span className="text-[10px] text-slate-500 font-bold bg-white border border-slate-200 shadow-sm px-2.5 py-0.5 rounded-full">
-          {filteredMessages.length}
-        </span>
+        
+        {/* Search Input */}
+        <div className="relative flex items-center w-full">
+          <input
+            type="text"
+            placeholder="البحث في الرسائل..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pr-3 pl-8 py-1.5 bg-slate-50/50 border border-slate-200/80 rounded-lg text-xs focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute left-2 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Scrollable list ── */}
