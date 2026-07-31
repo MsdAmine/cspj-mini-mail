@@ -28,11 +28,12 @@ namespace CspjMail.Api.Controllers
         [HttpPost("users")]
         public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
         {
-            // Check if email is already taken
-            var emailExists = await _context.Utilisateurs.AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower());
+            // Ignore soft-deleted accounts: a previously deleted email must be reusable
+            var emailExists = await _context.Utilisateurs
+                .AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower() && !u.IsDeleted);
             if (emailExists)
             {
-                return BadRequest("A user with this email address already exists.");
+                return BadRequest("Cet email est déjà utilisé par un utilisateur actif.");
             }
 
             // Verify the selected Enterprise/Association mapping target exists
@@ -57,7 +58,8 @@ namespace CspjMail.Api.Controllers
                 Prenom = dto.Prenom,
                 Role = dto.Role,
                 EntrepriseId = dto.InstitutionId,
-                Actif = true
+                Actif = true,
+                IsDeleted = false  // Explicitly mark as active to work with the filtered unique index
             };
 
             _context.Utilisateurs.Add(newUser);
