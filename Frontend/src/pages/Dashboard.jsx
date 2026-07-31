@@ -258,31 +258,8 @@ export default function Dashboard() {
 
       <div className="flex flex-col flex-1 min-w-0">
         
-        {/* En-tête épuré avec barre de recherche et profil utilisateur */}
-        <header dir="ltr" className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-4 md:px-6 shadow-sm flex-shrink-0">
-          <div className="flex-1 max-w-xs md:max-w-sm">
-            {!isAdminView && (
-              <div className="relative flex items-center w-full">
-                <input
-                  type="text"
-                  placeholder="البحث عن رسالة أو موضوع..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-100 border border-transparent rounded-xl text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute left-3 p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+        {/* En-tête épuré avec profil utilisateur (barre de recherche déplacée dans MailList) */}
+        <header dir="ltr" className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-end px-4 md:px-6 shadow-sm flex-shrink-0">
           
           <div className="flex items-center">
             {/* Zone profil cliquable avec avatar */}
@@ -994,15 +971,15 @@ export default function Dashboard() {
                 </div>
               ) : (
                 /* Empty state */
-                <div className="hidden md:flex flex-col items-center justify-center h-full gap-4 text-slate-400">
-                  <div className="w-20 h-20 rounded-3xl bg-white border border-slate-200/60 shadow-sm flex items-center justify-center text-slate-200">
-                    <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m13-4l-5 5-5-5" />
+                <div className="hidden md:flex flex-col items-center justify-center h-full gap-5 text-slate-400 bg-slate-50/50">
+                  <div className="w-24 h-24 rounded-full bg-indigo-50/50 border border-indigo-100/50 flex items-center justify-center text-indigo-300 shadow-inner">
+                    <svg className="w-12 h-12 drop-shadow-sm" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
                     </svg>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-slate-600">اختر محادثة لعرض سلسلة الرسائل.</p>
-                    <p className="text-xs text-slate-400 mt-1">حدد محادثة من القائمة لفتحها هنا في وضع القراءة.</p>
+                  <div className="text-center max-w-sm">
+                    <p className="text-base font-bold text-slate-700 tracking-tight">لا توجد محادثة محددة</p>
+                    <p className="text-[13px] text-slate-500 mt-1.5 leading-relaxed">يرجى تحديد محادثة من القائمة الجانبية لقراءة سلسلة الرسائل والرد عليها.</p>
                   </div>
                 </div>
               )}
