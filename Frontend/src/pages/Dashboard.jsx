@@ -681,34 +681,37 @@ export default function Dashboard() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Rôle affecté</label>
-                        <select
-                          value={newRole}
-                          onChange={(e) => setNewRole(e.target.value)}
-                          className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
-                        >
-                          <option value="Fonctionnaire">Fonctionnaire</option>
-                          <option value="Association">Association (جمعية)</option>
-                          <option value="Administrateur">Administrateur</option>
-                        </select>
-                      </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Rôle affecté</label>
+                      <select
+                        value={newRole}
+                        onChange={(e) => setNewRole(e.target.value)}
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
+                      >
+                        <option value="Fonctionnaire">Fonctionnaire</option>
+                        <option value="Association">Association (جمعية)</option>
+                        <option value="Administrateur">Administrateur</option>
+                      </select>
+                    </div>
 
-                      {newRole === 'Association' && (
-                        <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Sélectionner l'association de rattachement</label>
-                          <select
-                            value={newInstitutionId}
-                            onChange={(e) => setNewInstitutionId(e.target.value)}
-                            className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
-                          >
-                            {institutions.map(e => (
-                              <option key={e.id} value={e.id.toString()}>{e.nom}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                        Institution / Structure Affectée <span className="text-rose-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={newInstitutionId}
+                        onChange={(e) => setNewInstitutionId(e.target.value)}
+                        className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
+                      >
+                        {institutions.length === 0 ? (
+                          <option value="" disabled>Chargement des structures...</option>
+                        ) : (
+                          institutions.map(inst => (
+                            <option key={inst.id} value={inst.id.toString()}>{inst.nom}</option>
+                          ))
+                        )}
+                      </select>
                     </div>
 
                     <div className="pt-4">

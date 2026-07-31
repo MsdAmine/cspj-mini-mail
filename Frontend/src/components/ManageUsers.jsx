@@ -152,24 +152,35 @@ export default function ManageUsers() {
     );
   });
 
-  // Role badge helper — enhanced with glow pill design
+  // Safely translate backend role strings to French display labels
+  const formatRoleInFrench = (role) => {
+    if (!role) return 'Fonctionnaire';
+    const normalized = role.toString().toLowerCase();
+    if (normalized.includes('assoc') || normalized.includes('جمعية')) return 'Association';
+    if (normalized.includes('admin')) return 'Administrateur';
+    if (normalized.includes('moatof') || normalized.includes('موظف') || normalized.includes('fonctionnaire')) return 'Fonctionnaire';
+    return role;
+  };
+
+  // Role badge helper — enhanced with glow pill design (French labels)
   const getRoleBadge = (role) => {
-    if (role === 'Administrateur') {
+    const frenchRole = formatRoleInFrench(role);
+    if (frenchRole === 'Administrateur') {
       return {
-        label: 'مدير النظام',
+        label: 'Administrateur',
         className: 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50/80 text-blue-700 border border-blue-200/80 shadow-sm',
         dot: 'bg-blue-500 shadow-sm shadow-blue-500/50',
       };
     }
-    if (role === 'Association') {
+    if (frenchRole === 'Association') {
       return {
-        label: 'جمعية',
+        label: 'Association',
         className: 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50/80 text-amber-700 border border-amber-200/80 shadow-sm',
         dot: 'bg-amber-500 shadow-sm shadow-amber-500/50',
       };
     }
     return {
-      label: 'موظف',
+      label: 'Fonctionnaire',
       className: 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50/80 text-emerald-700 border border-emerald-200/80 shadow-sm',
       dot: 'bg-emerald-500 shadow-sm shadow-emerald-500/50',
     };
