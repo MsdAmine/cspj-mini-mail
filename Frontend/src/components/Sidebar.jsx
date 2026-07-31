@@ -152,9 +152,6 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
                   <p className={`text-[10px] leading-none tracking-widest uppercase whitespace-nowrap ${textMuted}`}>
                     {isUserAdmin ? 'Administration' : 'Système interne'}
                   </p>
-                  {isUserAdmin && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50 flex-shrink-0" />
-                  )}
                 </div>
               </div>
             </div>
@@ -259,33 +256,8 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
           )}
         </div>
 
-        {/* ── Footer / User profile micro-card + Logout ── */}
-        <div className={`px-3 py-3 border-t ${borderColor} flex-shrink-0 space-y-2`}>
-          {/* Floating user micro-card */}
-          <div 
-            className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-2.5 px-3'} py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors duration-150 cursor-pointer relative group`}
-            title={isCollapsed && user ? `${user.prenom} ${user.nom}\n${user.email || ''}` : undefined}
-          >
-            {/* Avatar */}
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 shadow-sm bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-indigo-500/20">
-              {user?.prenom ? user.prenom.charAt(0) : 'U'}
-            </div>
-            
-            {!isCollapsed && (
-              <>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold truncate leading-tight text-slate-200">
-                    {user ? `${user.prenom} ${user.nom}` : ''}
-                  </p>
-                  <p className={`text-[10px] truncate leading-tight mt-0.5 ${textMuted}`}>
-                    {user?.email || ''}
-                  </p>
-                </div>
-                {/* Online status dot */}
-                <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0 shadow-sm shadow-emerald-400/50" />
-              </>
-            )}
-          </div>
+        {/* ── Footer / Logout ── */}
+        <div className={`px-3 py-3 border-t ${borderColor} flex-shrink-0`}>
 
           {/* Logout button */}
           <button
