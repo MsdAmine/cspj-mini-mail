@@ -127,10 +127,44 @@ const TiptapEditor = ({
     [attachments, onAttachmentsChange]
   );
 
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      const merged = [...attachments];
+      newFiles.forEach((file) => {
+        const isDuplicate = merged.some(
+          (f) => f.name === file.name && f.size === file.size
+        );
+        if (!isDuplicate) merged.push(file);
+      });
+      onAttachmentsChange?.(merged);
+    }
+  }, [attachments, onAttachmentsChange]);
+
   if (!editor) return null;
 
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+    <div 
+      className={`border rounded-xl overflow-hidden bg-white transition-all duration-200 ${isDragging ? 'border-indigo-400 ring-4 ring-indigo-500/20' : 'border-slate-200'}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* ── Bulletproof list-style overrides ── */}
       {/* Tailwind Preflight resets list-style and padding to none/0 globally.  */}
       {/* This <style> tag re-applies browser-native bullets scoped to .tiptap.  */}
@@ -217,31 +251,39 @@ const TiptapEditor = ({
         )}
       </div>
 
-      {/* ── Liste des pièces jointes ── */}
-      {attachments.length > 0 && (
-        <div className="px-3 py-2 border-t border-slate-100 bg-slate-50/60 flex flex-col gap-1">
-          {attachments.map((file, i) => (
-            <div
-              key={`${file.name}-${file.size}-${i}`}
-              className="flex items-center justify-between bg-white border border-slate-200 px-2.5 py-1 rounded-md shadow-sm text-[11px] text-slate-600"
-            >
-              <div className="flex items-center gap-1.5 min-w-0">
-                <Paperclip size={11} className="text-slate-400 shrink-0" />
-                <span className="truncate max-w-[220px]">{file.name}</span>
-                <span className="text-slate-400 shrink-0">
-                  ({(file.size / 1024).toFixed(1)} KB)
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => removeAttachment(i)}
-                className="ml-2 text-slate-400 hover:text-rose-500 transition shrink-0"
-                title="Retirer"
+      {/* ── Liste des pièces jointes (Dropzone style) ── */}
+      {(attachments.length > 0 || isDragging) && (
+        <div className={`px-4 py-3 border-t transition-colors duration-200 ${isDragging ? 'bg-indigo-50/50 border-indigo-200' : 'bg-slate-50/80 border-slate-200/80'}`}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">المرفقات</p>
+            {isDragging && <p className="text-[10px] font-bold text-indigo-500 animate-pulse">أفلت الملفات هنا...</p>}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {attachments.map((file, i) => (
+              <div
+                key={`${file.name}-${file.size}-${i}`}
+                className="flex items-center justify-between bg-white border border-slate-200/80 p-2 rounded-lg shadow-sm hover:border-indigo-300 transition-colors group"
               >
-                <X size={13} />
-              </button>
-            </div>
-          ))}
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0">
+                    <Paperclip size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0 leading-tight">
+                    <p className="text-xs font-semibold text-slate-700 truncate" dir="ltr">{file.name}</p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">{(file.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(i)}
+                  className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-md transition-colors shrink-0"
+                  title="Retirer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
