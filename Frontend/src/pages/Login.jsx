@@ -27,6 +27,8 @@ export default function Login({ onForgotPassword }) {
     fillFields: isRTL ? 'يرجى ملء جميع الحقول المطلوبة.' : 'Veuillez remplir tous les champs requis.',
     enterCode: isRTL ? 'يرجى إدخال رمز التحقق.' : 'Veuillez saisir le code de vérification.',
     loginError: isRTL ? 'حدث خطأ أثناء تسجيل الدخول.' : 'Erreur lors de la connexion.',
+    invalidCredentials: isRTL ? 'بيانات الاعتماد غير صحيحة.' : 'Identifiant ou mot de passe incorrect.',
+    serverError: isRTL ? 'خطأ في الاتصال بالخادم.' : 'Erreur de connexion au serveur.',
     invalidCode: isRTL ? 'رمز التحقق غير صالح.' : 'Code de vérification invalide.',
     subtitle: isRTL ? 'منصة المراسلات الرسمية للمجلس الأعلى للسلطة القضائية' : 'Plateforme Officielle de Messagerie institutionnelle',
     emailPlaceholder: isRTL ? 'البريد الإلكتروني (admin@cspj.ma)' : 'Adresse e-mail (admin@cspj.ma)',
@@ -66,7 +68,11 @@ export default function Login({ onForgotPassword }) {
           setShowTwoFactor(true);
         }
       } catch (err) {
-        setError(err.message || t.loginError);
+        let msg = err.message;
+        if (msg === 'INVALID_CREDENTIALS' || msg.includes('Incorrect')) msg = t.invalidCredentials;
+        else if (msg === 'SERVER_ERROR') msg = t.serverError;
+        else msg = msg || t.loginError;
+        setError(msg);
       } finally {
         setIsSubmitting(false);
       }
@@ -80,7 +86,11 @@ export default function Login({ onForgotPassword }) {
       try {
         await verifyTwoFactor(pendingEmail, twoFactorCode);
       } catch (err) {
-        setError(err.message || t.invalidCode);
+        let msg = err.message;
+        if (msg === 'INVALID_CODE') msg = t.invalidCode;
+        else if (msg === 'SERVER_ERROR') msg = t.serverError;
+        else msg = msg || t.invalidCode;
+        setError(msg);
       } finally {
         setIsSubmitting(false);
       }
@@ -135,9 +145,9 @@ export default function Login({ onForgotPassword }) {
 
         {/* ── Error Alert ── */}
         {error && (
-          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm flex items-start gap-3 animate-fade-in" dir={isRTL ? "rtl" : "ltr"}>
-            <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="mb-4 p-3 my-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm flex items-center gap-2 animate-fade-in" dir={isRTL ? "rtl" : "ltr"}>
+            <svg className="w-5 h-5 flex-shrink-0 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <span className="leading-relaxed">{error}</span>
           </div>

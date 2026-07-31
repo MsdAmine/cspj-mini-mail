@@ -79,9 +79,10 @@ export const AuthProvider = ({ children }) => {
 
     } catch (error) {
       if (error.response && (error.response.status === 401 || error.response.status === 400)) {
-        throw new Error("Identifiant ou mot de passe incorrect.");
+        const msg = error.response.data?.message || error.response.data;
+        throw new Error(typeof msg === 'string' ? msg : "INVALID_CREDENTIALS");
       }
-      throw new Error(error.response?.data || "Erreur de connexion au serveur.");
+      throw new Error(error.response?.data?.message || error.response?.data || "SERVER_ERROR");
     }
   };
 
@@ -110,9 +111,9 @@ export const AuthProvider = ({ children }) => {
       return userProfile;
     } catch (error) {
       if (error.response && error.response.status === 401) {
-        throw new Error("Code de vérification invalide ou expiré.");
+        throw new Error("INVALID_CODE");
       }
-      throw new Error(error.response?.data || "Erreur lors de la vérification 2FA.");
+      throw new Error(error.response?.data?.message || error.response?.data || "SERVER_ERROR");
     }
   };
 
