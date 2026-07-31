@@ -321,8 +321,8 @@ export default function ComposeModal({ onClose }) {
     : "إرسال الرسالة";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden m-4 max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-fade-in p-4">
+      <div className="w-full max-w-2xl bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl shadow-slate-900/10 border border-slate-200/80 overflow-hidden max-h-[92vh] flex flex-col">
 
         {/* ── Clean white header ── */}
         <div className="bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between flex-shrink-0">
@@ -477,7 +477,7 @@ export default function ComposeModal({ onClose }) {
             <button
               type="button"
               onClick={onClose}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-4 py-2.5 rounded-xl active:scale-95 transition-all duration-150 text-sm cursor-pointer"
+              className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-5 py-2.5 rounded-xl active:scale-95 hover:-translate-y-0.5 transition-all duration-200 text-sm cursor-pointer"
               disabled={isSending}
             >
               إلغاء
@@ -487,7 +487,7 @@ export default function ComposeModal({ onClose }) {
             <button
               type="submit"
               disabled={isSending}
-              className="bg-slate-900 hover:bg-slate-800 text-white font-medium px-5 py-2.5 rounded-xl active:scale-95 transition-all duration-150 shadow-sm flex items-center gap-2 text-sm cursor-pointer disabled:opacity-60"
+              className="bg-zinc-950 hover:bg-zinc-800 text-white font-medium px-6 py-2.5 rounded-xl active:scale-95 hover:-translate-y-0.5 transition-all duration-200 shadow-md shadow-zinc-900/20 flex items-center gap-2 text-sm cursor-pointer disabled:opacity-60"
             >
               {isSending ? (
                 <>

@@ -84,21 +84,17 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
   // no closure overhead blocking the synchronous highlight switch).
   const closeMobile = () => setMobileOpen(false);
 
-  // ── Shared style tokens ────────────────────────────────────────────────────
-  const sidebarBg   = isUserAdmin ? 'bg-slate-950' : 'bg-white/95 backdrop-blur-md';
-  const borderColor = isUserAdmin ? 'border-slate-800/60' : 'border-slate-200/60';
-  const textMuted   = isUserAdmin ? 'text-slate-500' : 'text-slate-400';
-  const labelColor  = isUserAdmin ? 'text-slate-500' : 'text-slate-400';
+  // ── Shared style tokens (Uniform Dark Zinc Theme for ALL Roles) ────────────
+  const sidebarBg   = 'bg-zinc-950';
+  const borderColor = 'border-white/5';
+  const textMuted   = 'text-zinc-500';
+  const labelColor  = 'text-zinc-500';
 
-  const activeItemCls   = isUserAdmin
-    ? 'bg-white/10 text-white font-semibold border border-white/10'
-    : 'bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100';
-  const inactiveItemCls = isUserAdmin
-    ? 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800';
-  const activeIconCls   = isUserAdmin ? 'text-blue-400' : 'text-blue-500';
-  const inactiveIconCls = isUserAdmin ? 'text-slate-500' : 'text-slate-400';
-  const activeDotCls    = isUserAdmin ? 'bg-blue-400 shadow-sm shadow-blue-400/70' : 'bg-blue-500 shadow-sm shadow-blue-500/50';
+  const activeItemCls   = 'bg-white/10 text-white font-semibold border border-white/10 shadow-[0_0_15px_rgba(99,102,241,0.15)]';
+  const inactiveItemCls = 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200 hover:-translate-y-0.5';
+  const activeIconCls   = 'text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]';
+  const inactiveIconCls = 'text-zinc-500';
+  const activeDotCls    = 'bg-indigo-400 shadow-sm shadow-indigo-400/70';
 
   return (
     <>
@@ -141,21 +137,15 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
         {/* ── Brand Header ── */}
         <div className={`px-5 py-4 border-b ${borderColor} flex-shrink-0`}>
           <div className="flex items-center gap-3">
-            {/* Logo mark — glowing ring on dark, clean on light */}
-            <div className={`relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              isUserAdmin
-                ? 'bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30'
-                : 'bg-gradient-to-br from-slate-800 to-slate-900 shadow-md shadow-slate-900/20'
-            }`}>
-              {isUserAdmin && (
-                <span className="absolute inset-0 rounded-xl ring-1 ring-blue-400/40" />
-              )}
+            {/* Logo mark — glowing ring on dark */}
+            <div className="relative w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-gradient-to-br from-indigo-500 to-violet-600 shadow-lg shadow-indigo-500/30">
+              <span className="absolute inset-0 rounded-xl ring-1 ring-indigo-400/40" />
               <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <h1 className={`font-bold text-sm leading-none tracking-tight ${isUserAdmin ? 'text-white' : 'text-slate-900'}`}>CSPJ Mail</h1>
+              <h1 className="font-bold text-sm leading-none tracking-tight text-white">CSPJ Mail</h1>
               <p className={`text-[10px] leading-none mt-0.5 tracking-widest uppercase ${textMuted}`}>
                 {isUserAdmin ? 'Administration' : 'Système interne'}
               </p>
@@ -178,7 +168,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
             <>
               <button
                 onClick={() => { onComposeOpen(); closeMobile(); }}
-                className="w-full mb-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-xl text-sm font-semibold hover:from-slate-700 hover:to-slate-800 active:scale-[0.98] transition-all duration-150 shadow-md shadow-slate-900/20 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full mb-4 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] hover:-translate-y-0.5 transition-all duration-150 shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -253,21 +243,13 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
         {/* ── Footer / User profile micro-card + Logout ── */}
         <div className={`px-3 py-3 border-t ${borderColor} flex-shrink-0 space-y-2`}>
           {/* Floating user micro-card */}
-          <div className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl ${
-            isUserAdmin
-              ? 'bg-white/5 border border-white/8'
-              : 'bg-slate-50 border border-slate-100'
-          }`}>
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors duration-150 cursor-pointer">
             {/* Avatar */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 shadow-sm ${
-              isUserAdmin
-                ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-blue-500/20'
-                : 'bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-slate-900/20'
-            }`}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase flex-shrink-0 shadow-sm bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-indigo-500/20">
               {user?.prenom ? user.prenom.charAt(0) : 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className={`text-xs font-semibold truncate leading-tight ${isUserAdmin ? 'text-slate-200' : 'text-slate-800'}`}>
+              <p className="text-xs font-semibold truncate leading-tight text-zinc-200">
                 {user ? `${user.prenom} ${user.nom}` : ''}
               </p>
               <p className={`text-[10px] truncate leading-tight mt-0.5 ${textMuted}`}>
@@ -281,11 +263,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
           {/* Logout button */}
           <button
             onClick={logout}
-            className={`w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-150 cursor-pointer active:scale-[0.98] ${
-              isUserAdmin
-                ? 'text-slate-500 hover:text-rose-400 bg-transparent hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20'
-                : 'text-slate-500 hover:text-rose-600 bg-transparent hover:bg-rose-50/80 border border-transparent hover:border-rose-200/60'
-            }`}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all duration-150 cursor-pointer active:scale-[0.98] text-zinc-500 hover:text-rose-400 bg-transparent hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20"
             title={isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج من النظام'}
           >
             <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
