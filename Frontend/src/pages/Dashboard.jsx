@@ -213,12 +213,16 @@ export default function Dashboard() {
 
   const filteredThreads = threads.filter(t => {
     const query = threadSearch.toLowerCase().trim();
-    const matchesQuery = !query || 
-      t.objet.toLowerCase().includes(query) ||
-      t.expediteur.toLowerCase().includes(query) ||
-      t.destinataire.toLowerCase().includes(query) ||
-      t.expediteurEmail.toLowerCase().includes(query) ||
-      t.destinataireEmail.toLowerCase().includes(query);
+    
+    let matchesQuery = true;
+    if (query) {
+      matchesQuery = 
+        t.objet?.toLowerCase().includes(query) ||
+        t.expediteur?.toLowerCase().includes(query) ||
+        t.destinataire?.toLowerCase().includes(query) ||
+        t.expediteurEmail?.toLowerCase().includes(query) ||
+        t.destinataireEmail?.toLowerCase().includes(query);
+    }
 
     let matchesStatus = true;
     if (threadStatusFilter === 'EN_COURS') matchesStatus = t.statutAcheminement === 'En cours';
@@ -400,30 +404,34 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {filteredThreads.length === 0 ? (
-                    <div className="py-12 flex flex-col items-center gap-2">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                        </svg>
-                      </div>
-                      <p className="text-slate-400 text-xs">Aucune discussion ne correspond aux critères de recherche.</p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50/80 border-b border-slate-100/80 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
-                            <th className="px-5 py-3.5">Sujet / Objet</th>
-                            <th className="px-5 py-3.5">Expéditeur</th>
-                            <th className="px-5 py-3.5">Destinataire</th>
-                            <th className="px-5 py-3.5 text-center">Pièce Jointe</th>
-                            <th className="px-5 py-3.5 text-center">Lecture</th>
-                            <th className="px-5 py-3.5 text-center">Acheminement</th>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/80 border-b border-slate-100/80 text-slate-400 uppercase font-bold tracking-widest text-[10px]">
+                          <th className="px-5 py-3.5">Sujet / Objet</th>
+                          <th className="px-5 py-3.5">Expéditeur</th>
+                          <th className="px-5 py-3.5">Destinataire</th>
+                          <th className="px-5 py-3.5 text-center">Pièce Jointe</th>
+                          <th className="px-5 py-3.5 text-center">Lecture</th>
+                          <th className="px-5 py-3.5 text-center">Acheminement</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100/80 text-slate-600">
+                        {filteredThreads.length === 0 ? (
+                          <tr>
+                            <td colSpan="6">
+                              <div className="py-12 flex flex-col items-center gap-2">
+                                <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200/60 flex items-center justify-center">
+                                  <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                  </svg>
+                                </div>
+                                <p className="text-slate-400 text-xs">Aucune discussion ne correspond aux critères de recherche.</p>
+                              </div>
+                            </td>
                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100/80 text-slate-600">
-                          {filteredThreads.map((t, idx) => (
+                        ) : (
+                          filteredThreads.map((t, idx) => (
                             <tr key={t.id} className="hover:bg-blue-50/25 transition-colors duration-150">
                               <td className="px-5 py-4 font-semibold text-slate-800 max-w-xs truncate" title={t.objet}>
                                 {t.objet}
@@ -464,11 +472,11 @@ export default function Dashboard() {
                                 </span>
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* ── Dernières Activités Systèmes ── */}
