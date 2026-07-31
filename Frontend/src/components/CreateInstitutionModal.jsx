@@ -91,7 +91,7 @@ export default function CreateInstitutionModal({ onClose, onSuccess, institution
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-sm">
-                {isEditing ? `Modifier "${institutionToEdit.nom}"` : 'Nouvelle Institution / Association'}
+                {isEditing ? `Modifier l'Institution — "${institutionToEdit.nom}"` : 'Nouvelle Institution / Association'}
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
                 {isEditing
@@ -129,7 +129,7 @@ export default function CreateInstitutionModal({ onClose, onSuccess, institution
             {/* Nom */}
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Nom de l'association / institution <span className="text-rose-500">*</span>
+                Nom de l'Institution / Association <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -156,7 +156,7 @@ export default function CreateInstitutionModal({ onClose, onSuccess, institution
                 <label htmlFor="estAssociation" className="block text-sm font-semibold text-slate-700 cursor-pointer">
                   Il s'agit d'une association
                 </label>
-                <p className="text-[10px] text-slate-400 mt-0.5">Cochez cette case s'il s'agit d'une association et non d'une institution.</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">Cochez cette case s'il s'agit d'une association externe et non d'une institution interne.</p>
               </div>
             </div>
           </div>
