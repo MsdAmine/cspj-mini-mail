@@ -19,13 +19,40 @@ export default function Login({ onForgotPassword }) {
   // Whether this is the very first TOTP enrolment for this user
   const [isFirstTimeSetup, setIsFirstTimeSetup] = useState(false);
 
+  // Language state
+  const [lang, setLang] = useState('fr');
+  const isRTL = lang === 'ar';
+
+  const t = {
+    fillFields: isRTL ? 'يرجى ملء جميع الحقول المطلوبة.' : 'Veuillez remplir tous les champs requis.',
+    enterCode: isRTL ? 'يرجى إدخال رمز التحقق.' : 'Veuillez saisir le code de vérification.',
+    loginError: isRTL ? 'حدث خطأ أثناء تسجيل الدخول.' : 'Erreur lors de la connexion.',
+    invalidCode: isRTL ? 'رمز التحقق غير صالح.' : 'Code de vérification invalide.',
+    subtitle: isRTL ? 'منصة المراسلات الرسمية للمجلس الأعلى للسلطة القضائية' : 'Plateforme Officielle de Messagerie institutionnelle',
+    emailPlaceholder: isRTL ? 'البريد الإلكتروني (admin@cspj.ma)' : 'Adresse e-mail (admin@cspj.ma)',
+    passwordPlaceholder: isRTL ? 'كلمة المرور' : 'Mot de passe',
+    forgotPassword: isRTL ? 'نسيت كلمة المرور؟' : 'Mot de passe oublié ?',
+    twoFactorSetup: isRTL ? 'إعداد التحقق بخطوتين' : 'Configuration de la validation en deux étapes',
+    twoFactorSetupDesc: isRTL 
+      ? 'امسح رمز QR أدناه باستخدام تطبيق Google Authenticator أو Microsoft Authenticator أو Authy.'
+      : 'Scannez ce code QR avec Google Authenticator, Microsoft Authenticator ou Authy.',
+    twoFactor: isRTL ? 'الالتحقق بخطوتين' : 'Validation en deux étapes',
+    enterCodeFromApp: isRTL ? 'أدخل الرمز من تطبيق المصادقة الخاص بك' : 'Saisissez le code de votre application d\'authentification',
+    enterCodeFirstTime: isRTL ? 'أدخل الرمز المكوّن من 6 أرقام الذي يظهر في التطبيق' : 'Saisissez le code à 6 chiffres affiché dans l\'application',
+    verifying: isRTL ? 'جارٍ التحقق...' : 'Vérification en cours...',
+    loggingIn: isRTL ? 'جارٍ تسجيل الدخول...' : 'Connexion en cours...',
+    verifyAndLogin: isRTL ? 'تحقق والدخول' : 'Vérifier et se connecter',
+    login: isRTL ? 'تسجيل الدخول' : 'Se connecter',
+    backToLogin: isRTL ? 'العودة إلى تسجيل الدخول →' : '← Retour à la connexion'
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (!showTwoFactor) {
       if (!email.trim() || !password.trim()) {
-        setError('يرجى ملء جميع الحقول المطلوبة.');
+        setError(t.fillFields);
         return;
       }
 
@@ -39,13 +66,13 @@ export default function Login({ onForgotPassword }) {
           setShowTwoFactor(true);
         }
       } catch (err) {
-        setError(err.message || 'حدث خطأ أثناء تسجيل الدخول.');
+        setError(err.message || t.loginError);
       } finally {
         setIsSubmitting(false);
       }
     } else {
       if (!twoFactorCode.trim()) {
-        setError('يرجى إدخال رمز التحقق.');
+        setError(t.enterCode);
         return;
       }
 
@@ -53,24 +80,43 @@ export default function Login({ onForgotPassword }) {
       try {
         await verifyTwoFactor(pendingEmail, twoFactorCode);
       } catch (err) {
-        setError(err.message || 'رمز التحقق غير صالح.');
+        setError(err.message || t.invalidCode);
       } finally {
         setIsSubmitting(false);
       }
     }
   };
 
-  // Standard OTPAuth URI — used exclusively to render the QR code
   const otpAuthUrl = pendingSecret
     ? `otpauth://totp/CSPJ%20Mail:${encodeURIComponent(pendingEmail)}?secret=${pendingSecret}&issuer=CSPJ%20Mail`
     : '';
 
   return (
-    <div className="relative flex min-h-screen w-screen items-center justify-center bg-slate-50 font-sans antialiased overflow-hidden selection:bg-slate-200">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="relative flex min-h-screen w-screen items-center justify-center bg-slate-50 font-sans antialiased overflow-hidden selection:bg-slate-200">
       
       {/* ── Top Accent Border ── */}
       <div className="absolute top-0 inset-x-0 h-1 bg-slate-800" />
       
+      {/* ── Language Toggle ── */}
+      <div className={`absolute top-6 ${isRTL ? 'left-6' : 'right-6'} z-20`} dir="ltr">
+        <div className="flex bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg p-1 shadow-sm">
+          <button 
+            type="button"
+            onClick={() => setLang('fr')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${lang === 'fr' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            FR
+          </button>
+          <button 
+            type="button"
+            onClick={() => setLang('ar')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${lang === 'ar' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            العربية
+          </button>
+        </div>
+      </div>
+
       <div className="relative w-full max-w-md p-8 sm:p-10 bg-white border border-slate-200 shadow-xl rounded-2xl m-4 z-10">
 
         {/* ── Branding Header ── */}
@@ -80,16 +126,16 @@ export default function Login({ onForgotPassword }) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 mb-3">CSPJ Mail</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 mb-3" dir="ltr">CSPJ Mail</h1>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest bg-slate-100 text-slate-600 border border-slate-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
-            Plateforme Officielle de Messagerie institutionnelle
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-600 flex-shrink-0" />
+            {t.subtitle}
           </span>
         </div>
 
         {/* ── Error Alert ── */}
         {error && (
-          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm flex items-start gap-3 animate-fade-in" dir="rtl">
+          <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm flex items-start gap-3 animate-fade-in" dir={isRTL ? "rtl" : "ltr"}>
             <svg className="w-5 h-5 flex-shrink-0 mt-0.5 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -101,10 +147,10 @@ export default function Login({ onForgotPassword }) {
         <form onSubmit={handleSubmit} className="space-y-5">
           {!showTwoFactor ? (
             <>
-              <div dir="ltr" className="space-y-4">
+              <div dir={isRTL ? "rtl" : "ltr"} className="space-y-4">
                 {/* Email Field */}
                 <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-800 transition-colors">
+                  <div className={`absolute inset-y-0 ${isRTL ? 'right-0 pr-4' : 'left-0 pl-4'} flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-800 transition-colors`}>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                     </svg>
@@ -113,8 +159,8 @@ export default function Login({ onForgotPassword }) {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Adresse e-mail (admin@cspj.ma)"
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50/50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all duration-200"
+                    placeholder={t.emailPlaceholder}
+                    className={`w-full ${isRTL ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-3.5 bg-slate-50/50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all duration-200`}
                     disabled={isSubmitting}
                     dir="ltr"
                   />
@@ -122,7 +168,7 @@ export default function Login({ onForgotPassword }) {
 
                 {/* Password Field */}
                 <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-800 transition-colors">
+                  <div className={`absolute inset-y-0 ${isRTL ? 'right-0 pr-4' : 'left-0 pl-4'} flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-800 transition-colors`}>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
                     </svg>
@@ -131,15 +177,15 @@ export default function Login({ onForgotPassword }) {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Mot de passe"
-                    className="w-full pl-11 pr-12 py-3.5 bg-slate-50/50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all duration-200"
+                    placeholder={t.passwordPlaceholder}
+                    className={`w-full ${isRTL ? 'pr-11 pl-12' : 'pl-11 pr-12'} py-3.5 bg-slate-50/50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all duration-200`}
                     disabled={isSubmitting}
-                    dir="ltr"
+                    dir={isRTL ? "rtl" : "ltr"}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                    className={`absolute inset-y-0 ${isRTL ? 'left-0 pl-4' : 'right-0 pr-4'} flex items-center text-slate-400 hover:text-slate-600 transition-colors`}
                   >
                     {showPassword ? (
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -160,13 +206,13 @@ export default function Login({ onForgotPassword }) {
                     onClick={onForgotPassword}
                     className="text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors"
                   >
-                    Mot de passe oublié ?
+                    {t.forgotPassword}
                   </button>
                 </div>
               </div>
             </>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4" dir={isRTL ? "rtl" : "ltr"}>
               {isFirstTimeSetup ? (
                 /* ── First-time setup: full onboarding panel ─────────────────── */
                 <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 space-y-4">
@@ -176,12 +222,16 @@ export default function Login({ onForgotPassword }) {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                         d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
-                    <span className="text-sm font-semibold text-slate-900">إعداد التحقق بخطوتين</span>
+                    <span className="text-sm font-semibold text-slate-900">{t.twoFactorSetup}</span>
                   </div>
 
                   {/* Step 1: Setup instructions */}
-                  <p className="text-xs text-slate-600 leading-relaxed text-right" dir="rtl">
-                    امسح رمز QR أدناه باستخدام تطبيق <strong className="text-slate-900">Google Authenticator</strong> أو <strong className="text-slate-900">Microsoft Authenticator</strong> أو <strong className="text-slate-900">Authy</strong>.
+                  <p className={`text-xs text-slate-600 leading-relaxed ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {isRTL ? (
+                      <>امسح رمز QR أدناه باستخدام تطبيق <strong className="text-slate-900">Google Authenticator</strong> أو <strong className="text-slate-900">Microsoft Authenticator</strong> أو <strong className="text-slate-900">Authy</strong>.</>
+                    ) : (
+                      <>Scannez ce code QR avec <strong className="text-slate-900">Google Authenticator</strong>, <strong className="text-slate-900">Microsoft Authenticator</strong> ou <strong className="text-slate-900">Authy</strong>.</>
+                    )}
                   </p>
 
                   {/* QR Code */}
@@ -203,16 +253,14 @@ export default function Login({ onForgotPassword }) {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                       d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
-                  <span className="text-sm font-semibold text-slate-900">التحقق بخطوتين</span>
+                  <span className="text-sm font-semibold text-slate-900">{t.twoFactor}</span>
                 </div>
               )}
 
               {/* Enter code — shown in both branches */}
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 text-right" dir="rtl">
-                  {isFirstTimeSetup
-                    ? 'أدخل الرمز المكوّن من 6 أرقام الذي يظهر في التطبيق'
-                    : 'أدخل الرمز من تطبيق المصادقة الخاص بك'}
+                <label className={`block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {isFirstTimeSetup ? t.enterCodeFirstTime : t.enterCodeFromApp}
                 </label>
                 <input
                   id="totp-code-input"
@@ -244,10 +292,10 @@ export default function Login({ onForgotPassword }) {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                {showTwoFactor ? 'جارٍ التحقق...' : 'Connexion en cours...'}
+                {showTwoFactor ? t.verifying : t.loggingIn}
               </>
             ) : (
-              showTwoFactor ? 'تحقق والدخول' : 'Se connecter'
+              showTwoFactor ? t.verifyAndLogin : t.login
             )}
           </button>
 
@@ -257,7 +305,7 @@ export default function Login({ onForgotPassword }) {
               onClick={() => { setShowTwoFactor(false); setTwoFactorCode(''); setError(''); }}
               className="w-full text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors text-center mt-4"
             >
-              ← Retour à la connexion
+              {t.backToLogin}
             </button>
           )}
         </form>
