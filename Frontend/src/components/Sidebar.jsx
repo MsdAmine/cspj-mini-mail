@@ -252,7 +252,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
             className={`w-full flex items-center justify-center gap-2 ${isCollapsed ? 'px-0' : 'px-4'} py-2 text-xs font-semibold rounded-lg transition-all duration-150 cursor-pointer text-slate-400 hover:text-rose-400 bg-transparent hover:bg-rose-500/10 border border-transparent`}
             title={isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج من النظام'}
           >
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+            <svg className={`w-4 h-4 flex-shrink-0 ${!isUserAdmin ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             

@@ -12,7 +12,7 @@ export default function ForgotPassword({ onBack }) {
     setError('');
 
     if (!email.trim()) {
-      setError('يرجى إدخال عنوان بريدك الإلكتروني.');
+      setError('يرجى إدخال عنوان بريدك الإلكتروني / Veuillez saisir votre adresse e-mail.');
       return;
     }
 
@@ -22,92 +22,95 @@ export default function ForgotPassword({ onBack }) {
       setSubmitted(true);
     } catch {
       // Always show success to prevent enumeration — only show error on network failures
-      setError('حدث خطأ في الشبكة. يرجى المحاولة مجددًا.');
+      setError('Erreur réseau / خطأ في الشبكة.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex h-screen w-screen items-center justify-center bg-slate-900 font-sans antialiased text-slate-100">
-      <div className="w-full max-w-md p-8 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
+    <div className="relative flex min-h-screen w-screen items-center justify-center bg-slate-50 font-sans antialiased text-slate-900 overflow-hidden selection:bg-slate-200">
+      
+      {/* ── Top Accent Border ── */}
+      <div className="absolute top-0 inset-x-0 h-1 bg-slate-800" />
+      
+      <div className="relative w-full max-w-md p-8 sm:p-10 bg-white border border-slate-200 shadow-xl rounded-2xl m-4 z-10">
 
-        {/* العنوان */}
-        <div className="text-center mb-8">
-          <div className="inline-flex p-3 bg-blue-600/10 rounded-full text-blue-500 mb-3">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Title & Icon */}
+        <div className="text-center mb-8 flex flex-col items-center">
+          <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-100 border border-slate-200 shadow-sm mb-5 text-slate-800">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
                 d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">نسيت كلمة المرور</h1>
-          <p className="text-sm text-slate-400 mt-1">CSPJ Mini Mail · استعادة الحساب</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 mb-1" dir="rtl">إعادة ضبط كلمة المرور</h1>
+          <h1 className="text-base font-bold tracking-tight text-slate-700 mb-3">Réinitialisation du mot de passe</h1>
+          
+          <p className="text-xs text-slate-500 mt-1" dir="rtl">أدخل بريدك الإلكتروني المؤسساتي لاستلام رابط إعادة الضبط.</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">Saisissez votre adresse e-mail institutionnelle pour recevoir un lien de réinitialisation.</p>
         </div>
 
         {submitted ? (
-          /* ── حالة النجاح ── */
+          /* ── Success State ── */
           <div className="text-center space-y-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/10 rounded-full border border-emerald-500/20 mx-auto">
-              <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-50 rounded-full border border-emerald-100 mx-auto">
+              <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white mb-2">تم إرسال البريد الإلكتروني!</h2>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                إذا كان الحساب مرتبطًا بالعنوان{' '}
-                <span className="text-slate-200 font-medium">{email}</span>، فقد تم إرسال رابط إعادة التعيين. تحقق من مجلد الرسائل غير المرغوب فيها أيضًا.
+              <h2 className="text-sm font-semibold text-slate-900 mb-1" dir="rtl">تم إرسال البريد الإلكتروني!</h2>
+              <h2 className="text-sm font-semibold text-slate-700 mb-3">E-mail envoyé !</h2>
+              
+              <p className="text-xs text-slate-500 leading-relaxed" dir="rtl">
+                إذا كان الحساب مرتبطًا بالعنوان <span className="text-slate-800 font-medium" dir="ltr">{email}</span>، فقد تم إرسال رابط إعادة التعيين.
               </p>
-              <p className="text-xs text-slate-500 mt-3">
-                ينتهي الرابط خلال <span className="text-slate-400">15 دقيقة</span>.
+              <p className="text-[11px] text-slate-400 mt-1">
+                Si un compte est associé à cette adresse, un lien a été envoyé.
               </p>
             </div>
             <button
               onClick={onBack}
-              className="w-full py-2.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+              className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
             >
-              <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              العودة إلى تسجيل الدخول
+              العودة إلى تسجيل الدخول / Retour
             </button>
           </div>
         ) : (
-          /* ── نموذج الإدخال ── */
+          /* ── Form ── */
           <>
-            <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-              أدخل عنوان بريدك الإلكتروني أدناه. إذا كان هناك حساب مرتبط به، ستتلقى رابط إعادة تعيين صالحًا لمدة <span className="text-slate-300">15 دقيقة</span>.
-            </p>
-
             {error && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm flex items-center gap-2">
-                <span>⚠️</span>
-                <span>{error}</span>
+              <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm flex items-start gap-3 text-center justify-center">
+                <span className="leading-relaxed font-semibold">{error}</span>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                  البريد الإلكتروني
-                </label>
-                <input
-                  id="forgot-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="مثال: vous@cspj.ma"
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition"
-                  disabled={isSubmitting}
-                  autoFocus
-                  dir="ltr"
-                />
+              <div dir="ltr">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-800 transition-colors">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                    </svg>
+                  </div>
+                  <input
+                    id="forgot-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Adresse e-mail / البريد الإلكتروني"
+                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50/50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all duration-200"
+                    disabled={isSubmitting}
+                    autoFocus
+                  />
+                </div>
               </div>
 
               <button
                 id="forgot-submit"
                 type="submit"
-                className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -119,19 +122,16 @@ export default function ForgotPassword({ onBack }) {
                     جارٍ الإرسال...
                   </>
                 ) : (
-                  'إرسال رابط إعادة التعيين'
+                  'إرسال / Envoyer'
                 )}
               </button>
 
               <button
                 type="button"
                 onClick={onBack}
-                className="w-full py-2 text-sm text-slate-400 hover:text-slate-200 transition flex items-center justify-center gap-1"
+                className="w-full text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors text-center mt-4 pt-2"
               >
-                <svg className="w-4 h-4 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                العودة إلى تسجيل الدخول
+                العودة إلى تسجيل الدخول / Retour à la connexion
               </button>
             </form>
           </>
