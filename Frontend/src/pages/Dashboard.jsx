@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import DOMPurify from 'dompurify';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
 import { useLogs } from '../context/LogContext';
@@ -915,7 +916,7 @@ export default function Dashboard() {
                           {/* Body content */}
                           <div
                             className="text-slate-700 text-sm leading-relaxed prose prose-slate max-w-none prose-p:my-2 prose-a:text-indigo-600 hover:prose-a:text-indigo-700"
-                            dangerouslySetInnerHTML={{ __html: msg.corps }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.corps, { USE_PROFILES: { html: true } }) }}
                           />
 
                           {/* Attachments */}

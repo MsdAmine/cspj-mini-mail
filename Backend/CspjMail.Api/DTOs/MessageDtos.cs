@@ -1,4 +1,6 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Http;
+
 
 namespace CspjMail.Api.DTOs
 {
@@ -102,11 +104,28 @@ namespace CspjMail.Api.DTOs
 
     public class CreateUserDto
     {
+        [Required]
+        [EmailAddress]
+        [StringLength(150)]
         public string Email { get; set; } = null!;
+
+        [Required]
+        [StringLength(128, MinimumLength = 8, ErrorMessage = "Le mot de passe doit contenir au moins 8 caractères.")]
         public string Password { get; set; } = null!;
+
+        [Required]
+        [StringLength(50)]
         public string Nom { get; set; } = null!;
+
+        [Required]
+        [StringLength(50)]
         public string Prenom { get; set; } = null!;
+
+        [Required]
+        [StringLength(30)]
         public string Role { get; set; } = null!; // Administrateur, Fonctionnaire, Association
+
+        [Range(1, int.MaxValue)]
         public int InstitutionId { get; set; }
     }
 

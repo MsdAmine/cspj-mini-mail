@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using CspjMail.Api.Models;
 using CspjMail.Api.Configuration;
 using CspjMail.Api.Services;
+using Microsoft.AspNetCore.StaticFiles;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -76,9 +77,24 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+// ── Security Response Headers ─────────────────────────────────────────────────
+// Applied to every response before any other middleware. These are defence-in-depth
+// headers that harden the browser security posture even when application-level
+// controls (CSP, RBAC) are the primary line of defence.
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    await next();
+});
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    // Swagger UI exposed only in Development to prevent API schema disclosure in production.
     app.UseSwagger();
     app.UseSwaggerUI();
 }
@@ -90,7 +106,20 @@ if (!app.Environment.IsDevelopment())
 
 // Serve files from wwwroot/ (e.g. /uploads/*) BEFORE routing/auth so static
 // requests bypass the API middleware stack entirely.
-app.UseStaticFiles();
+// ServeUnknownFileTypes = false ensures only files with known/safe MIME types are served.
+var provider = new FileExtensionContentTypeProvider();
+app.UseStaticFiles(new StaticFileOptions
+{
+    ContentTypeProvider = provider,
+    ServeUnknownFileTypes = false,
+    OnPrepareResponse = ctx =>
+    {
+        // Prevent browsers from caching sensitive attachments across sessions
+        ctx.Context.Response.Headers["Cache-Control"] = "no-store, no-cache";
+        ctx.Context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        ctx.Context.Response.Headers["Content-Disposition"] = "attachment";
+    }
+});
 
 app.UseCors("AllowFrontend");
 
@@ -100,4 +129,4 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+app.Run();
