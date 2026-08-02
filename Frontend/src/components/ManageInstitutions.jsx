@@ -342,7 +342,7 @@ export default function ManageInstitutions() {
                         {/* Edit button */}
                         <button
                           onClick={() => handleOpenEdit(institution)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-slate-600 bg-white hover:bg-amber-50 hover:text-amber-700 hover:border-amber-200 rounded-xl transition-all duration-150 border border-slate-200/80 cursor-pointer active:scale-[0.98] shadow-sm text-xs font-medium"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-amber-600 bg-amber-50/80 hover:bg-amber-500 hover:text-white rounded-xl transition-all duration-150 border border-amber-200/80 hover:border-amber-500 cursor-pointer active:scale-[0.98] hover:shadow-md hover:shadow-amber-500/20 text-xs font-semibold"
                           title="Modifier cette institution"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -354,7 +354,7 @@ export default function ManageInstitutions() {
                         {/* Delete button */}
                         <button
                           onClick={() => setDeletingInstitution(institution)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-slate-500 bg-white hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-xl transition-all duration-150 border border-slate-200/80 cursor-pointer active:scale-[0.98] shadow-sm text-xs font-medium"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-rose-600 bg-rose-50/80 hover:bg-rose-500 hover:text-white rounded-xl transition-all duration-150 border border-rose-200/80 hover:border-rose-500 cursor-pointer active:scale-[0.98] hover:shadow-md hover:shadow-rose-500/20 text-xs font-semibold"
                           title="Supprimer cette institution"
                         >
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
