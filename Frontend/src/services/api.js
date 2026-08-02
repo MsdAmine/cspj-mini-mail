@@ -2,22 +2,11 @@ import axios from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5182/api',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
-// Attach JWT token to every outgoing request
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('cspj_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // Global 401 handler: clear stale session and force re-login
 api.interceptors.response.use(
@@ -27,8 +16,7 @@ api.interceptors.response.use(
       const url = error.config?.url || '';
       // Don't reload on auth routes so that the login form can show the error
       if (!url.includes('/auth/')) {
-        // Token expired or invalid — wipe local session
-        localStorage.removeItem('cspj_token');
+        // Session expired or invalid — wipe local user data
         localStorage.removeItem('cspj_user');
         // Reload to let AuthContext redirect to Login
         window.location.reload();
