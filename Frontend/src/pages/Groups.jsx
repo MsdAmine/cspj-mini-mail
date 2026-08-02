@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -544,7 +545,7 @@ export default function Groups() {
                     `}>
                       <div
                         className="text-slate-700 text-sm leading-relaxed prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: msg.corps }}
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.corps, { USE_PROFILES: { html: true } }) }}
                       />
 
                       {/* Attachments */}

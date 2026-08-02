@@ -327,14 +327,15 @@ namespace CspjMail.Api.Controllers
                 
                 return Ok(new { Message = "User deleted successfully." });
             }
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
-                // Parse inner exception and return detailed error if any constraints are violated
                 return BadRequest("Impossible de supprimer cet utilisateur car il est lié à des messages ou des données d'audit actifs.");
             }
             catch (Exception ex)
             {
-                return StatusCode(StatusCodes.Status500InternalServerError, $"An error occurred during deletion: {ex.Message}");
+                // Log the full exception server-side but never expose internal details to the client
+                _logger.LogError(ex, "Unexpected error deleting user {UserId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, "Une erreur interne est survenue. Veuillez réessayer.");
             }
         }
     }
