@@ -172,7 +172,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
         </div>
 
         {/* ── Main Navigation ── */}
-        <div className={`flex-1 overflow-y-auto ${isCollapsed ? 'px-2' : 'px-3'} py-4 space-y-0.5`}>
+        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-1">
 
           {/* Mail nav — non-admin users */}
           {!isUserAdmin && (
@@ -180,17 +180,21 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
               <button
                 onClick={() => { onComposeOpen(); closeMobile(); }}
                 title={isCollapsed ? "رسالة جديدة" : undefined}
-                className={`w-full mb-4 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer`}
+                className="w-full mb-4 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center px-3 cursor-pointer"
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-                {!isCollapsed && <span>رسالة جديدة</span>}
+                <div className="w-10 flex-shrink-0 flex items-center justify-center">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                </div>
+                <span className={`truncate transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-1'}`}>
+                  رسالة جديدة
+                </span>
               </button>
 
-              {!isCollapsed && (
-                <p className={`px-3 text-[10px] font-bold uppercase tracking-widest mb-1.5 transition-opacity ${labelColor}`}>المجلدات</p>
-              )}
+              <p className={`px-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${labelColor} ${isCollapsed ? 'h-0 opacity-0 mb-0 overflow-hidden' : 'h-auto opacity-100 mb-2'}`}>
+                المجلدات
+              </p>
 
               <nav className="space-y-1" dir="rtl">
                 {folders.map((folder) => {
@@ -204,12 +208,16 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
                         closeMobile();
                       }}
                       title={isCollapsed ? folder.label : undefined}
-                      className={`relative w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'} py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
+                      className={`relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
                         isActive ? activeItemCls : inactiveItemCls
                       }`}
                     >
-                      <span className={isActive ? activeIconCls : inactiveIconCls}>{folder.icon}</span>
-                      {!isCollapsed && <span>{folder.label}</span>}
+                      <div className={`w-10 flex-shrink-0 flex items-center justify-center ${isActive ? activeIconCls : inactiveIconCls}`}>
+                        {folder.icon}
+                      </div>
+                      <span className={`truncate transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-2'}`}>
+                        {folder.label}
+                      </span>
                     </button>
                   );
                 })}
@@ -220,9 +228,9 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
           {/* Admin nav — LTR French */}
           {isUserAdmin && (
             <nav className="space-y-1" dir="ltr">
-              {!isCollapsed && (
-                <p className={`px-3 text-[10px] font-bold uppercase tracking-widest mb-2 transition-opacity ${labelColor}`}>Administration</p>
-              )}
+              <p className={`px-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${labelColor} ${isCollapsed ? 'h-0 opacity-0 mb-0 overflow-hidden' : 'h-auto opacity-100 mb-2'}`}>
+                Administration
+              </p>
               {adminNavItems.map((item) => {
                 const isActive = adminTab === item.id;
                 return (
@@ -230,12 +238,16 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
                     key={item.id}
                     onClick={() => { setAdminTab(item.id); closeMobile(); }}
                     title={isCollapsed ? item.label : undefined}
-                    className={`relative w-full flex items-center ${isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'} py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
+                    className={`relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
                       isActive ? activeItemCls : inactiveItemCls
                     }`}
                   >
-                    <span className={isActive ? activeIconCls : inactiveIconCls}>{item.icon}</span>
-                    {!isCollapsed && <span>{item.label}</span>}
+                    <div className={`w-10 flex-shrink-0 flex items-center justify-center ${isActive ? activeIconCls : inactiveIconCls}`}>
+                      {item.icon}
+                    </div>
+                    <span className={`truncate transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-2'}`}>
+                      {item.label}
+                    </span>
                   </button>
                 );
               })}
@@ -244,23 +256,23 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
         </div>
 
         {/* ── Footer / Logout ── */}
-        <div className={`px-3 py-3 border-t ${borderColor} flex-shrink-0`}>
+        <div className={`px-2 py-3 border-t ${borderColor} flex-shrink-0`}>
 
           {/* Logout button */}
           <button
             onClick={logout}
-            className={`w-full flex items-center justify-center gap-2 ${isCollapsed ? 'px-0' : 'px-4'} py-2 text-xs font-semibold rounded-lg transition-all duration-150 cursor-pointer text-slate-400 hover:text-rose-400 bg-transparent hover:bg-rose-500/10 border border-transparent`}
+            className={`w-full flex items-center px-3 py-2.5 text-xs font-semibold rounded-lg transition-all duration-150 cursor-pointer text-slate-400 hover:text-rose-400 bg-transparent hover:bg-rose-500/10 border border-transparent`}
             title={isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج من النظام'}
           >
-            <svg className={`w-4 h-4 flex-shrink-0 ${!isUserAdmin ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
+            <div className="w-10 flex-shrink-0 flex items-center justify-center">
+              <svg className={`w-4 h-4 ${!isUserAdmin ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
             
-            {!isCollapsed && (
-              <span className="font-semibold tracking-wide">
-                {isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج'}
-              </span>
-            )}
+            <span className={`truncate transition-all duration-300 font-semibold tracking-wide ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-1'}`}>
+              {isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج'}
+            </span>
           </button>
         </div>
       </div>
