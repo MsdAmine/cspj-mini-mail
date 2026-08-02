@@ -130,9 +130,18 @@ namespace CspjMail.Api.Controllers
             var token = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
 
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"] ?? "180"))
+            };
+            Response.Cookies.Append("cspj_auth_token", tokenString, cookieOptions);
+
             return Ok(new AuthResponseDto
             {
-                Token = tokenString,
+                Token = string.Empty,
                 Email = user.Email,
                 Nom = user.Nom,
                 Prenom = user.Prenom,
@@ -140,6 +149,40 @@ namespace CspjMail.Api.Controllers
             });
         }
 
+
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            Response.Cookies.Delete("cspj_auth_token", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict
+            });
+            return Ok(new { message = "Déconnexion réussie." });
+        }
+
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim, out int userId))
+                return Unauthorized();
+
+            var user = await _context.Utilisateurs.FindAsync(userId);
+            if (user == null || !user.Actif) return Unauthorized();
+
+            return Ok(new
+            {
+                id = user.Id,
+                email = user.Email,
+                nom = user.Nom,
+                prenom = user.Prenom,
+                role = user.Role,
+                institutionId = user.EntrepriseId
+            });
+        }
 
         [HttpPut("profile")]
         [Authorize]
