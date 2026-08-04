@@ -12,6 +12,7 @@
   "dependencies": {
     "@tailwindcss/typography": "^0.5.20",
     "@tiptap/extension-bullet-list": "^3.27.3",
+    "@tiptap/extension-link": "^3.27.3",
     "@tiptap/extension-text-align": "^3.27.3",
     "@tiptap/extension-underline": "^3.27.3",
     "@tiptap/react": "^3.27.3",
