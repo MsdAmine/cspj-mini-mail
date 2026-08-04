@@ -5,7 +5,8 @@ import Underline from '@tiptap/extension-underline';
 import BulletList from '@tiptap/extension-bullet-list';
 import { ListItem } from '@tiptap/extension-list-item';
 import TextAlign from '@tiptap/extension-text-align';
-import { Bold, Italic, Underline as UnderlineIcon, List, Paperclip, X } from 'lucide-react';
+import Link from '@tiptap/extension-link';
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon, Code as CodeIcon, Quote, Undo, Redo, Paperclip, X } from 'lucide-react';
 
 /**
  * TiptapEditor
@@ -21,9 +22,10 @@ import { Bold, Italic, Underline as UnderlineIcon, List, Paperclip, X } from 'lu
 // Defined at module scope so React always sees the same component reference.
 // If defined inside TiptapEditor, every `onTransaction` re-render would create
 // a new component type → React unmounts + remounts the buttons → sluggish lag.
-const ToolbarButton = ({ onClick, isActive, icon: Icon, title }) => (
+const ToolbarButton = ({ onClick, isActive, icon: Icon, title, disabled = false }) => (
   <button
     type="button"
+    disabled={disabled}
     onMouseDown={(e) => {
       // Use onMouseDown + preventDefault so the editor never loses focus,
       // which also makes the active state update feel completely instant.
@@ -33,6 +35,8 @@ const ToolbarButton = ({ onClick, isActive, icon: Icon, title }) => (
     className={`p-1.5 rounded transition-colors ${
       isActive
         ? 'bg-blue-100 text-blue-700'
+        : disabled
+        ? 'text-slate-300 cursor-not-allowed'
         : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
     }`}
     title={title}
@@ -63,6 +67,10 @@ const TiptapEditor = ({
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+      }),
     ],
     content: content || '',
     onUpdate: ({ editor }) => {
@@ -92,6 +100,26 @@ const TiptapEditor = ({
     },
     [editor]
   );
+
+  const setLink = useCallback(() => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('URL', previousUrl);
+
+    // cancelled
+    if (url === null) {
+      return;
+    }
+
+    // empty
+    if (url === '') {
+      runCommand(() => editor.chain().focus().extendMarkRange('link').unsetLink().run());
+      return;
+    }
+
+    // update link
+    runCommand(() => editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run());
+  }, [editor, runCommand]);
 
   // Paperclip button click → programmatically open the hidden file input.
   const handlePaperclipClick = useCallback((e) => {
@@ -171,13 +199,13 @@ const TiptapEditor = ({
       <style>{`
         .tiptap ul {
           list-style-type: disc !important;
-          padding-left: 1.5rem !important;
+          padding-inline-start: 1.5rem !important;
           margin-top: 0.5rem !important;
           margin-bottom: 0.5rem !important;
         }
         .tiptap ol {
           list-style-type: decimal !important;
-          padding-left: 1.5rem !important;
+          padding-inline-start: 1.5rem !important;
           margin-top: 0.5rem !important;
           margin-bottom: 0.5rem !important;
         }
@@ -187,9 +215,51 @@ const TiptapEditor = ({
         .tiptap li p {
           margin: 0 !important;
         }
+        .tiptap pre {
+          background-color: #1e293b;
+          color: #f8fafc;
+          padding: 0.75rem;
+          border-radius: 0.5rem;
+          font-family: monospace;
+          margin-top: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+        .tiptap code {
+          background-color: #f1f5f9;
+          color: #ef4444;
+          padding: 0.125rem 0.25rem;
+          border-radius: 0.25rem;
+          font-family: monospace;
+          font-size: 0.875em;
+        }
+        .tiptap pre code {
+          background-color: transparent;
+          color: inherit;
+          padding: 0;
+        }
+        .tiptap blockquote {
+          border-inline-start: 3px solid #cbd5e1;
+          padding-inline-start: 1rem;
+          margin-top: 0.5rem;
+          margin-bottom: 0.5rem;
+          color: #64748b;
+          font-style: italic;
+        }
       `}</style>
       {/* ── Barre d'outils ── */}
-      <div className="flex items-center gap-1 px-3 py-2 bg-slate-50 border-b border-slate-200">
+      <div className="flex items-center gap-1 px-3 py-2 bg-slate-50 border-b border-slate-200 flex-wrap">
+        {/* Attachment */}
+        <button
+          type="button"
+          onClick={handlePaperclipClick}
+          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition"
+          title="Ajouter une pièce jointe"
+        >
+          <Paperclip size={16} />
+        </button>
+        <div className="w-px h-5 bg-slate-300 mx-1" />
+
+        {/* Text Formatting */}
         <ToolbarButton
           onClick={() => runCommand(() => editor.chain().focus().toggleBold().run())}
           isActive={editor.isActive('bold')}
@@ -208,24 +278,59 @@ const TiptapEditor = ({
           icon={UnderlineIcon}
           title="Souligné"
         />
-        <div className="w-px h-5 bg-slate-200 mx-2" />
+        <div className="w-px h-5 bg-slate-300 mx-1" />
+
+        {/* Lists & Blockquote */}
         <ToolbarButton
           onClick={() => runCommand(() => editor.chain().focus().toggleBulletList().run())}
           isActive={editor.isActive('bulletList')}
           icon={List}
           title="Liste à puces"
         />
-        <div className="w-px h-5 bg-slate-200 mx-2" />
+        <ToolbarButton
+          onClick={() => runCommand(() => editor.chain().focus().toggleOrderedList().run())}
+          isActive={editor.isActive('orderedList')}
+          icon={ListOrdered}
+          title="Liste numérotée"
+        />
+        <ToolbarButton
+          onClick={() => runCommand(() => editor.chain().focus().toggleBlockquote().run())}
+          isActive={editor.isActive('blockquote')}
+          icon={Quote}
+          title="Citation"
+        />
+        <div className="w-px h-5 bg-slate-300 mx-1" />
 
-        {/* Paperclip – triggers the hidden file input */}
-        <button
-          type="button"
-          onClick={handlePaperclipClick}
-          className="p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded transition"
-          title="Ajouter une pièce jointe"
-        >
-          <Paperclip size={16} />
-        </button>
+        {/* Link & Code */}
+        <ToolbarButton
+          onClick={setLink}
+          isActive={editor.isActive('link')}
+          icon={LinkIcon}
+          title="Lien"
+        />
+        <ToolbarButton
+          onClick={() => runCommand(() => editor.chain().focus().toggleCode().run())}
+          isActive={editor.isActive('code')}
+          icon={CodeIcon}
+          title="Code en ligne"
+        />
+        <div className="w-px h-5 bg-slate-300 mx-1" />
+
+        {/* Undo & Redo */}
+        <ToolbarButton
+          onClick={() => runCommand(() => editor.chain().focus().undo().run())}
+          isActive={false}
+          disabled={!editor.can().undo()}
+          icon={Undo}
+          title="Annuler"
+        />
+        <ToolbarButton
+          onClick={() => runCommand(() => editor.chain().focus().redo().run())}
+          isActive={false}
+          disabled={!editor.can().redo()}
+          icon={Redo}
+          title="Rétablir"
+        />
 
         {/* Hidden native file input – owned here, triggered by the paperclip */}
         <input
