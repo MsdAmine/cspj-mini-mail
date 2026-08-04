@@ -5,8 +5,7 @@ import Underline from '@tiptap/extension-underline';
 import BulletList from '@tiptap/extension-bullet-list';
 import { ListItem } from '@tiptap/extension-list-item';
 import TextAlign from '@tiptap/extension-text-align';
-import Link from '@tiptap/extension-link';
-import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Link as LinkIcon, Code as CodeIcon, Quote, Undo, Redo, Paperclip, X } from 'lucide-react';
+import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Quote, Undo, Redo, Paperclip, X } from 'lucide-react';
 
 /**
  * TiptapEditor
@@ -67,10 +66,6 @@ const TiptapEditor = ({
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-      }),
     ],
     content: content || '',
     onUpdate: ({ editor }) => {
@@ -100,26 +95,6 @@ const TiptapEditor = ({
     },
     [editor]
   );
-
-  const setLink = useCallback(() => {
-    if (!editor) return;
-    const previousUrl = editor.getAttributes('link').href;
-    const url = window.prompt('URL', previousUrl);
-
-    // cancelled
-    if (url === null) {
-      return;
-    }
-
-    // empty
-    if (url === '') {
-      runCommand(() => editor.chain().focus().extendMarkRange('link').unsetLink().run());
-      return;
-    }
-
-    // update link
-    runCommand(() => editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run());
-  }, [editor, runCommand]);
 
   // Paperclip button click → programmatically open the hidden file input.
   const handlePaperclipClick = useCallback((e) => {
@@ -298,21 +273,6 @@ const TiptapEditor = ({
           isActive={editor.isActive('blockquote')}
           icon={Quote}
           title="Citation"
-        />
-        <div className="w-px h-5 bg-slate-300 mx-1" />
-
-        {/* Link & Code */}
-        <ToolbarButton
-          onClick={setLink}
-          isActive={editor.isActive('link')}
-          icon={LinkIcon}
-          title="Lien"
-        />
-        <ToolbarButton
-          onClick={() => runCommand(() => editor.chain().focus().toggleCode().run())}
-          isActive={editor.isActive('code')}
-          icon={CodeIcon}
-          title="Code en ligne"
         />
         <div className="w-px h-5 bg-slate-300 mx-1" />
 
