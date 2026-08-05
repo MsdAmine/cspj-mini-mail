@@ -187,7 +187,8 @@ export default function ManageUsers() {
   };
 
   return (
-    <div dir="ltr" className="w-full max-w-6xl space-y-6 animate-fade-in pb-12 text-left">
+    <div dir="ltr" className="flex-1 overflow-y-auto p-8 flex flex-col items-center bg-[#f8fafc] text-left">
+    <div className="w-full max-w-6xl space-y-6 animate-fade-in pb-12 text-left">
 
       {/* ── Page Header ── */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-5 border-b border-slate-200/60">
@@ -493,6 +494,7 @@ export default function ManageUsers() {
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
 
-export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdminTab }) {
+export default function Sidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { activeFolder, setActiveFolder } = useMail();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -35,7 +36,7 @@ export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdmi
 
   const adminNavItems = [
     {
-      id: 'stats',
+      path: '/dashboard',
       label: 'Tableau de bord',
       icon: (
         <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -44,7 +45,7 @@ export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdmi
       ),
     },
     {
-      id: 'manage-users',
+      path: '/users',
       label: 'Utilisateurs',
       icon: (
         <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -53,7 +54,7 @@ export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdmi
       ),
     },
     {
-      id: 'institutions',
+      path: '/institutions',
       label: 'Institutions',
       icon: (
         <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -62,7 +63,7 @@ export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdmi
       ),
     },
     {
-      id: 'audit-logs',
+      path: '/audit-logs',
       label: "Journal d'audit",
       icon: (
         <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -71,7 +72,7 @@ export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdmi
       ),
     },
     {
-      id: 'create-user',
+      path: '/create-user',
       label: 'Créer un compte',
       icon: (
         <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -82,9 +83,9 @@ export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdmi
   ];
 
   const isUserAdmin = user?.role === 'Administrateur';
+  const isDashboard = location.pathname === '/dashboard';
 
-  // Close mobile sidebar (called separately from state updates so there is
-  // no closure overhead blocking the synchronous highlight switch).
+  // Close mobile sidebar
   const closeMobile = () => setMobileOpen(false);
 
   // ── Shared style tokens (Formal Institutional Theme) ────────────
@@ -200,12 +201,12 @@ export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdmi
 
               <nav className="space-y-1" dir="rtl">
                 {folders.map((folder) => {
-                  const isActive = activeFolder === folder.id && !isAdminView;
+                  const isActive = isDashboard && activeFolder === folder.id;
                   return (
                     <button
                       key={folder.id}
                       onClick={() => {
-                        setIsAdminView(false);
+                        navigate('/dashboard');
                         setActiveFolder(folder.id);
                         closeMobile();
                       }}
@@ -233,26 +234,28 @@ export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdmi
               <p className={`px-3 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${labelColor} ${isCollapsed ? 'h-0 opacity-0 mb-0 overflow-hidden' : 'h-auto opacity-100 mb-2'}`}>
                 Administration
               </p>
-              {adminNavItems.map((item) => {
-                const isActive = adminTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => { setAdminTab(item.id); closeMobile(); }}
-                    title={isCollapsed ? item.label : undefined}
-                    className={`relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
-                      isActive ? activeItemCls : inactiveItemCls
-                    }`}
-                  >
-                    <div className={`w-10 flex-shrink-0 flex items-center justify-center ${isActive ? activeIconCls : inactiveIconCls}`}>
-                      {item.icon}
-                    </div>
-                    <span className={`truncate transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-2'}`}>
-                      {item.label}
-                    </span>
-                  </button>
-                );
-              })}
+              {adminNavItems.map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={closeMobile}
+                  title={isCollapsed ? item.label : undefined}
+                  className={({ isActive }) => `relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
+                    isActive ? activeItemCls : inactiveItemCls
+                  }`}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <div className={`w-10 flex-shrink-0 flex items-center justify-center ${isActive ? activeIconCls : inactiveIconCls}`}>
+                        {item.icon}
+                      </div>
+                      <span className={`truncate transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-2'}`}>
+                        {item.label}
+                      </span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
             </nav>
           )}
         </div>
