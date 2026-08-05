@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
 
-export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, adminTab, setAdminTab }) {
+export default function Sidebar({ isAdminView, setIsAdminView, adminTab, setAdminTab }) {
+  const navigate = useNavigate();
   const { activeFolder, setActiveFolder } = useMail();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -178,7 +180,7 @@ export default function Sidebar({ onComposeOpen, isAdminView, setIsAdminView, ad
           {!isUserAdmin && (
             <>
               <button
-                onClick={() => { onComposeOpen(); closeMobile(); }}
+                onClick={() => { navigate('/compose'); closeMobile(); }}
                 title={isCollapsed ? "رسالة جديدة" : undefined}
                 className="w-full mb-4 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center px-3 cursor-pointer"
               >

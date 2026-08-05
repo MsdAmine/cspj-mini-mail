@@ -6,7 +6,6 @@ import { useLogs } from '../context/LogContext';
 import api from '../services/api';
 import Sidebar from '../components/Sidebar';
 import MailList from '../components/MailList';
-import ComposeModal from '../components/ComposeModal';
 import ProfilePage from './ProfilePage';
 import ManageUsers from '../components/ManageUsers';
 import ManageInstitutions from '../components/ManageInstitutions';
@@ -47,7 +46,6 @@ export default function Dashboard() {
     activeFolder
   } = useMail();
   
-  const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false); 
   const [replyBody, setReplyBody] = useState('');
   
@@ -246,7 +244,6 @@ export default function Dashboard() {
     return (
       <div dir={layoutDir} className="flex h-screen w-full bg-[#f8fafc] overflow-hidden font-sans text-slate-800">
         <Sidebar 
-          onComposeOpen={() => setIsComposeOpen(true)} 
           isAdminView={isAdminView}
           setIsAdminView={(val) => { setIsAdminView(val); setAdminMessage({ type: '', text: '' }); }}
           adminTab={adminTab}
@@ -261,7 +258,6 @@ export default function Dashboard() {
     <div dir={layoutDir} className="flex h-screen w-full bg-[#f8fafc] overflow-hidden font-sans text-slate-800">
       
       <Sidebar 
-        onComposeOpen={() => setIsComposeOpen(true)} 
         isAdminView={isAdminView}
         setIsAdminView={(val) => { setIsAdminView(val); setAdminMessage({ type: '', text: '' }); }}
         adminTab={adminTab}
@@ -1021,8 +1017,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
-      {isComposeOpen && <ComposeModal onClose={() => setIsComposeOpen(false)} />}
     </div>
   );
 }
