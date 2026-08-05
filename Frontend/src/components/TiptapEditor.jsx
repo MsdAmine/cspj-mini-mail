@@ -79,7 +79,8 @@ const TiptapEditor = ({
     },
     editorProps: {
       attributes: {
-        class: 'tiptap prose prose-sm max-w-none focus:outline-none min-h-[100px] px-3 py-2',
+        class: 'tiptap prose prose-sm max-w-none focus:outline-none min-h-[100px] px-3 py-2 text-right',
+        dir: 'rtl',
       },
     },
   });
@@ -172,6 +173,15 @@ const TiptapEditor = ({
       {/* Tailwind Preflight resets list-style and padding to none/0 globally.  */}
       {/* This <style> tag re-applies browser-native bullets scoped to .tiptap.  */}
       <style>{`
+        .tiptap.ProseMirror {
+          direction: rtl;
+          text-align: right;
+        }
+        .tiptap.ProseMirror p.is-editor-empty:first-child::before {
+          direction: rtl;
+          text-align: right;
+          float: right;
+        }
         .tiptap ul {
           list-style-type: disc !important;
           padding-inline-start: 1.5rem !important;
@@ -305,12 +315,12 @@ const TiptapEditor = ({
       </div>
 
       {/* ── Zone d'édition ── */}
-      <div className="relative min-h-[120px] max-h-[300px] overflow-y-auto">
-        <EditorContent editor={editor} className="min-h-[120px]" />
+      <div className="relative min-h-[120px] max-h-[300px] overflow-y-auto" dir="rtl">
+        <EditorContent editor={editor} className="min-h-[120px] text-right" />
 
         {/* Placeholder personnalisé */}
         {editor.isEmpty && (
-          <div className="absolute top-3 left-3 pointer-events-none text-slate-400 text-sm">
+          <div className="absolute top-3 right-3 pointer-events-none text-slate-400 text-sm text-right">
             {placeholder}
           </div>
         )}
