@@ -8,7 +8,13 @@ import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ComposePage from './pages/ComposePage';
-
+import Layout from './components/Layout';
+import ManageUsers from './components/ManageUsers';
+import ManageInstitutions from './components/ManageInstitutions';
+import ManageLogs from './components/ManageLogs';
+import ProfilePage from './pages/ProfilePage';
+import CreateUserPage from './pages/CreateUserPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
 /**
  * Protected Route wrapper
  */
@@ -33,6 +39,14 @@ function AuthRoute({ children }) {
   }
   
   return children;
+}
+
+/**
+ * Dashboard route: shows admin stats for Administrateur, mail inbox otherwise
+ */
+function DashboardRoute() {
+  const { user } = useAuth();
+  return user?.role === 'Administrateur' ? <AdminDashboardPage /> : <Dashboard />;
 }
 
 /**
@@ -71,16 +85,14 @@ function AppRoutes() {
         } 
       />
       
-      <Route 
-        path="/dashboard" 
-        element={
-          <ProtectedRoute>
-            <MailProvider>
-              <Dashboard />
-            </MailProvider>
-          </ProtectedRoute>
-        } 
-      />
+      <Route element={<ProtectedRoute><MailProvider><Layout /></MailProvider></ProtectedRoute>}>
+        <Route path="/dashboard" element={<DashboardRoute />} />
+        <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/users" element={<ManageUsers />} />
+        <Route path="/institutions" element={<ManageInstitutions />} />
+        <Route path="/audit-logs" element={<ManageLogs />} />
+        <Route path="/create-user" element={<CreateUserPage />} />
+      </Route>
       
       <Route 
         path="/compose" 

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProfilePage({ onBack }) {
+export default function ProfilePage() {
+  const navigate = useNavigate();
   const { user, logout, updateProfile } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -178,7 +180,7 @@ export default function ProfilePage({ onBack }) {
 
         {/* Back button */}
         <button
-          onClick={onBack}
+          onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-blue-600 transition group"
         >
           <ChevronBack />
