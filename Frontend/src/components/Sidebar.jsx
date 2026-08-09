@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { activeFolder, setActiveFolder } = useMail();
+  const { activeFolder, setActiveFolder, drafts } = useMail();
   const { user, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -32,6 +32,11 @@ export default function Sidebar() {
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
       </svg>
     )},
+    { id: 'drafts',   label: 'المسودات',          icon: (
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+      </svg>
+    ), badge: drafts.length },
   ];
 
   const adminNavItems = [
@@ -221,6 +226,12 @@ export default function Sidebar() {
                       <span className={`truncate transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-2'}`}>
                         {folder.label}
                       </span>
+                      {/* Draft badge count */}
+                      {!isCollapsed && folder.badge > 0 && (
+                        <span className="mr-auto ms-2 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-sm">
+                          {folder.badge}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

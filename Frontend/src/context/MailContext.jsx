@@ -8,14 +8,34 @@ export const MailProvider = ({ children }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
-  const [activeFolder, setActiveFolder] = useState('inbox'); // 'inbox' | 'sent' | 'archived' | 'groups' | 'direct'
+  const [activeFolder, setActiveFolder] = useState('inbox'); // 'inbox' | 'sent' | 'archived' | 'groups' | 'direct' | 'drafts'
   const [searchQuery, setSearchQuery] = useState('');
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
+  // ── Drafts (per-user localStorage) ──────────────────────────────────────
+  const getDraftKey = (uid) => `cspj_drafts__${uid ?? 'guest'}`;
+
+  const readDrafts = (uid) => {
+    try {
+      const raw = localStorage.getItem(getDraftKey(uid));
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  };
+
+  const [drafts, setDrafts] = useState(() => readDrafts(null));
+
+  // Reload drafts when the logged-in user changes
+  useEffect(() => {
+    setDrafts(readDrafts(user?.id));
+  }, [user?.id]);
 
   // Load threads depending on folder / search query
   const loadMailbox = async () => {
     if (!user) return;
+    if (activeFolder === 'drafts') {
+      setMessages([]);
+      return;
+    }
     setLoading(true);
     try {
       let endpoint = '/messages/inbox';
@@ -167,6 +187,38 @@ export const MailProvider = ({ children }) => {
     // Handled automatically on the backend upon fetching details
   };
 
+  /**
+   * Upsert a draft. Pass a `draftId` to update an existing one; omit to create new.
+   * Returns the draftId so ComposePage can track which draft is being edited.
+   */
+  const saveDraft = (draftData) => {
+    const uid = user?.id;
+    const existing = readDrafts(uid);
+    const isUpdate = draftData.draftId && existing.some(d => d.draftId === draftData.draftId);
+
+    const entry = {
+      ...draftData,
+      draftId: draftData.draftId || `draft_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      savedAt: new Date().toISOString(),
+    };
+
+    const updated = isUpdate
+      ? existing.map(d => d.draftId === entry.draftId ? entry : d)
+      : [entry, ...existing];
+
+    localStorage.setItem(getDraftKey(uid), JSON.stringify(updated));
+    setDrafts(updated);
+    return entry.draftId;
+  };
+
+  /** Remove a draft by its draftId. */
+  const deleteDraft = (draftId) => {
+    const uid = user?.id;
+    const updated = readDrafts(uid).filter(d => d.draftId !== draftId);
+    localStorage.setItem(getDraftKey(uid), JSON.stringify(updated));
+    setDrafts(updated);
+  };
+
   return (
     <MailContext.Provider value={{
       messages,
@@ -181,6 +233,9 @@ export const MailProvider = ({ children }) => {
       replyToThread,
       toggleArchiveMessage,
       markAsReadMessage,
+      drafts,
+      saveDraft,
+      deleteDraft,
       contacts,
       loading,
       refreshMailbox: loadMailbox

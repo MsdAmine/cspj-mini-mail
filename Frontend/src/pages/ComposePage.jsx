@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useMail } from "../context/MailContext";
 import { useAuth } from "../context/AuthContext";
 import TiptapEditor from "../components/TiptapEditor";
@@ -15,7 +15,37 @@ const getRoleArabicLabel = (role) => {
   return role;
 };
 
-// ── SVG icon components ────────────────────────────
+// ── Toast component ──────────────────────────────────────────────────────────
+function Toast({ message, type = 'success', onClose }) {
+  const bgClass = type === 'success'
+    ? 'bg-emerald-600 border-emerald-500'
+    : 'bg-rose-600 border-rose-500';
+
+  return (
+    <div
+      className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl border shadow-2xl shadow-black/30 text-white text-sm font-semibold backdrop-blur-sm animate-slide-up ${bgClass}`}
+      dir="rtl"
+    >
+      {type === 'success' ? (
+        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )}
+      <span>{message}</span>
+      <button onClick={onClose} className="mr-1 opacity-70 hover:opacity-100 transition-opacity cursor-pointer">
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ── SVG icon components ──────────────────────────────────────────────────────
 const IconMail = () => (
   <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -37,6 +67,12 @@ const IconBack = () => (
 const IconSend = () => (
   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+  </svg>
+);
+
+const IconDraft = () => (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
   </svg>
 );
 
@@ -78,23 +114,42 @@ const Spinner = () => (
 );
 
 export default function ComposePage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const { contacts, sendNewMessage } = useMail();
+  const navigate   = useNavigate();
+  const location   = useLocation();
+  const { user }   = useAuth();
+  const { contacts, sendNewMessage, saveDraft, deleteDraft } = useMail();
 
-  const [messageMode, setMessageMode] = useState("individuel");
+  // ── Draft being edited (passed via navigate state) ───────────────────────
+  const incomingDraft = location.state?.draft ?? null;
 
-  const [subject,      setSubject]      = useState("");
-  const [body,         setBody]         = useState("");
-  const [attachments,  setAttachments]  = useState([]);
+  const [messageMode, setMessageMode] = useState(incomingDraft?.messageMode ?? "individuel");
+  const [subject,      setSubject]     = useState(incomingDraft?.subject     ?? "");
+  const [body,         setBody]        = useState(incomingDraft?.body        ?? "");
+  const [attachments,  setAttachments] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isSending,    setIsSending]    = useState(false);
+  const [isSending,    setIsSending]   = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
 
-  const [receiverId, setReceiverId] = useState("");
+  // Track the draftId of the currently open draft (so "save again" updates the same record)
+  const [currentDraftId, setCurrentDraftId] = useState(incomingDraft?.draftId ?? null);
 
-  const [selectedIds,   setSelectedIds]   = useState([]);
+  const [receiverId,    setReceiverId]    = useState(incomingDraft?.receiverId    ?? "");
+  const [selectedIds,   setSelectedIds]   = useState(incomingDraft?.selectedIds   ?? []);
   const [contactSearch, setContactSearch] = useState("");
 
+  // ── Toast state ──────────────────────────────────────────────────────────
+  const [toast, setToast] = useState(null); // { message, type }
+  const toastTimerRef = useRef(null);
+
+  const showToast = (message, type = 'success', duration = 3000) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message, type });
+    toastTimerRef.current = setTimeout(() => setToast(null), duration);
+  };
+
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
+
+  // ── Contact filtering ────────────────────────────────────────────────────
   const filteredContacts = contacts.filter((c) =>
     `${c.nomComplet} ${c.email} ${c.institutionNom}`
       .toLowerCase()
@@ -130,6 +185,7 @@ export default function ComposePage() {
     setContactSearch("");
   };
 
+  // ── Send ─────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e?.preventDefault();
     setErrorMessage("");
@@ -160,6 +216,12 @@ export default function ComposePage() {
         estDiffusion: messageMode === "diffusion",
         attachments,
       });
+
+      // If this was a draft, remove it now that it's been sent
+      if (currentDraftId) {
+        deleteDraft(currentDraftId);
+      }
+
       navigate('/dashboard');
     } catch (err) {
       setErrorMessage(err.message || "حدث خطأ أثناء إرسال الرسالة.");
@@ -168,9 +230,33 @@ export default function ComposePage() {
     }
   };
 
-  const handleSaveDraft = () => {
-    // Optional: Implement save draft logic here
-    navigate('/dashboard');
+  // ── Save as Draft ────────────────────────────────────────────────────────
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true);
+    try {
+      const draftPayload = {
+        draftId: currentDraftId,   // null → creates new; string → updates existing
+        messageMode,
+        subject,
+        body,
+        receiverId,
+        selectedIds,
+        // Store attachment names only (File objects can't be serialised)
+        attachmentNames: attachments.map(f => f.name),
+      };
+
+      const newId = saveDraft(draftPayload);
+      setCurrentDraftId(newId);
+
+      showToast("تم حفظ المسودة بنجاح ✓", 'success');
+
+      // Navigate after the toast is visible
+      setTimeout(() => navigate('/dashboard'), 1200);
+    } catch {
+      showToast("حدث خطأ أثناء حفظ المسودة.", 'error');
+    } finally {
+      setIsSavingDraft(false);
+    }
   };
 
   const segTabClass = (mode) =>
@@ -259,17 +345,19 @@ export default function ComposePage() {
     </div>
   );
 
+  const isEditingDraft = !!incomingDraft;
+
   return (
     <div dir="rtl" className="flex h-screen w-full bg-[#f8fafc] overflow-hidden font-sans text-slate-800">
       {/* Sidebar for consistency */}
-      <Sidebar 
-        onComposeOpen={() => {}} 
+      <Sidebar
+        onComposeOpen={() => {}}
         isAdminView={user?.role === 'Administrateur'}
         setIsAdminView={() => {}}
         adminTab={'stats'}
         setAdminTab={() => {}}
       />
-      
+
       <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
         {/* Header Bar */}
         <header className="h-16 bg-white border-b border-slate-200/80 flex items-center justify-between px-6 flex-shrink-0 shadow-sm z-10">
@@ -282,18 +370,32 @@ export default function ComposePage() {
               العودة
             </button>
             <div className="h-6 w-px bg-slate-200"></div>
-            <h1 className="text-lg font-bold text-slate-900 tracking-tight">رسالة جديدة</h1>
+            <h1 className="text-lg font-bold text-slate-900 tracking-tight">
+              {isEditingDraft ? 'تحرير المسودة' : 'رسالة جديدة'}
+            </h1>
+            {isEditingDraft && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                مسودة
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
+            {/* Save as Draft button */}
             <button
               onClick={handleSaveDraft}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              disabled={isSending || isSavingDraft}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer border border-slate-200/80 hover:border-slate-300"
             >
+              {isSavingDraft ? <Spinner /> : <IconDraft />}
               حفظ كمسودة
             </button>
+            {/* Send button */}
             <button
               onClick={handleSubmit}
-              disabled={isSending}
+              disabled={isSending || isSavingDraft}
               className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed rounded-lg shadow-sm shadow-blue-600/20 transition-all active:scale-95 cursor-pointer"
             >
               {isSending ? (
@@ -307,7 +409,18 @@ export default function ComposePage() {
 
         {/* Main Content Area */}
         <div className="flex-1 overflow-hidden flex flex-col relative">
-          
+
+          {/* Draft restore notice */}
+          {isEditingDraft && incomingDraft?.attachmentNames?.length > 0 && (
+            <div className="mx-8 mt-4 p-3 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 flex-shrink-0">
+              <IconInfo />
+              <span>
+                المرفقات السابقة لا يمكن استعادتها تلقائيًا. يرجى إعادة إرفاق:
+                <strong className="mx-1">{incomingDraft.attachmentNames.join('، ')}</strong>
+              </span>
+            </div>
+          )}
+
           {/* Mode Switcher */}
           <div className="flex justify-center pt-6 pb-4 flex-shrink-0">
             <div className="flex bg-white p-1 rounded-full border border-slate-200/80 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)]">
@@ -339,7 +452,7 @@ export default function ComposePage() {
 
           {/* Form Layout */}
           <form id="compose-form" onSubmit={handleSubmit} className="flex-1 overflow-hidden flex px-8 pb-8 gap-6 max-w-7xl mx-auto w-full">
-            
+
             {/* Editor Area (Flex Grow) */}
             <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden relative min-h-0">
               <div className="p-5 border-b border-slate-100 space-y-4 flex-shrink-0 bg-slate-50/30">
@@ -397,11 +510,29 @@ export default function ComposePage() {
                 <MultiSelectPanel />
               </div>
             )}
-            
+
           </form>
 
         </div>
       </div>
+
+      {/* ── Toast Notification ── */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* ── Inline keyframe for toast slide-up animation ── */}
+      <style>{`
+        @keyframes slide-up {
+          from { opacity: 0; transform: translate(-50%, 1.5rem); }
+          to   { opacity: 1; transform: translate(-50%, 0); }
+        }
+        .animate-slide-up { animation: slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+      `}</style>
     </div>
   );
 }
