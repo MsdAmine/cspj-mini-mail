@@ -31,7 +31,7 @@ export default function Login({ onForgotPassword }) {
     serverError: isRTL ? 'خطأ في الاتصال بالخادم.' : 'Erreur de connexion au serveur.',
     invalidCode: isRTL ? 'رمز التحقق غير صالح.' : 'Code de vérification invalide.',
     subtitle: isRTL ? 'منصة المراسلات الرسمية للمجلس الأعلى للسلطة القضائية' : 'Plateforme Officielle de Messagerie institutionnelle',
-    emailPlaceholder: isRTL ? 'البريد الإلكتروني (admin@cspj.ma)' : 'Adresse e-mail (admin@cspj.ma)',
+    emailPlaceholder: isRTL ? 'البريد الإلكتروني' : 'Adresse e-mail',
     passwordPlaceholder: isRTL ? 'كلمة المرور' : 'Mot de passe',
     forgotPassword: isRTL ? 'نسيت كلمة المرور؟' : 'Mot de passe oublié ?',
     twoFactorSetup: isRTL ? 'إعداد التحقق بخطوتين' : 'Configuration de la validation en deux étapes',
