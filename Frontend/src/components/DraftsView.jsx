@@ -430,34 +430,25 @@ export default function DraftsView() {
 
   return (
     <>
-      {/* ── Full-viewport workspace ── */}
+      {/* ── Outer: full height, column layout, no overflow ── */}
       <div
-        className="flex-1 overflow-y-auto relative"
+        className="h-full flex flex-col overflow-hidden"
         dir="rtl"
         style={{ background: '#F8FAFC' }}
       >
-        {/* Subtle decorative blobs */}
+        {/* ── Sticky frosted-glass header ── */}
         <div
-          className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none"
+          className="sticky top-0 z-10 flex-shrink-0 px-6 pt-8 pb-5"
           style={{
-            background: 'radial-gradient(circle, rgba(251,191,36,0.05) 0%, transparent 70%)',
-            transform: 'translate(-30%, -30%)',
+            background: 'rgba(248,250,252,0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderBottom: '1px solid rgba(226,232,240,0.6)',
           }}
-        />
-        <div
-          className="absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full pointer-events-none"
-          style={{
-            background: 'radial-gradient(circle, rgba(37,99,235,0.04) 0%, transparent 70%)',
-            transform: 'translate(30%, 30%)',
-          }}
-        />
-
-        <div className="relative max-w-3xl mx-auto px-6 py-10">
-
-          {/* ── Section header ── */}
-          <div className="flex items-start justify-between mb-10">
-            {/* Right side: icon + title + subtitle (RTL: this is the "start") */}
+        >
+          <div className="max-w-3xl mx-auto">
             <div className="flex items-center gap-4">
+              {/* Amber pen icon badge */}
               <div
                 className="w-12 h-12 rounded-2xl flex items-center justify-center text-amber-600 flex-shrink-0"
                 style={{
@@ -483,43 +474,44 @@ export default function DraftsView() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Left side: new compose shortcut (shown when drafts exist) */}
-            {drafts.length > 0 && (
-              <button
-                id="drafts-new-compose-btn"
-                onClick={() => navigate('/compose')}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-blue-700 transition-all duration-200 cursor-pointer"
-                style={{
-                  background: 'rgba(219,234,254,0.7)',
-                  border: '1px solid rgba(191,219,254,0.8)',
-                  boxShadow: '0 1px 4px rgba(37,99,235,0.08)',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(191,219,254,0.9)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(219,234,254,0.7)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-              >
-                <PlusIcon className="w-4 h-4" />
-                رسالة جديدة
-              </button>
+        {/* ── Scrollable cards area ── */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden relative">
+          {/* Subtle decorative blobs — clipped by parent overflow-hidden */}
+          <div
+            className="absolute top-0 left-0 w-96 h-96 rounded-full pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle, rgba(251,191,36,0.05) 0%, transparent 70%)',
+              transform: 'translate(-40%, -30%)',
+            }}
+          />
+          <div
+            className="absolute bottom-0 right-0 w-80 h-80 rounded-full pointer-events-none"
+            style={{
+              background: 'radial-gradient(circle, rgba(37,99,235,0.04) 0%, transparent 70%)',
+              transform: 'translate(30%, 30%)',
+            }}
+          />
+
+          <div className="relative max-w-3xl mx-auto px-6 pt-8 pb-24">
+            {/* ── Draft cards or empty state ── */}
+            {drafts.length === 0 ? (
+              <EmptyDrafts onCompose={() => navigate('/compose')} />
+            ) : (
+              <div className="space-y-4">
+                {drafts.map((draft) => (
+                  <DraftCard
+                    key={draft.draftId}
+                    draft={draft}
+                    onEdit={handleEdit}
+                    onDelete={handleConfirmDelete}
+                  />
+                ))}
+              </div>
             )}
           </div>
-
-          {/* ── Draft cards or empty state ── */}
-          {drafts.length === 0 ? (
-            <EmptyDrafts onCompose={() => navigate('/compose')} />
-          ) : (
-            <div className="space-y-4">
-              {drafts.map((draft) => (
-                <DraftCard
-                  key={draft.draftId}
-                  draft={draft}
-                  onEdit={handleEdit}
-                  onDelete={handleConfirmDelete}
-                />
-              ))}
-            </div>
-          )}
-
         </div>
 
         {/* ── Floating Action Button (FAB) ── */}
