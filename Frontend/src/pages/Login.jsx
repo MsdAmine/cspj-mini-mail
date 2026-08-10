@@ -170,9 +170,9 @@ export default function Login({ onForgotPassword }) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder={t.emailPlaceholder}
-                    className={`w-full ${isRTL ? 'pr-11 pl-4' : 'pl-11 pr-4'} py-3.5 bg-slate-50/50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all duration-200`}
+                    className={`w-full ${isRTL ? 'pr-11 pl-4 text-right placeholder:text-right' : 'pl-11 pr-4'} py-3.5 bg-slate-50/50 border border-slate-300 rounded-lg text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all duration-200`}
                     disabled={isSubmitting}
-                    dir="ltr"
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                 </div>
 
