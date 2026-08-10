@@ -7,6 +7,7 @@ import api from '../services/api';
 import MailList from '../components/MailList';
 import TiptapEditor from '../components/TiptapEditor';
 import Groups from './Groups';
+import DraftsView from '../components/DraftsView';
 import { Send, AlertTriangle } from 'lucide-react';
 
 // ── Role → Arabic label helper ──────────────────────────────────────────────
@@ -69,31 +70,10 @@ export default function Dashboard() {
     replyToThread, 
     toggleArchiveMessage,
     activeFolder,
-    drafts,
-    deleteDraft,
   } = useMail();
   
   const [replyBody, setReplyBody] = useState('');
-
-  // ── Draft delete modal state ──
-  const [draftToDelete, setDraftToDelete] = useState(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [toast, setToast] = useState(null);
-
-  const confirmDeleteDraft = (draftId) => {
-    setDraftToDelete(draftId);
-    setIsDeleteModalOpen(true);
-  };
-
-  const executeDeleteDraft = async () => {
-    if (draftToDelete) {
-      await deleteDraft(draftToDelete);
-      setDraftToDelete(null);
-      setIsDeleteModalOpen(false);
-      setToast({ message: 'تم حذف المسودة', type: 'success' });
-      setTimeout(() => setToast(null), 3000);
-    }
-  };
 
   const isAdmin = user?.role === 'Administrateur';
 
@@ -155,137 +135,7 @@ export default function Dashboard() {
 
       {/* ── Drafts view ── */}
       {activeFolder === 'drafts' ? (
-        <div className="flex-1 overflow-y-auto px-6 py-8" dir="rtl">
-          <div className="max-w-3xl mx-auto">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">المسودات</h2>
-                  <p className="text-xs text-slate-500">{drafts.length} مسودة محفوظة</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Empty state */}
-            {drafts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-24 gap-4 text-slate-400">
-                <div className="w-20 h-20 rounded-full bg-slate-100/60 flex items-center justify-center">
-                  <svg className="w-9 h-9 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.25}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                  </svg>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-slate-600">لا توجد مسودات</p>
-                  <p className="text-xs text-slate-400 mt-1">احفظ رسالة كمسودة لتظهر هنا.</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {drafts.map((draft) => {
-                  const savedDate = new Date(draft.savedAt);
-                  const bodyPreview = draft.body
-                    ? draft.body.replace(/<[^>]*>?/gm, '').slice(0, 120)
-                    : '';
-                  const isMulti = draft.messageMode === 'diffusion';
-
-                  return (
-                    <div
-                      key={draft.draftId}
-                      className="group relative bg-white border border-slate-200 hover:border-amber-300 rounded-2xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
-                    >
-                      {/* Amber left accent */}
-                      <div className="absolute right-0 top-0 bottom-0 w-1 rounded-r-2xl bg-amber-400/70" />
-
-                      <div className="flex items-start gap-4 p-5 pe-6">
-                        {/* Draft icon avatar */}
-                        <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 flex-shrink-0 mt-0.5">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                          </svg>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-3 mb-2">
-                            <h3 className="text-base font-bold text-slate-900 truncate">
-                              {draft.subject?.trim() || <span className="text-slate-400 font-medium italic">بدون موضوع</span>}
-                            </h3>
-                            <span className="text-xs font-mono text-slate-400 whitespace-nowrap flex-shrink-0 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
-                              {savedDate.toLocaleDateString('ar-MA', { day: '2-digit', month: 'short' })}
-                              {' • '}
-                              {savedDate.toLocaleTimeString('ar-MA', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-
-                          {/* Mode badge & Body preview */}
-                          <div className="flex items-center gap-3">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border flex-shrink-0 ${
-                              isMulti
-                                ? 'bg-violet-50 text-violet-700 border-violet-200/80'
-                                : 'bg-slate-100 text-slate-600 border-slate-200'
-                            }`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${isMulti ? 'bg-violet-500' : 'bg-slate-400'}`} />
-                              {isMulti ? 'إرسال متعدد' : 'رسالة فردية'}
-                            </span>
-                            
-                            {bodyPreview && (
-                              <p className="text-sm text-slate-500 leading-relaxed truncate">
-                                {bodyPreview}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Attachment names notice */}
-                          {draft.attachmentNames?.length > 0 && (
-                            <div className="flex items-center gap-1.5 mt-3 text-[11px] text-slate-400">
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.586 6.586a6 6 0 108.486 8.486L20 13" />
-                              </svg>
-                              {draft.attachmentNames.length} مرفق (يحتاج إعادة إرفاق)
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-3 flex-shrink-0 mr-4">
-                          {/* Edit / Open button */}
-                          <button
-                            onClick={() => navigate('/compose', { state: { draft } })}
-                            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 hover:border-amber-300 rounded-lg transition-all duration-150 cursor-pointer"
-                            title="تحرير المسودة"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                            </svg>
-                            تحرير
-                          </button>
-
-                          {/* Delete button */}
-                          <button
-                            onClick={() => confirmDeleteDraft(draft.draftId)}
-                            className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 hover:border-rose-300 rounded-lg transition-all duration-150 cursor-pointer"
-                            title="حذف المسودة"
-                          >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                            حذف
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
+        <DraftsView />
       ) : activeFolder === 'groups' ? (
         <Groups />
       ) : (
@@ -556,36 +406,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Delete Confirmation Modal ── */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in" dir="rtl">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-slide-up border border-slate-200">
-            <div className="p-6">
-              <div className="w-12 h-12 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 mb-4 mx-auto">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-bold text-center text-slate-900 mb-2">تأكيد الحذف</h3>
-              <p className="text-sm text-center text-slate-500 mb-6">
-                هل أنت متأكد أنك تريد حذف هذه المسودة؟ لا يمكن التراجع عن هذا الإجراء.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setIsDeleteModalOpen(false)}
-                  className="flex-1 py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-xl transition-colors cursor-pointer"
-                >
-                  إلغاء
-                </button>
-                <button
-                  onClick={executeDeleteDraft}
-                  className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl shadow-sm shadow-rose-600/20 transition-colors cursor-pointer"
-                >
-                  حذف
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* ── Toast Notification ── */}
       {toast && (
