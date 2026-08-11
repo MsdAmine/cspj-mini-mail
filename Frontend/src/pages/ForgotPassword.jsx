@@ -119,7 +119,7 @@ function OtpInput({ value, onChange, disabled }) {
   }, []);
 
   return (
-    <div className="flex gap-2.5 justify-center" dir="ltr">
+    <div className="flex gap-2.5 justify-center" dir="ltr" style={{ direction: 'ltr' }}>
       {Array.from({ length: 6 }).map((_, idx) => (
         <input
           key={idx}
@@ -128,6 +128,7 @@ function OtpInput({ value, onChange, disabled }) {
           type="text"
           inputMode="numeric"
           maxLength={1}
+          dir="ltr"
           value={digits[idx] || ''}
           onChange={e => handleChange(e, idx)}
           onKeyDown={e => handleKey(e, idx)}
