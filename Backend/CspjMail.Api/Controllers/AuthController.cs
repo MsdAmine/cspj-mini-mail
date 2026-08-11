@@ -222,7 +222,7 @@ namespace CspjMail.Api.Controllers
             });
         }
 
-        // ─── Forgot Password (OTP flow) ───────────────────────────────────────────
+        // ─── Forgot Password (TOTP flow) ──────────────────────────────────────────
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
         {
@@ -230,58 +230,47 @@ namespace CspjMail.Api.Controllers
             var user = await _context.Utilisateurs
                 .FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
 
-            if (user == null || !user.Actif)
+            // Confirm the account exists, is active, and already has a TOTP secret
+            // enrolled (i.e. the user has scanned the QR code in their Authenticator app).
+            if (user == null || !user.Actif || string.IsNullOrEmpty(user.TwoFactorSecret))
             {
-                // Return a generic 200 so callers cannot enumerate valid emails.
-                return Ok(new { success = true });
+                // Return a generic 200 — do not disclose whether the email exists or
+                // whether TOTP has been configured.
+                return Ok(new { success = true, requiresTotp = false });
             }
 
-            // ── Generate a cryptographically secure 6-digit OTP ────────────────────
-            var otpCode = System.Security.Cryptography.RandomNumberGenerator
-                .GetInt32(100000, 1000000)
-                .ToString();
-
-            // Store OTP in the existing PasswordResetToken column (plain text is
-            // acceptable: it is short-lived, numeric-only, and served over HTTPS).
-            user.PasswordResetToken = otpCode;
-            user.ResetTokenExpiry   = DateTime.UtcNow.AddMinutes(5);
-            await _context.SaveChangesAsync();
-
-            Console.Error.WriteLine($"[OTP] Generated for {user.Email}: {otpCode} (expires in 5 min)");
-
-            // In Development: echo the OTP in the response so the UI dev panel
-            // can display it without needing a configured SMS / email gateway.
-            if (_env.IsDevelopment())
-            {
-                return Ok(new { success = true, devOtp = otpCode });
-            }
-
-            // Production: OTP would be delivered via SMS / transactional email here.
-            return Ok(new { success = true });
+            return Ok(new { success = true, requiresTotp = true });
         }
 
-        // ─── Verify OTP ──────────────────────────────────────────────────────────
+        // ─── Verify TOTP for password reset ───────────────────────────────────────
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
         {
             var user = await _context.Utilisateurs
                 .FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
 
-            if (user == null || !user.Actif ||
-                string.IsNullOrWhiteSpace(user.PasswordResetToken) ||
-                user.ResetTokenExpiry == null ||
-                user.ResetTokenExpiry < DateTime.UtcNow ||
-                user.PasswordResetToken != dto.OtpCode.Trim())
+            if (user == null || !user.Actif || string.IsNullOrEmpty(user.TwoFactorSecret))
             {
-                return BadRequest(new { error = "رمز التحقق غير صحيح أو منتهي الصلاحية. / Code OTP invalide ou expiré." });
+                return BadRequest(new { error = "رمز التحقق غير صحيح أو منتهي الصلاحية. / Code TOTP invalide ou expiré." });
             }
 
-            // Invalidate the OTP immediately — single use.
-            user.PasswordResetToken = null;
-            user.ResetTokenExpiry   = null;
-            await _context.SaveChangesAsync();
+            // ── Validate the TOTP code using the user's existing Authenticator secret ──
+            // This reuses the exact same OtpNet path as the 2FA login flow.
+            var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
+            var totp        = new Totp(secretBytes);
 
-            // Issue a short-lived (10 min) signed JWT that authorises the password reset.
+            // Allow ±1 time step (±30 s) for clock skew — same tolerance as login.
+            bool isValid = totp.VerifyTotp(
+                dto.OtpCode?.Trim() ?? string.Empty,
+                out _,
+                VerificationWindow.RfcSpecifiedNetworkDelay);
+
+            if (!isValid)
+            {
+                return BadRequest(new { error = "رمز التحقق غير صحيح أو منتهي الصلاحية. / Code TOTP invalide ou expiré." });
+            }
+
+            // ── Issue a short-lived (10 min) signed JWT that authorises the reset ────
             var jwtSettings = _configuration.GetSection("Jwt");
             var key         = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 
@@ -302,7 +291,7 @@ namespace CspjMail.Api.Controllers
                     SecurityAlgorithms.HmacSha256Signature)
             };
 
-            var handler          = new JwtSecurityTokenHandler();
+            var handler           = new JwtSecurityTokenHandler();
             var resetSessionToken = handler.WriteToken(handler.CreateToken(tokenDescriptor));
 
             return Ok(new { success = true, resetSessionToken });
