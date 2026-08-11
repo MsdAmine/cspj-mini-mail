@@ -222,7 +222,7 @@ namespace CspjMail.Api.Controllers
             });
         }
 
-        // ─── Forgot Password ──────────────────────────────────────────────────────
+        // ─── Forgot Password (OTP flow) ───────────────────────────────────────────
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
         {
@@ -231,136 +231,137 @@ namespace CspjMail.Api.Controllers
                 .FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
 
             if (user == null || !user.Actif)
-                return Ok(new { message = "If an account exists with this email, a password reset link has been sent." });
+            {
+                // Return a generic 200 so callers cannot enumerate valid emails.
+                return Ok(new { success = true });
+            }
 
-            // Generate a cryptographically secure token
-            var tokenBytes = new byte[32];
-            System.Security.Cryptography.RandomNumberGenerator.Fill(tokenBytes);
-            var token = Convert.ToBase64String(tokenBytes)
-                .Replace("+", "-").Replace("/", "_").Replace("=", ""); // URL-safe
+            // ── Generate a cryptographically secure 6-digit OTP ────────────────────
+            var otpCode = System.Security.Cryptography.RandomNumberGenerator
+                .GetInt32(100000, 1000000)
+                .ToString();
 
-            user.PasswordResetToken = token;
-            user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(15);
+            // Store OTP in the existing PasswordResetToken column (plain text is
+            // acceptable: it is short-lived, numeric-only, and served over HTTPS).
+            user.PasswordResetToken = otpCode;
+            user.ResetTokenExpiry   = DateTime.UtcNow.AddMinutes(5);
             await _context.SaveChangesAsync();
 
-            var resetLink = $"http://localhost:5173/reset-password?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(user.Email)}";
+            Console.Error.WriteLine($"[OTP] Generated for {user.Email}: {otpCode} (expires in 5 min)");
 
-            var htmlBody = $@"
-<!DOCTYPE html>
-<html lang=""fr"">
-<head>
-  <meta charset=""UTF-8"" />
-  <meta name=""viewport"" content=""width=device-width, initial-scale=1.0""/>
-  <title>Réinitialisation du mot de passe</title>
-</head>
-<body style=""margin:0;padding:0;background-color:#0f172a;font-family:'Segoe UI',Arial,sans-serif;"">
-  <table width=""100%"" cellpadding=""0"" cellspacing=""0"" style=""background-color:#0f172a;padding:40px 0;"">
-    <tr>
-      <td align=""center"">
-        <table width=""560"" cellpadding=""0"" cellspacing=""0""
-               style=""background-color:#1e293b;border-radius:16px;border:1px solid #334155;overflow:hidden;"">
+            // In Development: echo the OTP in the response so the UI dev panel
+            // can display it without needing a configured SMS / email gateway.
+            if (_env.IsDevelopment())
+            {
+                return Ok(new { success = true, devOtp = otpCode });
+            }
 
-          <!-- Header -->
-          <tr>
-            <td style=""background:linear-gradient(135deg,#1d4ed8 0%,#4f46e5 100%);
-                        padding:32px 40px;text-align:center;"">
-              <div style=""display:inline-block;background:rgba(255,255,255,0.15);
-                           border-radius:50%;padding:12px;margin-bottom:12px;"">
-                <img src=""https://img.icons8.com/fluency/48/000000/lock.png""
-                     width=""40"" height=""40"" alt=""Lock"" style=""display:block;""/>
-              </div>
-              <h1 style=""margin:0;color:#ffffff;font-size:22px;font-weight:700;
-                          letter-spacing:-0.5px;"">CSPJ Mini Mail</h1>
-              <p style=""margin:6px 0 0;color:rgba(255,255,255,0.75);font-size:13px;"">
-                Plateforme de messagerie interne professionnelle
-              </p>
-            </td>
-          </tr>
+            // Production: OTP would be delivered via SMS / transactional email here.
+            return Ok(new { success = true });
+        }
 
-          <!-- Body -->
-          <tr>
-            <td style=""padding:36px 40px;"">
-              <h2 style=""margin:0 0 16px;color:#f1f5f9;font-size:18px;font-weight:600;"">
-                Réinitialisation de votre mot de passe
-              </h2>
-              <p style=""margin:0 0 16px;color:#94a3b8;font-size:14px;line-height:1.7;"">
-                Bonjour <strong style=""color:#e2e8f0;"">{user.Prenom} {user.Nom}</strong>,
-              </p>
-              <p style=""margin:0 0 28px;color:#94a3b8;font-size:14px;line-height:1.7;"">
-                Nous avons reçu une demande de réinitialisation du mot de passe associé
-                à votre compte. Cliquez sur le bouton ci-dessous pour choisir un nouveau
-                mot de passe. Ce lien est valable pendant <strong style=""color:#e2e8f0;"">15 minutes</strong>.
-              </p>
+        // ─── Verify OTP ──────────────────────────────────────────────────────────
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
+        {
+            var user = await _context.Utilisateurs
+                .FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
 
-              <!-- CTA Button -->
-              <table width=""100%"" cellpadding=""0"" cellspacing=""0"">
-                <tr>
-                  <td align=""center"">
-                    <a href=""{resetLink}""
-                       style=""display:inline-block;background:linear-gradient(135deg,#2563eb,#4f46e5);
-                               color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;
-                               padding:14px 36px;border-radius:10px;
-                               box-shadow:0 4px 14px rgba(37,99,235,0.45);"">
-                      Réinitialiser mon mot de passe →
-                    </a>
-                  </td>
-                </tr>
-              </table>
+            if (user == null || !user.Actif ||
+                string.IsNullOrWhiteSpace(user.PasswordResetToken) ||
+                user.ResetTokenExpiry == null ||
+                user.ResetTokenExpiry < DateTime.UtcNow ||
+                user.PasswordResetToken != dto.OtpCode.Trim())
+            {
+                return BadRequest(new { error = "رمز التحقق غير صحيح أو منتهي الصلاحية. / Code OTP invalide ou expiré." });
+            }
 
-              <p style=""margin:28px 0 0;color:#64748b;font-size:12px;line-height:1.7;"">
-                Si vous n'avez pas demandé cette réinitialisation, ignorez cet e-mail —
-                votre mot de passe restera inchangé.<br/><br/>
-                En cas de problème avec le bouton, copiez ce lien dans votre navigateur :<br/>
-                <a href=""{resetLink}"" style=""color:#3b82f6;word-break:break-all;"">{resetLink}</a>
-              </p>
-            </td>
-          </tr>
+            // Invalidate the OTP immediately — single use.
+            user.PasswordResetToken = null;
+            user.ResetTokenExpiry   = null;
+            await _context.SaveChangesAsync();
 
-          <!-- Footer -->
-          <tr>
-            <td style=""padding:20px 40px;border-top:1px solid #334155;text-align:center;"">
-              <p style=""margin:0;color:#475569;font-size:11px;"">
-                © {DateTime.UtcNow.Year} CSPJ Mini Mail · Ce message est automatique, merci de ne pas y répondre.
-              </p>
-            </td>
-          </tr>
+            // Issue a short-lived (10 min) signed JWT that authorises the password reset.
+            var jwtSettings = _configuration.GetSection("Jwt");
+            var key         = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>";
+            var claims = new[]
+            {
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim("purpose", "password_reset")
+            };
 
-            bool emailSent = false;
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject            = new ClaimsIdentity(claims),
+                Expires            = DateTime.UtcNow.AddMinutes(10),
+                Issuer             = jwtSettings["Issuer"],
+                Audience           = jwtSettings["Audience"],
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var handler          = new JwtSecurityTokenHandler();
+            var resetSessionToken = handler.WriteToken(handler.CreateToken(tokenDescriptor));
+
+            return Ok(new { success = true, resetSessionToken });
+        }
+
+        // ─── Reset Password via OTP session token ────────────────────────────────
+        [HttpPost("reset-password-otp")]
+        public async Task<IActionResult> ResetPasswordOtp([FromBody] ResetPasswordOtpDto dto)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Email) ||
+                string.IsNullOrWhiteSpace(dto.ResetToken) ||
+                string.IsNullOrWhiteSpace(dto.NewPassword))
+                return BadRequest(new { error = "Tous les champs sont requis." });
+
+            // Validate the reset session token.
+            var jwtSettings = _configuration.GetSection("Jwt");
+            var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
+
+            var handler = new JwtSecurityTokenHandler();
+            ClaimsPrincipal principal;
             try
             {
-                await _emailService.SendEmailAsync(
-                    user.Email,
-                    "Réinitialisation de votre mot de passe — CSPJ Mini Mail",
-                    htmlBody);
-                emailSent = true;
-            }
-            catch (Exception ex)
-            {
-                // Log but do not expose errors to the caller
-                Console.Error.WriteLine($"Failed to send reset email: {ex.Message}");
-            }
-
-            // In Development: surface the reset link in the API response so developers
-            // can test the full reset flow without a configured SMTP server.
-            // This field is intentionally omitted in Production.
-            if (_env.IsDevelopment() && !emailSent)
-            {
-                Console.Error.WriteLine($"[DEV] Reset Password Link for {user.Email}: {resetLink}");
-                return Ok(new
+                principal = handler.ValidateToken(dto.ResetToken, new TokenValidationParameters
                 {
-                    message = "If an account exists with this email, a password reset link has been sent.",
-                    devResetLink = resetLink
-                });
+                    ValidateIssuer           = true,
+                    ValidateAudience         = true,
+                    ValidateLifetime         = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer              = jwtSettings["Issuer"],
+                    ValidAudience            = jwtSettings["Audience"],
+                    IssuerSigningKey         = key,
+                    ClockSkew                = TimeSpan.Zero
+                }, out _);
+            }
+            catch
+            {
+                return BadRequest(new { error = "Le jeton de réinitialisation est invalide ou a expiré." });
             }
 
-            return Ok(new { message = "If an account exists with this email, a password reset link has been sent." });
+            // Ensure the token was issued for this specific email and purpose.
+            var tokenEmail   = principal.FindFirstValue(ClaimTypes.Email);
+            var tokenPurpose = principal.FindFirstValue("purpose");
+
+            if (!string.Equals(tokenEmail, dto.Email.Trim().ToLower(), StringComparison.OrdinalIgnoreCase) ||
+                tokenPurpose != "password_reset")
+            {
+                return BadRequest(new { error = "Le jeton de réinitialisation est invalide." });
+            }
+
+            var user = await _context.Utilisateurs
+                .FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
+
+            if (user == null || !user.Actif)
+                return BadRequest(new { error = "Compte introuvable." });
+
+            user.MotDePasseHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { success = true, message = "Votre mot de passe a été réinitialisé avec succès." });
         }
 
         // ─── Reset Password ───────────────────────────────────────────────────────
