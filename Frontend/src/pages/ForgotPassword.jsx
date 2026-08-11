@@ -1,13 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import api from '../services/api';
 
-
 /* ─── Step indicator ─────────────────────────────────────────────────────── */
-function StepIndicator({ current }) {
+function StepIndicator({ current, isRTL }) {
   const steps = [
-    { id: 'email',       label: 'البريد', labelFr: 'E-mail'  },
-    { id: 'otp',         label: 'الرمز',  labelFr: 'Code OTP' },
-    { id: 'newPassword', label: 'الكلمة', labelFr: 'Mot de passe' },
+    { id: 'email',       labelAr: 'البريد',  labelFr: 'E-mail'       },
+    { id: 'otp',         labelAr: 'الرمز',   labelFr: 'Code TOTP'    },
+    { id: 'newPassword', labelAr: 'الكلمة',  labelFr: 'Mot de passe' },
   ];
   const order = ['email', 'otp', 'newPassword', 'success'];
   const currentIdx = order.indexOf(current);
@@ -15,16 +14,16 @@ function StepIndicator({ current }) {
   return (
     <div className="flex items-center justify-center gap-0 mb-8 select-none" dir="ltr">
       {steps.map((step, idx) => {
-        const stepIdx = order.indexOf(step.id);
-        const isDone    = stepIdx < currentIdx;
-        const isActive  = stepIdx === currentIdx;
-        const isFuture  = stepIdx > currentIdx;
+        const stepIdx  = order.indexOf(step.id);
+        const isDone   = stepIdx < currentIdx;
+        const isActive = stepIdx === currentIdx;
+        const isFuture = stepIdx > currentIdx;
         return (
           <React.Fragment key={step.id}>
             <div className="flex flex-col items-center gap-1">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  isDone   ? 'bg-emerald-500 text-white shadow-sm'      :
+                  isDone   ? 'bg-emerald-500 text-white shadow-sm' :
                   isActive ? 'bg-slate-900 text-white shadow-md ring-2 ring-slate-300' :
                              'bg-slate-100 text-slate-400 border border-slate-200'
                 }`}
@@ -36,7 +35,7 @@ function StepIndicator({ current }) {
                 ) : idx + 1}
               </div>
               <span className={`text-[9px] font-medium ${isActive ? 'text-slate-800' : isFuture ? 'text-slate-300' : 'text-emerald-600'}`}>
-                {step.labelFr}
+                {isRTL ? step.labelAr : step.labelFr}
               </span>
             </div>
             {idx < steps.length - 1 && (
@@ -49,7 +48,7 @@ function StepIndicator({ current }) {
   );
 }
 
-/* ─── OTP Input Row ──────────────────────────────────────────────────────── */
+/* ─── OTP Input Row (always LTR) ─────────────────────────────────────────── */
 function OtpInput({ value, onChange, disabled }) {
   const inputsRef = useRef([]);
   const digits = value.split('');
@@ -71,14 +70,8 @@ function OtpInput({ value, onChange, disabled }) {
       return;
     }
 
-    if (key === 'ArrowLeft' && idx > 0) {
-      inputsRef.current[idx - 1]?.focus();
-      return;
-    }
-    if (key === 'ArrowRight' && idx < 5) {
-      inputsRef.current[idx + 1]?.focus();
-      return;
-    }
+    if (key === 'ArrowLeft' && idx > 0)  { inputsRef.current[idx - 1]?.focus(); return; }
+    if (key === 'ArrowRight' && idx < 5) { inputsRef.current[idx + 1]?.focus(); return; }
 
     if (!/^\d$/.test(key)) return;
     e.preventDefault();
@@ -86,10 +79,7 @@ function OtpInput({ value, onChange, disabled }) {
     const next = [...digits];
     next[idx] = key;
     onChange(next.join(''));
-
-    if (idx < 5) {
-      inputsRef.current[idx + 1]?.focus();
-    }
+    if (idx < 5) inputsRef.current[idx + 1]?.focus();
   };
 
   const handlePaste = (e) => {
@@ -97,12 +87,10 @@ function OtpInput({ value, onChange, disabled }) {
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (!pasted) return;
     onChange(pasted.padEnd(6, '').slice(0, 6));
-    const focusIdx = Math.min(pasted.length, 5);
-    inputsRef.current[focusIdx]?.focus();
+    inputsRef.current[Math.min(pasted.length, 5)]?.focus();
   };
 
   const handleChange = (e, idx) => {
-    // Handles mobile soft-keyboard input
     const val = e.target.value.replace(/\D/g, '');
     if (!val) return;
     const next = [...digits];
@@ -112,7 +100,6 @@ function OtpInput({ value, onChange, disabled }) {
   };
 
   useEffect(() => {
-    // Auto-focus first empty box when component mounts
     const firstEmpty = digits.findIndex(d => !d);
     inputsRef.current[firstEmpty === -1 ? 5 : firstEmpty]?.focus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -158,8 +145,8 @@ function PasswordStrength({ password }) {
 
   if (!password) return null;
 
-  const labels = ['', 'Faible', 'Moyen', 'Bon', 'Fort'];
-  const colors = ['', 'bg-rose-400', 'bg-amber-400', 'bg-sky-400', 'bg-emerald-400'];
+  const labels = ['', 'Faible / ضعيف', 'Moyen / متوسط', 'Bon / جيد', 'Fort / قوي'];
+  const colors  = ['', 'bg-rose-400', 'bg-amber-400', 'bg-sky-400', 'bg-emerald-400'];
 
   return (
     <div className="mt-2 space-y-1.5">
@@ -176,10 +163,10 @@ function PasswordStrength({ password }) {
 }
 
 /* ─── Error alert ────────────────────────────────────────────────────────── */
-function ErrorAlert({ message }) {
+function ErrorAlert({ message, isRTL }) {
   if (!message) return null;
   return (
-    <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm flex items-start gap-2 animate-[fadeIn_0.2s_ease]" dir="rtl">
+    <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-lg text-sm flex items-start gap-2" dir={isRTL ? 'rtl' : 'ltr'}>
       <svg className="w-5 h-5 flex-shrink-0 text-rose-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
@@ -190,102 +177,139 @@ function ErrorAlert({ message }) {
 
 /* ─── Main component ─────────────────────────────────────────────────────── */
 export default function ForgotPassword({ onBack }) {
-  // State machine: email → otp → newPassword → success
-  const [step, setStep]                     = useState('email');
 
-  // Step 1 state
-  const [email, setEmail]                   = useState('');
+  /* ── Language ─────────────────────────────────────────────────────────── */
+  const [lang, setLang] = useState('fr');
+  const isRTL = lang === 'ar';
 
-  // Step 2 state
-  const [otp, setOtp]                       = useState('');
+  // Translation map — mirrors the pattern used in Login.jsx
+  const t = {
+    // Page titles
+    titleEmail:      isRTL ? 'إعادة ضبط كلمة المرور'        : 'Réinitialisation du mot de passe',
+    titleOtp:        isRTL ? 'رمز المصادقة'                   : 'Code Authentificateur',
+    titlePassword:   isRTL ? 'تعيين كلمة المرور الجديدة'      : 'Définir un nouveau mot de passe',
+    titleSuccess:    isRTL ? 'تمّت إعادة الضبط!'              : 'Réinitialisation réussie !',
+    subtitleEmail:   isRTL ? 'الخطوة الأولى'                   : 'Étape 1',
+    subtitleOtp:     isRTL ? 'رمز المصادقة'                   : 'Code Authentificateur',
+    subtitlePwd:     isRTL ? 'كلمة المرور الجديدة'             : 'Nouveau mot de passe',
+    subtitleSuccess: isRTL ? 'تمّ بنجاح'                       : 'Succès',
 
-  // Step 3 state
-  const [resetToken, setResetToken]         = useState('');
-  const [newPassword, setNewPassword]       = useState('');
+    // Step 1
+    step1Desc:       isRTL
+      ? 'أدخل بريدك المؤسساتي. ستحتاج إلى تطبيق المصادقة الخاص بك في الخطوة التالية.'
+      : 'Saisissez votre adresse e-mail. Vous aurez besoin de votre application d\'authentification à l\'étape suivante.',
+    emailPlaceholder: isRTL ? 'البريد الإلكتروني' : 'Adresse e-mail',
+    btnNext:          isRTL ? '← التالي'           : 'Suivant →',
+    btnNextLoading:   isRTL ? 'جارٍ التحقق...'      : 'Vérification...',
+    backToLogin:      isRTL ? 'العودة إلى تسجيل الدخول' : 'Retour à la connexion',
+
+    // Step 2
+    step2CardTitle:   isRTL
+      ? 'أدخل الرمز الظاهر في تطبيق المصادقة الخاص بك'
+      : 'Saisissez le code affiché dans votre application d\'authentification',
+    step2CardBody:    isRTL
+      ? 'افتح Google Authenticator أو Microsoft Authenticator وأدخل الرمز المكوّن من 6 أرقام الظاهر لحسابك.'
+      : 'Ouvrez Google Authenticator ou Microsoft Authenticator et saisissez le code à 6 chiffres affiché pour votre compte.',
+    btnVerify:        isRTL ? '← التحقق من الرمز'  : 'Vérifier le code →',
+    btnVerifyLoading: isRTL ? 'جارٍ التحقق...'       : 'Vérification...',
+    changeEmail:      isRTL ? '← تغيير البريد الإلكتروني' : '← Changer l\'adresse e-mail',
+
+    // Step 3
+    step3Desc:        isRTL ? 'اختر كلمة مرور قوية لحسابك.' : 'Choisissez un mot de passe fort pour votre compte.',
+    pwdPlaceholder:   isRTL ? 'كلمة المرور الجديدة'          : 'Nouveau mot de passe',
+    confirmPlaceholder: isRTL ? 'تأكيد كلمة المرور'         : 'Confirmer le mot de passe',
+    btnSave:          isRTL ? '← تعيين كلمة المرور'         : 'Enregistrer le mot de passe →',
+    btnSaveLoading:   isRTL ? 'جارٍ الحفظ...'                : 'Enregistrement...',
+
+    // Success
+    successTitle: isRTL ? 'تمّ تعيين كلمة المرور بنجاح! 🎉' : 'Mot de passe réinitialisé avec succès ! 🎉',
+    successBody:  isRTL ? 'يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.' : 'Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.',
+    btnBackLogin: isRTL ? 'العودة إلى تسجيل الدخول'          : 'Retour à la connexion',
+
+    // Errors
+    errEmail:    isRTL ? 'يرجى إدخال عنوان بريدك الإلكتروني.' : 'Veuillez saisir votre adresse e-mail.',
+    errNoTotp:   isRTL ? 'لا يمكن إتمام طلب إعادة التعيين لهذا الحساب.' : 'Réinitialisation impossible pour ce compte.',
+    errNetwork:  isRTL ? 'خطأ في الشبكة. يرجى المحاولة مجدداً.' : 'Erreur réseau. Veuillez réessayer.',
+    errOtpLen:   isRTL ? 'يرجى إدخال الرمز المكوّن من 6 أرقام.' : 'Veuillez saisir le code à 6 chiffres.',
+    errOtpWrong: isRTL ? 'رمز التحقق غير صحيح أو منتهي الصلاحية.' : 'Code TOTP invalide ou expiré.',
+    errPwdLen:   isRTL ? 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.' : 'Le mot de passe doit contenir au moins 8 caractères.',
+    errPwdMatch: isRTL ? 'كلمتا المرور غير متطابقتين.' : 'Les mots de passe ne correspondent pas.',
+    errGeneric:  isRTL ? 'حدث خطأ. يرجى إعادة المحاولة.' : 'Une erreur est survenue. Veuillez réessayer.',
+  };
+
+  /* ── State machine ────────────────────────────────────────────────────── */
+  const [step, setStep] = useState('email');
+
+  // Step 1
+  const [email, setEmail] = useState('');
+
+  // Step 2
+  const [otp, setOtp] = useState('');
+
+  // Step 3
+  const [resetToken, setResetToken]           = useState('');
+  const [newPassword, setNewPassword]         = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPw, setShowPw]                 = useState(false);
-  const [showConfirm, setShowConfirm]       = useState(false);
+  const [showPw, setShowPw]                   = useState(false);
+  const [showConfirm, setShowConfirm]         = useState(false);
 
   // Shared
-  const [isSubmitting, setIsSubmitting]     = useState(false);
-  const [error, setError]                   = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError]               = useState('');
 
-  /* ── Step 1: Send OTP ─────────────────────────────────────────────────── */
+  // Clear error on language switch
+  useEffect(() => { setError(''); }, [lang]);
+
+  /* ── Step 1: verify email & TOTP enrollment ───────────────────────────── */
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setError('');
-    if (!email.trim()) {
-      setError('يرجى إدخال عنوان بريدك الإلكتروني / Veuillez saisir votre adresse e-mail.');
-      return;
-    }
+    if (!email.trim()) { setError(t.errEmail); return; }
     setIsSubmitting(true);
     try {
       const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
-      if (!data?.requiresTotp) {
-        // Account not found or TOTP not configured — show generic error to prevent enumeration
-        setError('لا يمكن إتمام طلب إعادة التعيين لهذا الحساب. / Réinitialisation impossible pour ce compte.');
-        return;
-      }
+      if (!data?.requiresTotp) { setError(t.errNoTotp); return; }
       setStep('otp');
     } catch {
-      setError('خطأ في الشبكة. يرجى المحاولة مجدداً / Erreur réseau. Veuillez réessayer.');
+      setError(t.errNetwork);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
-  /* ── Step 2: Verify OTP ───────────────────────────────────────────────── */
+  /* ── Step 2: verify TOTP code ─────────────────────────────────────────── */
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError('');
-    if (otp.length !== 6) {
-      setError('يرجى إدخال الرمز المكوّن من 6 أرقام / Veuillez saisir le code à 6 chiffres.');
-      return;
-    }
+    if (otp.length !== 6) { setError(t.errOtpLen); return; }
     setIsSubmitting(true);
     try {
       const { data } = await api.post('/auth/verify-otp', { email: email.trim(), otpCode: otp });
       setResetToken(data.resetSessionToken);
       setStep('newPassword');
     } catch (err) {
-      const msg = err?.response?.data?.error;
-      setError(msg || 'رمز التحقق غير صحيح أو منتهي الصلاحية / Code TOTP invalide ou expiré.');
+      setError(err?.response?.data?.error || t.errOtpWrong);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
-  /* ── Step 3: Reset password ───────────────────────────────────────────── */
+  /* ── Step 3: save new password ────────────────────────────────────────── */
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
-    if (newPassword.length < 8) {
-      setError('يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل / Le mot de passe doit contenir au moins 8 caractères.');
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setError('كلمتا المرور غير متطابقتين / Les mots de passe ne correspondent pas.');
-      return;
-    }
+    if (newPassword.length < 8)        { setError(t.errPwdLen);   return; }
+    if (newPassword !== confirmPassword) { setError(t.errPwdMatch); return; }
     setIsSubmitting(true);
     try {
-      await api.post('/auth/reset-password-otp', {
-        email:       email.trim(),
-        resetToken,
-        newPassword,
-      });
+      await api.post('/auth/reset-password-otp', { email: email.trim(), resetToken, newPassword });
       setStep('success');
     } catch (err) {
-      const msg = err?.response?.data?.error;
-      setError(msg || 'حدث خطأ. يرجى إعادة المحاولة / Une erreur est survenue.');
+      setError(err?.response?.data?.error || t.errGeneric);
     } finally {
       setIsSubmitting(false);
     }
   };
-
-
 
   /* ── Shared spinner button ────────────────────────────────────────────── */
   const SubmitButton = ({ label, loadingLabel, id }) => (
@@ -309,15 +333,35 @@ export default function ForgotPassword({ onBack }) {
 
   /* ── Render ───────────────────────────────────────────────────────────── */
   return (
-    <div className="relative flex min-h-screen w-screen items-center justify-center bg-slate-50 font-sans antialiased text-slate-900 overflow-hidden selection:bg-slate-200">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="relative flex min-h-screen w-screen items-center justify-center bg-slate-50 font-sans antialiased text-slate-900 overflow-hidden selection:bg-slate-200">
 
       {/* Top accent line */}
-      <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-slate-700 via-slate-900 to-slate-700" />
+      <div className="absolute top-0 inset-x-0 h-1 bg-slate-800" />
+
+      {/* ── Language toggle — mirrors Login.jsx exactly ─────────────────── */}
+      <div className={`absolute top-6 ${isRTL ? 'left-6' : 'right-6'} z-20`} dir="ltr">
+        <div className="flex bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setLang('fr')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${lang === 'fr' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            FR
+          </button>
+          <button
+            type="button"
+            onClick={() => setLang('ar')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${lang === 'ar' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            العربية
+          </button>
+        </div>
+      </div>
 
       <div className="relative w-full max-w-md mx-4 my-8 z-10">
         <div className="bg-white border border-slate-200 shadow-xl rounded-2xl p-8 sm:p-10">
 
-          {/* Header */}
+          {/* ── Header ──────────────────────────────────────────────────── */}
           <div className="text-center mb-6 flex flex-col items-center">
             <div className="relative w-14 h-14 rounded-2xl flex items-center justify-center bg-slate-100 border border-slate-200 shadow-sm mb-4 text-slate-800">
               {step === 'success' ? (
@@ -338,31 +382,33 @@ export default function ForgotPassword({ onBack }) {
                 </svg>
               )}
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 mb-0.5" dir="rtl">
-              {step === 'success' ? 'تمّت إعادة الضبط!' :
-               step === 'newPassword' ? 'تعيين كلمة المرور الجديدة' :
-               step === 'otp' ? 'رمز المصادقة' :
-               'إعادة ضبط كلمة المرور'}
+
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 mb-0.5">
+              {step === 'success'     ? t.titleSuccess  :
+               step === 'newPassword' ? t.titlePassword :
+               step === 'otp'         ? t.titleOtp      :
+               t.titleEmail}
             </h1>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              {step === 'success' ? 'Mot de passe réinitialisé avec succès' :
-               step === 'newPassword' ? 'Définir un nouveau mot de passe' :
-               step === 'otp' ? 'Code Authentificateur' :
-               'Réinitialisation du mot de passe'}
+              {step === 'success'     ? t.subtitleSuccess :
+               step === 'newPassword' ? t.subtitlePwd     :
+               step === 'otp'         ? t.subtitleOtp     :
+               t.subtitleEmail}
             </p>
           </div>
 
           {/* Step indicator (hide on success) */}
-          {step !== 'success' && <StepIndicator current={step} />}
+          {step !== 'success' && <StepIndicator current={step} isRTL={isRTL} />}
 
-          <ErrorAlert message={error} />
+          <ErrorAlert message={error} isRTL={isRTL} />
 
-          {/* ── STEP 1: Email ─────────────────────────────────────────────── */}
+          {/* ── STEP 1: Email ──────────────────────────────────────────── */}
           {step === 'email' && (
             <form onSubmit={handleSendOtp} className="space-y-4">
-              <p className="text-xs text-slate-500 text-center mb-4" dir="rtl">
-                أدخل بريدك المؤسساتي. ستحتاج إلى تطبيق المصادقة الخاص بك في الخطوة التالية.
+              <p className="text-xs text-slate-500 text-center mb-4">
+                {t.step1Desc}
               </p>
+
               <div className="relative group" dir="ltr">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-800 transition-colors">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -374,80 +420,72 @@ export default function ForgotPassword({ onBack }) {
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="Adresse e-mail / البريد الإلكتروني"
+                  placeholder={t.emailPlaceholder}
                   className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all"
                   disabled={isSubmitting}
+                  dir="ltr"
                   autoFocus
                 />
               </div>
-              <SubmitButton
-                id="send-otp-btn"
-                label="التالي ←"
-                loadingLabel="جارٍ التحقق..."
-              />
+
+              <SubmitButton id="send-otp-btn" label={t.btnNext} loadingLabel={t.btnNextLoading} />
+
               <button
                 type="button"
                 onClick={onBack}
                 className="w-full text-xs font-medium text-slate-500 hover:text-slate-800 transition-colors text-center pt-1"
               >
-                العودة إلى تسجيل الدخول / Retour à la connexion
+                {t.backToLogin}
               </button>
             </form>
           )}
 
-          {/* ── STEP 2: OTP Entry ─────────────────────────────────────────── */}
+          {/* ── STEP 2: TOTP Code ──────────────────────────────────────── */}
           {step === 'otp' && (
             <form onSubmit={handleVerifyOtp} className="space-y-5">
 
-              {/* Authenticator app instruction */}
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 flex items-start gap-3">
+              {/* Authenticator app instruction card */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 flex items-start gap-3" dir={isRTL ? 'rtl' : 'ltr'}>
                 <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-lg bg-slate-200 flex items-center justify-center">
                   <svg className="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3m-3 3h3m-3 3h3" />
                   </svg>
                 </div>
-                <div dir="rtl">
+                <div>
                   <p className="text-xs font-semibold text-slate-800 mb-0.5">
-                    أدخل الرمز الظاهر في تطبيق المصادقة الخاص بك
+                    {t.step2CardTitle}
                   </p>
                   <p className="text-[10px] text-slate-500 leading-relaxed">
-                    افتح <strong>Google Authenticator</strong> أو <strong>Microsoft Authenticator</strong> وأدخل الرمز المكوّن من 6 أرقام الظاهر لحسابك.
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    Saisissez le code à 6 chiffres affiché dans votre application d'authentification.
+                    {t.step2CardBody}
                   </p>
                 </div>
               </div>
 
+              {/* OTP boxes — always LTR regardless of page direction */}
               <OtpInput value={otp} onChange={setOtp} disabled={isSubmitting} />
 
-              <SubmitButton
-                id="verify-otp-btn"
-                label="التحقق من الرمز →"
-                loadingLabel="جارٍ التحقق..."
-              />
+              <SubmitButton id="verify-otp-btn" label={t.btnVerify} loadingLabel={t.btnVerifyLoading} />
 
-              {/* Back link */}
               <div className="flex items-center justify-center text-[11px] font-medium text-slate-500">
                 <button
                   type="button"
                   onClick={() => { setStep('email'); setOtp(''); setError(''); }}
                   className="hover:text-slate-800 transition-colors"
                 >
-                  ← تغيير البريد الإلكتروني / Changer l'adresse
+                  {t.changeEmail}
                 </button>
               </div>
             </form>
           )}
 
-          {/* ── STEP 3: New Password ──────────────────────────────────────── */}
+          {/* ── STEP 3: New Password ───────────────────────────────────── */}
           {step === 'newPassword' && (
             <form onSubmit={handleResetPassword} className="space-y-4">
-              <p className="text-xs text-slate-500 text-center" dir="rtl">
-                اختر كلمة مرور قوية لحسابك.
+              <p className="text-xs text-slate-500 text-center">
+                {t.step3Desc}
               </p>
 
-              {/* New password field */}
+              {/* New password */}
               <div className="relative group" dir="ltr">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-800 transition-colors">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -459,17 +497,14 @@ export default function ForgotPassword({ onBack }) {
                   type={showPw ? 'text' : 'password'}
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Nouveau mot de passe / كلمة المرور الجديدة"
+                  placeholder={t.pwdPlaceholder}
                   className="w-full pl-11 pr-11 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:border-slate-800 focus:ring-1 focus:ring-slate-800 transition-all"
                   disabled={isSubmitting}
+                  dir="ltr"
                   autoFocus
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(v => !v)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
-                  tabIndex={-1}
-                >
+                <button type="button" onClick={() => setShowPw(v => !v)} tabIndex={-1}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-700 transition-colors">
                   {showPw ? (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
@@ -484,7 +519,7 @@ export default function ForgotPassword({ onBack }) {
               </div>
               <PasswordStrength password={newPassword} />
 
-              {/* Confirm password field */}
+              {/* Confirm password */}
               <div className="relative group" dir="ltr">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-800 transition-colors">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -496,20 +531,17 @@ export default function ForgotPassword({ onBack }) {
                   type={showConfirm ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Confirmer le mot de passe / تأكيد كلمة المرور"
+                  placeholder={t.confirmPlaceholder}
                   className={`w-full pl-11 pr-11 py-3.5 bg-slate-50 border rounded-xl text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-1 transition-all ${
                     confirmPassword && newPassword !== confirmPassword
                       ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-300'
                       : 'border-slate-300 focus:border-slate-800 focus:ring-slate-800'
                   }`}
                   disabled={isSubmitting}
+                  dir="ltr"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirm(v => !v)}
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-700 transition-colors"
-                  tabIndex={-1}
-                >
+                <button type="button" onClick={() => setShowConfirm(v => !v)} tabIndex={-1}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-400 hover:text-slate-700 transition-colors">
                   {showConfirm ? (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
@@ -523,15 +555,11 @@ export default function ForgotPassword({ onBack }) {
                 </button>
               </div>
 
-              <SubmitButton
-                id="reset-password-btn"
-                label="تعيين كلمة المرور الجديدة →"
-                loadingLabel="جارٍ الحفظ..."
-              />
+              <SubmitButton id="reset-password-btn" label={t.btnSave} loadingLabel={t.btnSaveLoading} />
             </form>
           )}
 
-          {/* ── SUCCESS ───────────────────────────────────────────────────── */}
+          {/* ── SUCCESS ────────────────────────────────────────────────── */}
           {step === 'success' && (
             <div className="text-center space-y-6">
               <div className="inline-flex items-center justify-center w-20 h-20 bg-emerald-50 rounded-full border-2 border-emerald-100 mx-auto">
@@ -540,14 +568,11 @@ export default function ForgotPassword({ onBack }) {
                 </svg>
               </div>
               <div>
-                <h2 className="text-base font-bold text-slate-900 mb-1" dir="rtl">
-                  تمّ تعيين كلمة المرور بنجاح! 🎉
+                <h2 className="text-base font-bold text-slate-900 mb-1">
+                  {t.successTitle}
                 </h2>
-                <p className="text-[12px] text-slate-500">
-                  Votre mot de passe a été réinitialisé avec succès.
-                </p>
-                <p className="text-xs text-slate-400 mt-2" dir="rtl">
-                  يمكنك الآن تسجيل الدخول بكلمة المرور الجديدة.
+                <p className="text-xs text-slate-400 mt-2">
+                  {t.successBody}
                 </p>
               </div>
               <button
@@ -558,7 +583,7 @@ export default function ForgotPassword({ onBack }) {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
-                العودة إلى تسجيل الدخول / Retour à la connexion
+                {t.btnBackLogin}
               </button>
             </div>
           )}
