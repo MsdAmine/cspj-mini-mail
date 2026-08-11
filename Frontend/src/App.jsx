@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MailProvider } from './context/MailContext';
 import { LogProvider } from './context/LogContext';
@@ -54,13 +54,14 @@ function DashboardRoute() {
  */
 function AppRoutes() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   return (
     <Routes>
       <Route 
         path="/" 
         element={
-          user ? <Navigate to="/dashboard" replace /> : <Login onForgotPassword={() => {}} />
+          user ? <Navigate to="/dashboard" replace /> : <Login onForgotPassword={() => navigate('/forgot-password')} />
         } 
       />
       
@@ -68,7 +69,7 @@ function AppRoutes() {
         path="/forgot-password" 
         element={
           <AuthRoute>
-            <ForgotPassword onBack={() => {}} />
+            <ForgotPassword onBack={() => navigate('/')} />
           </AuthRoute>
         } 
       />
@@ -78,7 +79,7 @@ function AppRoutes() {
         element={
           <AuthRoute>
             <ResetPassword
-              onBack={() => { window.location.href = '/'; }}
+              onBack={() => navigate('/')}
               queryString={window.location.search}
             />
           </AuthRoute>
