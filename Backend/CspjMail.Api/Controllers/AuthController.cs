@@ -20,12 +20,14 @@ namespace CspjMail.Api.Controllers
         private readonly CspjMiniMailDbContext _context;
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
+        private readonly IWebHostEnvironment _env;
 
-        public AuthController(CspjMiniMailDbContext context, IConfiguration configuration, IEmailService emailService)
+        public AuthController(CspjMiniMailDbContext context, IConfiguration configuration, IEmailService emailService, IWebHostEnvironment env)
         {
             _context = context;
             _configuration = configuration;
             _emailService = emailService;
+            _env = env;
         }
 
         [HttpPost("login")]
@@ -330,17 +332,32 @@ namespace CspjMail.Api.Controllers
 </body>
 </html>";
 
+            bool emailSent = false;
             try
             {
                 await _emailService.SendEmailAsync(
                     user.Email,
                     "Réinitialisation de votre mot de passe — CSPJ Mini Mail",
                     htmlBody);
+                emailSent = true;
             }
             catch (Exception ex)
             {
                 // Log but do not expose errors to the caller
                 Console.Error.WriteLine($"Failed to send reset email: {ex.Message}");
+            }
+
+            // In Development: surface the reset link in the API response so developers
+            // can test the full reset flow without a configured SMTP server.
+            // This field is intentionally omitted in Production.
+            if (_env.IsDevelopment() && !emailSent)
+            {
+                Console.Error.WriteLine($"[DEV] Reset Password Link for {user.Email}: {resetLink}");
+                return Ok(new
+                {
+                    message = "If an account exists with this email, a password reset link has been sent.",
+                    devResetLink = resetLink
+                });
             }
 
             return Ok(new { message = "If an account exists with this email, a password reset link has been sent." });

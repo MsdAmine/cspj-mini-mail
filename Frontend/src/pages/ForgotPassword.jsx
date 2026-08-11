@@ -1,11 +1,83 @@
 import React, { useState } from 'react';
 import api from '../services/api';
+import { sendPasswordResetEmail, isEmailJsConfigured } from '../services/emailService';
 
+/* ─── Dev-mode detection ────────────────────────────────────────────────────── */
+const IS_DEV = import.meta.env.DEV;
+
+/* ─── Copyable link component ───────────────────────────────────────────────── */
+function CopyableLink({ url }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      /* fallback: select the text */
+      const input = document.getElementById('dev-reset-link-input');
+      input?.select();
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-left">
+      {/* ── Dev badge ── */}
+      <div className="mb-2 flex items-center gap-1.5">
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+          <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+          </svg>
+          وضع التطوير · Dev Mode
+        </span>
+      </div>
+
+      {/* ── Arabic hint ── */}
+      <p className="mb-1.5 text-[11px] leading-relaxed text-amber-800" dir="rtl">
+        في وضع التطوير المحلي: يمكنك فتح رابط إعادة الضبط من الأسفل أو من وحدة التحكم (Console) لتجربة إعادة التعيين.
+      </p>
+      <p className="mb-2 text-[10px] text-amber-600">
+        En mode développement local — ouvrez ce lien pour tester la réinitialisation :
+      </p>
+
+      {/* ── URL input + copy button ── */}
+      <div className="flex items-center gap-2" dir="ltr">
+        <input
+          id="dev-reset-link-input"
+          type="text"
+          readOnly
+          value={url}
+          className="min-w-0 flex-1 rounded-md border border-amber-300 bg-white px-2.5 py-1.5 font-mono text-[10px] text-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-400 truncate"
+        />
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex-shrink-0 rounded-md bg-amber-200 px-2.5 py-1.5 text-[11px] font-semibold text-amber-900 transition hover:bg-amber-300 active:scale-95"
+        >
+          {copied ? '✓ نسخ' : 'نسخ'}
+        </button>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 rounded-md bg-slate-800 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-slate-700 active:scale-95"
+        >
+          فتح →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main component ─────────────────────────────────────────────────────────── */
 export default function ForgotPassword({ onBack }) {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  // Holds the reset URL returned by the backend in dev mode (null in production)
+  const [devResetLink, setDevResetLink] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +90,33 @@ export default function ForgotPassword({ onBack }) {
 
     setIsSubmitting(true);
     try {
-      await api.post('/auth/forgot-password', { email: email.trim() });
+      const { data } = await api.post('/auth/forgot-password', { email: email.trim() });
+
+      /* ── Dev-mode: backend echoes back the reset link ─────────────────────── */
+      if (IS_DEV && data?.devResetLink) {
+        const url = data.devResetLink;
+        setDevResetLink(url);
+
+        // Loud console hint for the developer
+        console.log(
+          '%c[CSPJ Mail — DEV] 🔑 Reset Password Link',
+          'color:#f59e0b;font-weight:bold;font-size:13px;'
+        );
+        console.log(`%c${url}`, 'color:#3b82f6;text-decoration:underline;font-size:12px;');
+        console.log(
+          '%cClick the link above or use the panel in the UI to test the reset flow.',
+          'color:#94a3b8;font-size:11px;'
+        );
+
+        /* ── Optional: also try EmailJS if configured ─────────────────────── */
+        if (isEmailJsConfigured) {
+          const result = await sendPasswordResetEmail(email.trim(), url);
+          if (result.sent) {
+            console.log('%c[CSPJ Mail — DEV] EmailJS dispatch succeeded ✓', 'color:#10b981;font-weight:bold;');
+          }
+        }
+      }
+
       setSubmitted(true);
     } catch {
       // Always show success to prevent enumeration — only show error on network failures
@@ -69,6 +167,11 @@ export default function ForgotPassword({ onBack }) {
               <p className="text-[11px] text-slate-400 mt-1">
                 Si un compte est associé à cette adresse, un lien a été envoyé.
               </p>
+
+              {/* ── Dev-mode panel: copyable reset link ── */}
+              {IS_DEV && devResetLink && (
+                <CopyableLink url={devResetLink} />
+              )}
             </div>
             <button
               onClick={onBack}
