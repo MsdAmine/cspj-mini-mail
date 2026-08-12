@@ -23,6 +23,9 @@ namespace CspjMail.Api.DTOs
 
         [Required]
         [StringLength(128, MinimumLength = 8, ErrorMessage = "Le mot de passe doit contenir au moins 8 caractères.")]
+        [RegularExpression(
+            @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}$",
+            ErrorMessage = "Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.")]
         public string NewPassword { get; set; } = null!;
     }
 
@@ -38,6 +41,7 @@ namespace CspjMail.Api.DTOs
 
         [Required]
         [StringLength(6, MinimumLength = 6, ErrorMessage = "Le code OTP doit comporter exactement 6 chiffres.")]
+        [RegularExpression(@"^\d{6}$", ErrorMessage = "Le code OTP doit être composé de 6 chiffres uniquement.")]
         public string OtpCode { get; set; } = null!;
     }
 
@@ -54,6 +58,9 @@ namespace CspjMail.Api.DTOs
 
         [Required]
         [StringLength(128, MinimumLength = 8, ErrorMessage = "Le mot de passe doit contenir au moins 8 caractères.")]
+        [RegularExpression(
+            @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}$",
+            ErrorMessage = "Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.")]
         public string NewPassword { get; set; } = null!;
     }
 }

@@ -233,6 +233,9 @@ export default function ForgotPassword({ onBack }) {
     errOtpLen:   isRTL ? 'يرجى إدخال الرمز المكوّن من 6 أرقام.' : 'Veuillez saisir le code à 6 chiffres.',
     errOtpWrong: isRTL ? 'رمز التحقق غير صحيح أو منتهي الصلاحية.' : 'Code TOTP invalide ou expiré.',
     errPwdLen:   isRTL ? 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.' : 'Le mot de passe doit contenir au moins 8 caractères.',
+    errPwdComplex: isRTL
+      ? 'يجب أن تحتوي كلمة المرور على حرف كبير وحرف صغير ورقم وحرف خاص.'
+      : 'Le mot de passe doit contenir une majuscule, une minuscule, un chiffre et un caractère spécial.',
     errPwdMatch: isRTL ? 'كلمتا المرور غير متطابقتين.' : 'Les mots de passe ne correspondent pas.',
     errGeneric:  isRTL ? 'حدث خطأ. يرجى إعادة المحاولة.' : 'Une erreur est survenue. Veuillez réessayer.',
   };
@@ -295,11 +298,16 @@ export default function ForgotPassword({ onBack }) {
   };
 
   /* ── Step 3: save new password ────────────────────────────────────────── */
+  // Password complexity regex — mirrors the backend [RegularExpression] on ResetPasswordOtpDto.
+  // Must contain: ≥1 lowercase, ≥1 uppercase, ≥1 digit, ≥1 special character, 8–128 chars.
+  const PWD_COMPLEXITY_RE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}$/;
+
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
-    if (newPassword.length < 8)        { setError(t.errPwdLen);   return; }
-    if (newPassword !== confirmPassword) { setError(t.errPwdMatch); return; }
+    if (newPassword.length < 8)            { setError(t.errPwdLen);     return; }
+    if (!PWD_COMPLEXITY_RE.test(newPassword)) { setError(t.errPwdComplex); return; }
+    if (newPassword !== confirmPassword)   { setError(t.errPwdMatch);   return; }
     setIsSubmitting(true);
     try {
       await api.post('/auth/reset-password-otp', { email: email.trim(), resetToken, newPassword });
