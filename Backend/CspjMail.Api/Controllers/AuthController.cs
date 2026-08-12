@@ -3,7 +3,9 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using CspjMail.Api.Models;
 using CspjMail.Api.DTOs;
@@ -21,16 +23,30 @@ namespace CspjMail.Api.Controllers
         private readonly IConfiguration _configuration;
         private readonly IEmailService _emailService;
         private readonly IWebHostEnvironment _env;
+        private readonly IMemoryCache _cache;
 
-        public AuthController(CspjMiniMailDbContext context, IConfiguration configuration, IEmailService emailService, IWebHostEnvironment env)
+        // Audience used exclusively for short-lived password-reset session tokens.
+        // The global JWT bearer middleware is configured for the main audience only,
+        // so a reset token cannot satisfy [Authorize] on regular API endpoints.
+        private const string ResetTokenAudience = "cspj-password-reset";
+
+        public AuthController(
+            CspjMiniMailDbContext context,
+            IConfiguration configuration,
+            IEmailService emailService,
+            IWebHostEnvironment env,
+            IMemoryCache cache)
         {
-            _context = context;
+            _context       = context;
             _configuration = configuration;
-            _emailService = emailService;
-            _env = env;
+            _emailService  = emailService;
+            _env           = env;
+            _cache         = cache;
         }
 
+        // ─── Login ───────────────────────────────────────────────────────────────
         [HttpPost("login")]
+        [EnableRateLimiting("totp-ops")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
             var user = await _context.Utilisateurs
@@ -60,9 +76,9 @@ namespace CspjMail.Api.Controllers
                 return Ok(new
                 {
                     RequiresTwoFactor = true,
-                    Email = user.Email,
-                    TwoFactorSecret = user.TwoFactorSecret,
-                    IsFirstTimeSetup = true
+                    Email             = user.Email,
+                    TwoFactorSecret   = user.TwoFactorSecret,
+                    IsFirstTimeSetup  = true
                 });
             }
 
@@ -70,12 +86,14 @@ namespace CspjMail.Api.Controllers
             return Ok(new
             {
                 RequiresTwoFactor = true,
-                Email = user.Email,
-                IsFirstTimeSetup = false
+                Email             = user.Email,
+                IsFirstTimeSetup  = false
             });
         }
 
+        // ─── Verify 2FA (login flow) ─────────────────────────────────────────────
         [HttpPost("verify-2fa")]
+        [EnableRateLimiting("totp-ops")]
         public async Task<IActionResult> VerifyTwoFactor([FromBody] VerifyTwoFactorDto dto)
         {
             var user = await _context.Utilisateurs
@@ -94,12 +112,13 @@ namespace CspjMail.Api.Controllers
 
             // ── TOTP verification via Otp.NET ────────────────────────────────────
             var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
-            var totp = new Totp(secretBytes);
+            var totp        = new Totp(secretBytes);
 
-            // VerificationWindow.RfcSpecifiedNetworkDelay allows ±1 time step (±30 s) for clock skew
+            // VerificationWindow.RfcSpecifiedNetworkDelay allows ±1 time step (±30 s) for clock skew.
+            // We capture timeStepMatched to prevent replay within the same time window.
             bool isValid = totp.VerifyTotp(
                 dto.Code ?? string.Empty,
-                out _,
+                out long timeStepMatched,
                 VerificationWindow.RfcSpecifiedNetworkDelay);
 
             if (!isValid)
@@ -107,9 +126,19 @@ namespace CspjMail.Api.Controllers
                 return Unauthorized("Invalid or expired 2FA code.");
             }
 
+            // ── TOTP Replay Prevention ───────────────────────────────────────────
+            // A captured valid code must not be reusable within its ±90-second validity window.
+            var replayCacheKey = $"totp_used:{user.Id}:{timeStepMatched}";
+            if (_cache.TryGetValue(replayCacheKey, out _))
+            {
+                return Unauthorized("This 2FA code has already been used. Please wait for a new code.");
+            }
+            // Mark the time step as consumed for the full ±90 s OtpNet tolerance window.
+            _cache.Set(replayCacheKey, true, TimeSpan.FromSeconds(90));
+
             var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtSettings = _configuration.GetSection("Jwt");
-            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
+            var jwtSettings  = _configuration.GetSection("Jwt");
+            var key          = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
 
             var claims = new List<Claim>
             {
@@ -122,32 +151,32 @@ namespace CspjMail.Api.Controllers
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"] ?? "180")),
-                Issuer = jwtSettings["Issuer"],
-                Audience = jwtSettings["Audience"],
+                Subject            = new ClaimsIdentity(claims),
+                Expires            = DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"] ?? "180")),
+                Issuer             = jwtSettings["Issuer"],
+                Audience           = jwtSettings["Audience"],
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
             };
 
-            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var token       = tokenHandler.CreateToken(tokenDescriptor);
             var tokenString = tokenHandler.WriteToken(token);
 
             var cookieOptions = new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure   = true,
                 SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"] ?? "180"))
+                Expires  = DateTime.UtcNow.AddMinutes(double.Parse(jwtSettings["DurationInMinutes"] ?? "180"))
             };
             Response.Cookies.Append("cspj_auth_token", tokenString, cookieOptions);
 
             return Ok(new AuthResponseDto
             {
-                Token = string.Empty,
-                Email = user.Email,
-                Nom = user.Nom,
+                Token  = string.Empty,
+                Email  = user.Email,
+                Nom    = user.Nom,
                 Prenom = user.Prenom,
-                Role = user.Role
+                Role   = user.Role
             });
         }
 
@@ -158,7 +187,7 @@ namespace CspjMail.Api.Controllers
             Response.Cookies.Delete("cspj_auth_token", new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
+                Secure   = true,
                 SameSite = SameSiteMode.Strict
             });
             return Ok(new { message = "Déconnexion réussie." });
@@ -177,11 +206,11 @@ namespace CspjMail.Api.Controllers
 
             return Ok(new
             {
-                id = user.Id,
-                email = user.Email,
-                nom = user.Nom,
-                prenom = user.Prenom,
-                role = user.Role,
+                id            = user.Id,
+                email         = user.Email,
+                nom           = user.Nom,
+                prenom        = user.Prenom,
+                role          = user.Role,
                 institutionId = user.EntrepriseId
             });
         }
@@ -207,23 +236,24 @@ namespace CspjMail.Api.Controllers
             }
 
             user.Prenom = dto.Prenom.Trim();
-            user.Nom = dto.Nom.Trim();
-            user.Email = dto.Email.Trim().ToLower();
+            user.Nom    = dto.Nom.Trim();
+            user.Email  = dto.Email.Trim().ToLower();
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                prenom = user.Prenom,
-                nom = user.Nom,
-                email = user.Email,
-                role = user.Role,
+                prenom        = user.Prenom,
+                nom           = user.Nom,
+                email         = user.Email,
+                role          = user.Role,
                 institutionId = user.EntrepriseId
             });
         }
 
         // ─── Forgot Password (TOTP flow) ──────────────────────────────────────────
         [HttpPost("forgot-password")]
+        [EnableRateLimiting("totp-ops")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
         {
             // Always return 200 to prevent email enumeration attacks.
@@ -244,38 +274,54 @@ namespace CspjMail.Api.Controllers
 
         // ─── Verify TOTP for password reset ───────────────────────────────────────
         [HttpPost("verify-otp")]
+        [EnableRateLimiting("totp-ops")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
         {
             var user = await _context.Utilisateurs
                 .FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
 
+            // ── User-Enumeration Prevention ──────────────────────────────────────
+            // Return HTTP 200 with an opaque error body for *both* unknown-user and
+            // wrong-code paths so attackers cannot distinguish them by status code.
             if (user == null || !user.Actif || string.IsNullOrEmpty(user.TwoFactorSecret))
             {
-                return BadRequest(new { error = "رمز التحقق غير صحيح أو منتهي الصلاحية. / Code TOTP invalide ou expiré." });
+                return Ok(new { success = false, error = "Code TOTP invalide ou expiré." });
             }
 
             // ── Validate the TOTP code using the user's existing Authenticator secret ──
-            // This reuses the exact same OtpNet path as the 2FA login flow.
             var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
             var totp        = new Totp(secretBytes);
 
-            // Allow ±1 time step (±30 s) for clock skew — same tolerance as login.
+            // Capture timeStepMatched to prevent replay within the ±90-second window.
             bool isValid = totp.VerifyTotp(
                 dto.OtpCode?.Trim() ?? string.Empty,
-                out _,
+                out long timeStepMatched,
                 VerificationWindow.RfcSpecifiedNetworkDelay);
 
             if (!isValid)
             {
-                return BadRequest(new { error = "رمز التحقق غير صحيح أو منتهي الصلاحية. / Code TOTP invalide ou expiré." });
+                return Ok(new { success = false, error = "Code TOTP invalide ou expiré." });
             }
 
-            // ── Issue a short-lived (10 min) signed JWT that authorises the reset ────
+            // ── TOTP Replay Prevention ───────────────────────────────────────────
+            var replayCacheKey = $"totp_used:{user.Id}:{timeStepMatched}";
+            if (_cache.TryGetValue(replayCacheKey, out _))
+            {
+                return Ok(new { success = false, error = "Ce code a déjà été utilisé. Veuillez attendre le prochain code." });
+            }
+            _cache.Set(replayCacheKey, true, TimeSpan.FromSeconds(90));
+
+            // ── Issue a short-lived (10 min) signed JWT that authorises the reset ─
+            // SECURITY: Uses a distinct audience ("cspj-password-reset") so the global
+            // JWT bearer middleware — configured for the main app audience — rejects
+            // this token if an attacker tries to plant it as a session cookie.
             var jwtSettings = _configuration.GetSection("Jwt");
             var key         = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
+            var jti         = Guid.NewGuid().ToString();
 
             var claims = new[]
             {
+                new Claim(JwtRegisteredClaimNames.Jti, jti),
                 new Claim(ClaimTypes.Email, user.Email),
                 new Claim("purpose", "password_reset")
             };
@@ -285,7 +331,7 @@ namespace CspjMail.Api.Controllers
                 Subject            = new ClaimsIdentity(claims),
                 Expires            = DateTime.UtcNow.AddMinutes(10),
                 Issuer             = jwtSettings["Issuer"],
-                Audience           = jwtSettings["Audience"],
+                Audience           = ResetTokenAudience,          // ← isolated audience
                 SigningCredentials = new SigningCredentials(
                     new SymmetricSecurityKey(key),
                     SecurityAlgorithms.HmacSha256Signature)
@@ -306,7 +352,7 @@ namespace CspjMail.Api.Controllers
                 string.IsNullOrWhiteSpace(dto.NewPassword))
                 return BadRequest(new { error = "Tous les champs sont requis." });
 
-            // Validate the reset session token.
+            // Validate the reset session token against the dedicated narrow audience.
             var jwtSettings = _configuration.GetSection("Jwt");
             var key         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!));
 
@@ -321,7 +367,7 @@ namespace CspjMail.Api.Controllers
                     ValidateLifetime         = true,
                     ValidateIssuerSigningKey = true,
                     ValidIssuer              = jwtSettings["Issuer"],
-                    ValidAudience            = jwtSettings["Audience"],
+                    ValidAudience            = ResetTokenAudience,  // ← must match isolated audience
                     IssuerSigningKey         = key,
                     ClockSkew                = TimeSpan.Zero
                 }, out _);
@@ -334,11 +380,21 @@ namespace CspjMail.Api.Controllers
             // Ensure the token was issued for this specific email and purpose.
             var tokenEmail   = principal.FindFirstValue(ClaimTypes.Email);
             var tokenPurpose = principal.FindFirstValue("purpose");
+            var jti          = principal.FindFirstValue(JwtRegisteredClaimNames.Jti);
 
             if (!string.Equals(tokenEmail, dto.Email.Trim().ToLower(), StringComparison.OrdinalIgnoreCase) ||
-                tokenPurpose != "password_reset")
+                tokenPurpose != "password_reset" ||
+                string.IsNullOrEmpty(jti))
             {
                 return BadRequest(new { error = "Le jeton de réinitialisation est invalide." });
+            }
+
+            // ── Single-Use Enforcement (jti blacklist) ───────────────────────────
+            // Prevent the resetSessionToken from being replayed within its 10-min window.
+            var jtiCacheKey = $"reset_jti_used:{jti}";
+            if (_cache.TryGetValue(jtiCacheKey, out _))
+            {
+                return BadRequest(new { error = "Ce lien de réinitialisation a déjà été utilisé." });
             }
 
             var user = await _context.Utilisateurs
@@ -348,12 +404,21 @@ namespace CspjMail.Api.Controllers
                 return BadRequest(new { error = "Compte introuvable." });
 
             user.MotDePasseHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+
+            // Invalidate any legacy email-based reset token as a belt-and-suspenders measure.
+            user.PasswordResetToken = null;
+            user.ResetTokenExpiry   = null;
+
             await _context.SaveChangesAsync();
+
+            // Blacklist the jti *after* successful DB write so a DB failure doesn't
+            // permanently consume the token without resetting the password.
+            _cache.Set(jtiCacheKey, true, TimeSpan.FromMinutes(10));
 
             return Ok(new { success = true, message = "Votre mot de passe a été réinitialisé avec succès." });
         }
 
-        // ─── Reset Password ───────────────────────────────────────────────────────
+        // ─── Reset Password (legacy email-link flow) ──────────────────────────────
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
         {
@@ -378,11 +443,11 @@ namespace CspjMail.Api.Controllers
 
             // Invalidate the token immediately after use
             user.PasswordResetToken = null;
-            user.ResetTokenExpiry = null;
+            user.ResetTokenExpiry   = null;
 
             await _context.SaveChangesAsync();
 
             return Ok(new { message = "Votre mot de passe a été réinitialisé avec succès." });
         }
     }
-}
+}
