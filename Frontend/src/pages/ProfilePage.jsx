@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import {
   User,
   Mail,
@@ -9,7 +10,6 @@ import {
   Shield,
   ShieldCheck,
   KeyRound,
-  Clock,
   Hash,
   BadgeCheck,
   Lock,
@@ -23,6 +23,8 @@ import {
   CheckCircle2,
   Fingerprint,
   Wifi,
+  Eye,
+  EyeOff,
   Info,
 } from 'lucide-react';
 
@@ -45,36 +47,35 @@ function detectRole(user) {
 function roleTheme(role) {
   if (role === ROLE.ASSOCIATION) {
     return {
-      accent:          '#0D9488',
-      gradientBanner:  'linear-gradient(135deg, #0F172A 0%, #134E4A 60%, #0D9488 100%)',
-      badgeBg:         'bg-teal-600',
-      badgeBgLight:    'bg-teal-50',
-      badgeText:       'text-teal-700',
-      badgeBorder:     'border-teal-200',
-      avatarGrad:      'linear-gradient(135deg, #134E4A, #0D9488)',
-      ringColor:       'ring-teal-400/40',
-      btnPrimary:      'bg-teal-600 hover:bg-teal-700 focus:ring-4 focus:ring-teal-300',
-      editRing:        'focus:border-teal-500 focus:ring-4 focus:ring-teal-50',
-      iconColor:       'text-teal-600',
+      accent:         '#0D9488',
+      gradientBanner: 'linear-gradient(135deg, #0F172A 0%, #134E4A 60%, #0D9488 100%)',
+      badgeBg:        'bg-teal-600',
+      badgeBgLight:   'bg-teal-50',
+      badgeText:      'text-teal-700',
+      badgeBorder:    'border-teal-200',
+      avatarGrad:     'linear-gradient(135deg, #134E4A, #0D9488)',
+      ringColor:      'ring-teal-400/40',
+      btnPrimary:     'bg-teal-600 hover:bg-teal-700 focus:ring-4 focus:ring-teal-300',
+      editRing:       'focus:border-teal-500 focus:ring-2 focus:ring-teal-100',
+      iconColor:      'text-teal-600',
     };
   }
-  // Fonctionnaire & Admin → Indigo/Blue
   return {
-    accent:          '#4F46E5',
-    gradientBanner:  'linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #1E3A5F 100%)',
-    badgeBg:         'bg-indigo-600',
-    badgeBgLight:    'bg-indigo-50',
-    badgeText:       'text-indigo-700',
-    badgeBorder:     'border-indigo-200',
-    avatarGrad:      'linear-gradient(135deg, #1e293b, #3730a3)',
-    ringColor:       'ring-indigo-400/40',
-    btnPrimary:      'bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300',
-    editRing:        'focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50',
-    iconColor:       'text-indigo-600',
+    accent:         '#4F46E5',
+    gradientBanner: 'linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #1E3A5F 100%)',
+    badgeBg:        'bg-indigo-600',
+    badgeBgLight:   'bg-indigo-50',
+    badgeText:      'text-indigo-700',
+    badgeBorder:    'border-indigo-200',
+    avatarGrad:     'linear-gradient(135deg, #1e293b, #3730a3)',
+    ringColor:      'ring-indigo-400/40',
+    btnPrimary:     'bg-indigo-600 hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-300',
+    editRing:       'focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100',
+    iconColor:      'text-indigo-600',
   };
 }
 
-/** Bilingual string maps – AR for non-admin, FR for admin */
+/** Bilingual string maps */
 function useStrings(role) {
   const isAdmin = role === ROLE.ADMIN;
   const isRTL   = role !== ROLE.ADMIN;
@@ -82,60 +83,59 @@ function useStrings(role) {
   return {
     isAdmin,
     isRTL,
-    back:              isAdmin ? 'Retour'                                       : 'رجوع',
-    breadcrumb:        isAdmin ? 'Mon Profil'                                   : 'ملفي الشخصي',
-    logout:            isAdmin ? 'Déconnexion'                                  : 'تسجيل الخروج',
-    statusActive:      isAdmin ? 'Session active'                               : 'متصل الآن',
-    cardATitle:        isAdmin ? 'Informations personnelles'                    : 'المعلومات الشخصية',
-    labelPrenom:       isAdmin ? 'Prénom'                                       : 'الاسم الشخصي',
-    labelNom:          isAdmin ? 'Nom de famille'                               : 'الاسم العائلي',
-    labelEmail:        isAdmin ? 'Adresse e-mail professionnelle'               : 'البريد الإلكتروني المهني',
-    labelPhone:        isAdmin ? 'Téléphone professionnel'                      : 'الهاتف المهني',
-    phoneDemo:         isAdmin ? 'Non synchronisé'                              : 'غير متزامن',
-    phoneDemoTip:      isAdmin
+    back:             isAdmin ? 'Retour'                                              : 'رجوع',
+    breadcrumb:       isAdmin ? 'Mon Profil'                                          : 'ملفي الشخصي',
+    logout:           isAdmin ? 'Déconnexion'                                         : 'تسجيل الخروج',
+    statusActive:     isAdmin ? 'Session active'                                      : 'متصل الآن',
+    cardATitle:       isAdmin ? 'Informations personnelles & Rôle'                    : 'المعلومات الشخصية والدور المؤسسي',
+    labelPrenom:      isAdmin ? 'Prénom'                                              : 'الاسم الشخصي',
+    labelNom:         isAdmin ? 'Nom de famille'                                      : 'الاسم العائلي',
+    labelPhone:       isAdmin ? 'Téléphone professionnel'                             : 'الهاتف المهني',
+    phoneDemo:        isAdmin ? 'Non synchronisé'                                     : 'غير متزامن',
+    phoneDemoTip:     isAdmin
       ? 'Ce champ est une préférence locale non persistée en base de données.'
       : 'هذا الحقل تفضيل محلي غير محفوظ في قاعدة البيانات.',
-    editBtn:           isAdmin ? 'Modifier'                                     : 'تعديل',
-    cancelBtn:         isAdmin ? 'Annuler'                                      : 'إلغاء',
-    saveBtn:           isAdmin ? 'Enregistrer'                                  : 'حفظ التغييرات',
-    savingBtn:         isAdmin ? 'Enregistrement…'                              : 'جارٍ الحفظ…',
-    lockedTip:         isAdmin ? 'Verrouillé par l\'administration CSPJ'        : 'مقفل من طرف إدارة CSPJ',
-    editableNote:      isAdmin
-      ? 'Les champs marqués ✎ sont modifiables. Le rôle et la structure sont verrouillés par l\'administration CSPJ.'
-      : 'الحقول المعلّمة بـ ✎ قابلة للتعديل. الدور والهيكل مقفلان من طرف إدارة CSPJ.',
-    cardBTitle:        isAdmin ? 'Rôle & Organisation'                          : 'الدور والهيكل المؤسسي',
-    labelRole:         isAdmin ? 'Rôle système'                                 : 'الدور في النظام',
-    labelInstitution:  isAdmin ? 'Structure / Institution'                      : 'المؤسسة / الهيكل',
-    labelMatricule:    isAdmin ? 'Identifiant système'                          : 'معرّف النظام',
-    labelAssocName:    isAdmin ? 'Nom de l\'association'                        : 'اسم الجمعية',
-    labelRepStatus:    isAdmin ? 'Statut représentant'                          : 'صفة الممثل الرسمي',
-    labelDirection:    isAdmin ? 'Direction / Service'                          : 'المديرية / المصلحة',
-    readOnlyNote:      isAdmin
-      ? 'Ces informations sont définies par l\'administration CSPJ.'
+    editBtn:          isAdmin ? 'Modifier'                                            : 'تعديل',
+    cancelBtn:        isAdmin ? 'Annuler'                                             : 'إلغاء',
+    saveBtn:          isAdmin ? 'Enregistrer'                                         : 'حفظ',
+    savingBtn:        isAdmin ? 'Enregistrement…'                                     : 'جارٍ الحفظ…',
+    lockedTip:        isAdmin ? "Verrouillé par l'administration CSPJ"                : 'مقفل من طرف إدارة CSPJ',
+    editableNote:     isAdmin
+      ? "Les champs marqués ✎ sont modifiables. Le rôle et la structure sont verrouillés."
+      : 'الحقول المعلّمة بـ ✎ قابلة للتعديل. الدور والهيكل مقفلان.',
+    labelRole:        isAdmin ? 'Rôle système'                                        : 'الدور في النظام',
+    labelInstitution: isAdmin ? 'Structure / Institution'                             : 'المؤسسة / الهيكل',
+    labelMatricule:   isAdmin ? 'Identifiant système'                                 : 'معرّف النظام',
+    labelAssocName:   isAdmin ? "Nom de l'association"                                : 'اسم الجمعية',
+    labelRepStatus:   isAdmin ? 'Statut représentant'                                 : 'صفة الممثل الرسمي',
+    labelDirection:   isAdmin ? 'Direction / Service'                                 : 'المديرية / المصلحة',
+    readOnlyNote:     isAdmin
+      ? "Ces informations sont définies par l'administration CSPJ."
       : 'هذه المعلومات يحددها فريق إدارة CSPJ.',
-    cardCTitle:        isAdmin ? 'Sécurité & Authentification'                  : 'الأمان والمصادقة',
-    label2FA:          isAdmin ? 'Double authentification (TOTP)'               : 'المصادقة الثنائية (TOTP)',
-    status2FAOn:       isAdmin ? 'Activé'                                       : 'مُفعَّل',
-    labelLastLogin:    isAdmin ? 'Session courante'                             : 'الجلسة الحالية',
-    sessionActive:     isAdmin ? 'Active — session en cours'                    : 'نشطة — جلسة جارية',
-    changePwdBtn:      isAdmin ? 'Changer le mot de passe'                      : 'تغيير كلمة المرور',
-    changePwdTitle:    isAdmin ? 'Réinitialisation du mot de passe'             : 'إعادة تعيين كلمة المرور',
-    changePwdBody:     isAdmin
-      ? 'Vous allez être redirigé vers le flux de réinitialisation sécurisé de CSPJ Mail. Votre session sera maintenue.'
-      : 'سيتم توجيهك إلى مسار إعادة تعيين كلمة المرور الآمن الخاص بـ CSPJ Mail. ستظل جلستك نشطة.',
-    changePwdConfirm:  isAdmin ? 'Continuer'                                    : 'متابعة',
-    changePwdCancel:   isAdmin ? 'Annuler'                                      : 'إلغاء',
-    saveSuccess:       isAdmin ? 'Profil mis à jour avec succès.'               : 'تم تحديث الملف الشخصي بنجاح.',
-    saveError:         isAdmin ? 'Échec de la mise à jour. Veuillez réessayer.' : 'فشل التحديث. يرجى المحاولة مجددًا.',
-    fieldRequired:     isAdmin ? 'Tous les champs requis doivent être remplis.' : 'يجب ملء جميع الحقول المطلوبة.',
-    securityNote:      isAdmin
-      ? 'Votre session est protégée par TLS 1.3 et la double authentification. Pensez à vous déconnecter après usage.'
-      : 'جلستك محمية بتشفير TLS 1.3 والمصادقة الثنائية. تأكد من تسجيل الخروج بعد الانتهاء من عملك.',
-    footer:            isAdmin
+    cardBTitle:       isAdmin ? 'Sécurité & Authentification'                         : 'الأمان والمصادقة',
+    label2FA:         isAdmin ? 'Double authentification (TOTP)'                      : 'المصادقة الثنائية (TOTP)',
+    status2FAOn:      isAdmin ? 'Activé'                                              : 'مُفعَّل',
+    changePwdBtn:     isAdmin ? 'Changer le mot de passe'                             : 'تغيير كلمة المرور',
+    changePwdTitle:   isAdmin ? 'Changer le mot de passe'                             : 'تغيير كلمة المرور',
+    labelCurrentPwd:  isAdmin ? 'Mot de passe actuel'                                 : 'كلمة المرور الحالية',
+    labelNewPwd:      isAdmin ? 'Nouveau mot de passe'                                : 'كلمة المرور الجديدة',
+    labelConfirmPwd:  isAdmin ? 'Confirmer le nouveau mot de passe'                   : 'تأكيد كلمة المرور الجديدة',
+    changePwdSubmit:  isAdmin ? 'Mettre à jour'                                       : 'تحديث',
+    changePwdCancel:  isAdmin ? 'Annuler'                                             : 'إلغاء',
+    pwdMismatch:      isAdmin ? 'Les mots de passe ne correspondent pas.'             : 'كلمات المرور غير متطابقة.',
+    pwdTooShort:      isAdmin ? 'Le mot de passe doit contenir au moins 8 caractères.': 'يجب أن تحتوي كلمة المرور على 8 أحرف على الأقل.',
+    pwdRequired:      isAdmin ? 'Tous les champs sont requis.'                        : 'جميع الحقول مطلوبة.',
+    pwdSuccess:       isAdmin ? 'Mot de passe mis à jour avec succès.'               : 'تم تحديث كلمة المرور بنجاح.',
+    saveSuccess:      isAdmin ? 'Profil mis à jour avec succès.'                      : 'تم تحديث الملف الشخصي بنجاح.',
+    saveError:        isAdmin ? 'Échec de la mise à jour. Veuillez réessayer.'        : 'فشل التحديث. يرجى المحاولة مجددًا.',
+    fieldRequired:    isAdmin ? 'Tous les champs requis doivent être remplis.'        : 'يجب ملء جميع الحقول المطلوبة.',
+    securityNote:     isAdmin
+      ? 'Session protégée par TLS 1.3. Pensez à vous déconnecter après usage.'
+      : 'جلستك محمية بتشفير TLS 1.3. تأكد من تسجيل الخروج بعد الانتهاء.',
+    footer: isAdmin
       ? 'CSPJ Mail © 2026 — Conseil Supérieur du Pouvoir Judiciaire — Tous droits réservés'
       : 'CSPJ Mail © 2026 — المجلس الأعلى للسلطة القضائية — جميع الحقوق محفوظة',
-    quickAction:       isAdmin ? 'Action rapide' : 'إجراء سريع',
-    folders:           isAdmin ? 'Dossiers' : 'المجلدات',
+    quickAction: isAdmin ? 'Action rapide' : 'إجراء سريع',
   };
 }
 
@@ -143,31 +143,43 @@ function getRoleBadgeLabel(role) {
   if (role === ROLE.ADMIN)         return 'Administrateur Système — CSPJ';
   if (role === ROLE.FONCTIONNAIRE) return 'إطار إداري — Fonctionnaire CSPJ';
   if (role === ROLE.ASSOCIATION)   return 'جمعية شريكة — Association Partenaire';
-  return role;
+  return role ?? '—';
 }
 
 function getRoleShortLabel(role) {
   if (role === ROLE.ADMIN)         return 'Admin';
   if (role === ROLE.FONCTIONNAIRE) return 'Fonctionnaire';
   if (role === ROLE.ASSOCIATION)   return 'Association';
-  return role;
+  return role ?? '—';
 }
 
-function getInstitutionLabel(institutionId, role) {
-  const isAdmin = role === ROLE.ADMIN;
-  if (institutionId === 1) return isAdmin
-    ? 'CSPJ — Conseil Supérieur du Pouvoir Judiciaire'
-    : 'المجلس الأعلى للسلطة القضائية — CSPJ';
-  if (institutionId === 2) return isAdmin
-    ? 'Association des Magistrats Marocains'
-    : 'جمعية القضاة المغاربة';
-  return isAdmin ? 'Structure externe' : 'هيكل خارجي';
+/**
+ * Maps institutionId to a human-readable name.
+ * Returns dash for unknown/null — NO fake placeholders.
+ */
+function getInstitutionLabel(institutionId, isAdmin) {
+  if (institutionId == null) return '—';
+  if (institutionId === 1)
+    return isAdmin
+      ? 'CSPJ — Conseil Supérieur du Pouvoir Judiciaire'
+      : 'المجلس الأعلى للسلطة القضائية — CSPJ';
+  if (institutionId === 2)
+    return isAdmin
+      ? 'Association des Magistrats Marocains'
+      : 'جمعية القضاة المغاربة';
+  // Unknown but real institution ID: show it as-is
+  return `ID-${institutionId}`;
 }
 
-function getRoleDisplayLabel(role) {
+/**
+ * Formats the role string from user object for display.
+ * No fake labels — maps exact role strings or returns the raw value.
+ */
+function getRoleDisplayLabel(role, isAdmin) {
+  if (!role) return '—';
   if (role === ROLE.ADMIN)         return 'Administrateur Système';
-  if (role === ROLE.FONCTIONNAIRE) return 'موظف إداري — Fonctionnaire';
-  if (role === ROLE.ASSOCIATION)   return 'ممثل جمعية — Association';
+  if (role === ROLE.FONCTIONNAIRE) return isAdmin ? 'Fonctionnaire CSPJ' : 'وظيفة إدارية — Fonctionnaire';
+  if (role === ROLE.ASSOCIATION)   return isAdmin ? 'Association Partenaire' : 'جمعية / Association';
   return role;
 }
 
@@ -175,6 +187,12 @@ function getInitials(user) {
   if (!user) return 'U';
   return `${user.prenom?.charAt(0) ?? ''}${user.nom?.charAt(0) ?? ''}`.toUpperCase() || 'U';
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DOT PATTERN
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DOT_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='40' cy='40' r='1.5'/%3E%3Ccircle cx='0' cy='0' r='1.5'/%3E%3Ccircle cx='80' cy='0' r='1.5'/%3E%3Ccircle cx='0' cy='80' r='1.5'/%3E%3Ccircle cx='80' cy='80' r='1.5'/%3E%3C/g%3E%3C/svg%3E")`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TOAST
@@ -188,21 +206,12 @@ function Toast({ message, onDismiss }) {
   }, [message, onDismiss]);
 
   if (!message.text) return null;
-
   const isSuccess = message.type === 'success';
   const isRTL     = message.isRTL;
 
   return (
     <div
-      className={`
-        fixed top-5 z-[100] flex items-center gap-3
-        px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-semibold
-        ${isRTL ? 'left-5' : 'right-5'}
-        ${isSuccess
-          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-          : 'bg-rose-50 text-rose-800 border-rose-200'
-        }
-      `}
+      className={`fixed top-5 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-semibold ${isRTL ? 'left-5' : 'right-5'} ${isSuccess ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}
       style={{ minWidth: 280, maxWidth: 380 }}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
@@ -211,10 +220,7 @@ function Toast({ message, onDismiss }) {
         : <AlertCircle  className="w-5 h-5 text-rose-500 flex-shrink-0" />
       }
       <span className="flex-1">{message.text}</span>
-      <button
-        onClick={onDismiss}
-        className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 transition"
-      >
+      <button onClick={onDismiss} className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 transition">
         <X className="w-3.5 h-3.5" />
       </button>
     </div>
@@ -222,33 +228,110 @@ function Toast({ message, onDismiss }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CHANGE PASSWORD MODAL
+// PASSWORD INPUT WITH SHOW/HIDE TOGGLE
 // ─────────────────────────────────────────────────────────────────────────────
 
-const DOT_PATTERN = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='40' cy='40' r='1.5'/%3E%3Ccircle cx='0' cy='0' r='1.5'/%3E%3Ccircle cx='80' cy='0' r='1.5'/%3E%3Ccircle cx='0' cy='80' r='1.5'/%3E%3Ccircle cx='80' cy='80' r='1.5'/%3E%3C/g%3E%3C/svg%3E")`;
+function PasswordInput({ id, value, onChange, placeholder, className, disabled }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={show ? 'text' : 'password'}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        dir="ltr"
+        className={`pr-10 ${className}`}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setShow(s => !s)}
+        className="absolute inset-y-0 right-2 flex items-center text-slate-400 hover:text-slate-600 transition"
+        aria-label={show ? 'Hide password' : 'Show password'}
+      >
+        {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+}
 
-function ChangePasswordModal({ strings, theme, onConfirm, onClose }) {
-  const { isRTL, isAdmin } = strings;
+// ─────────────────────────────────────────────────────────────────────────────
+// CHANGE PASSWORD MODAL — REAL, FUNCTIONAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ChangePasswordModal({ strings, theme, onClose, onSuccess }) {
+  const { isRTL } = strings;
+
+  const [currentPwd,   setCurrentPwd]   = useState('');
+  const [newPwd,       setNewPwd]       = useState('');
+  const [confirmPwd,   setConfirmPwd]   = useState('');
+  const [error,        setError]        = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const inputClass = [
+    'w-full px-3 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-800',
+    'bg-slate-50/60 focus:bg-white outline-none transition duration-150',
+    'disabled:opacity-50 disabled:cursor-not-allowed',
+    theme.editRing,
+  ].join(' ');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!currentPwd.trim() || !newPwd.trim() || !confirmPwd.trim()) {
+      setError(strings.pwdRequired);
+      return;
+    }
+    if (newPwd.length < 8) {
+      setError(strings.pwdTooShort);
+      return;
+    }
+    if (newPwd !== confirmPwd) {
+      setError(strings.pwdMismatch);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword: currentPwd,
+        newPassword:     newPwd,
+      });
+      onSuccess({ type: 'success', text: strings.pwdSuccess, isRTL });
+      onClose();
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        (typeof err.response?.data === 'string' ? err.response.data : null) ||
+        strings.saveError;
+      setError(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
       <div
-        className={`w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden ${isRTL ? 'text-right' : 'text-left'}`}
+        className={`w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200/80 overflow-hidden ${isRTL ? 'text-right' : 'text-left'}`}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         {/* Header */}
-        <div className="relative px-6 py-5 overflow-hidden" style={{ background: theme.gradientBanner }}>
-          <div className="absolute inset-0 opacity-[0.07]"
-            style={{ backgroundImage: DOT_PATTERN, backgroundSize: '40px 40px' }}
-          />
+        <div className="relative px-6 py-4 overflow-hidden" style={{ background: theme.gradientBanner }}>
+          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: DOT_PATTERN, backgroundSize: '40px 40px' }} />
           <div className="relative flex items-center justify-between">
             <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
-                <KeyRound className="w-5 h-5 text-white" />
+              <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center">
+                <KeyRound className="w-4 h-4 text-white" />
               </div>
               <h3 className="text-white font-bold text-sm">{strings.changePwdTitle}</h3>
             </div>
             <button
+              type="button"
               onClick={onClose}
               className="w-8 h-8 flex items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white transition"
             >
@@ -257,28 +340,83 @@ function ChangePasswordModal({ strings, theme, onConfirm, onClose }) {
           </div>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-6 space-y-5">
-          <div className={`flex items-start gap-3 p-4 rounded-2xl border ${isAdmin ? 'bg-indigo-50 border-indigo-100' : 'bg-teal-50 border-teal-100'}`}>
-            <Info className={`w-5 h-5 mt-0.5 flex-shrink-0 ${theme.iconColor}`} />
-            <p className="text-sm text-slate-700 leading-relaxed">{strings.changePwdBody}</p>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {/* Current password */}
+          <div className="space-y-1.5">
+            <label htmlFor="pwd-current" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              {strings.labelCurrentPwd}
+            </label>
+            <PasswordInput
+              id="pwd-current"
+              value={currentPwd}
+              onChange={e => setCurrentPwd(e.target.value)}
+              placeholder="••••••••"
+              disabled={isSubmitting}
+              className={inputClass}
+            />
           </div>
 
-          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          {/* New password */}
+          <div className="space-y-1.5">
+            <label htmlFor="pwd-new" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              {strings.labelNewPwd}
+            </label>
+            <PasswordInput
+              id="pwd-new"
+              value={newPwd}
+              onChange={e => setNewPwd(e.target.value)}
+              placeholder="••••••••"
+              disabled={isSubmitting}
+              className={inputClass}
+            />
+          </div>
+
+          {/* Confirm new password */}
+          <div className="space-y-1.5">
+            <label htmlFor="pwd-confirm" className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              {strings.labelConfirmPwd}
+            </label>
+            <PasswordInput
+              id="pwd-confirm"
+              value={confirmPwd}
+              onChange={e => setConfirmPwd(e.target.value)}
+              placeholder="••••••••"
+              disabled={isSubmitting}
+              className={inputClass}
+            />
+          </div>
+
+          {/* Validation error */}
+          {error && (
+            <div className={`flex items-start gap-2 p-3 rounded-xl bg-rose-50 border border-rose-200 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
+              <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-rose-700 font-medium leading-snug">{error}</p>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className={`flex items-center gap-3 pt-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <button
+              type="button"
               onClick={onClose}
-              className="flex-1 px-5 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
+              disabled={isSubmitting}
+              className="flex-1 px-4 py-2.5 text-sm font-semibold rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition disabled:opacity-50"
             >
               {strings.changePwdCancel}
             </button>
             <button
-              onClick={onConfirm}
-              className={`flex-1 px-5 py-2.5 text-sm font-bold rounded-xl text-white transition shadow-sm ${theme.btnPrimary}`}
+              type="submit"
+              disabled={isSubmitting}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold rounded-xl text-white transition shadow-sm disabled:opacity-60 ${theme.btnPrimary}`}
             >
-              {strings.changePwdConfirm}
+              {isSubmitting && (
+                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              )}
+              {strings.changePwdSubmit}
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
@@ -302,7 +440,6 @@ function FieldRow({
   isRTL,
   theme,
   lockedTip,
-  badge,
 }) {
   const inputRef = useRef(null);
 
@@ -312,40 +449,38 @@ function FieldRow({
     }
   }, [isEditing, editable, locked]);
 
+  const displayValue = value != null && value !== '' ? value : '—';
+
   return (
-    <div
-      className={`flex items-center gap-4 py-3.5 px-5 border-b border-slate-100 last:border-b-0 group transition-colors hover:bg-slate-50/60 ${isRTL ? 'flex-row-reverse' : ''}`}
-    >
-      {/* Icon container */}
-      <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${locked ? 'bg-slate-100' : theme.badgeBgLight}`}>
+    <div className={`flex items-center gap-3 py-3 px-4 border-b border-slate-100 last:border-b-0 group transition-colors hover:bg-slate-50/60 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      {/* Icon */}
+      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${locked ? 'bg-slate-100' : theme.badgeBgLight}`}>
         {locked
-          ? <Lock className="w-3.5 h-3.5 text-slate-400" />
-          : <Icon className={`w-3.5 h-3.5 ${theme.iconColor}`} />
+          ? <Lock className="w-3 h-3 text-slate-400" />
+          : <Icon className={`w-3 h-3 ${theme.iconColor}`} />
         }
       </div>
 
       {/* Label + Value */}
       <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-        {/* Label row */}
-        <div className={`flex items-center gap-2 mb-0.5 flex-wrap ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 leading-none">
+        <div className={`flex items-center gap-1.5 mb-0.5 ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-none">
             {label}
           </span>
           {locked && (
             <span
               title={lockedTip}
-              className="inline-flex items-center gap-1 text-[9px] font-bold tracking-wider text-slate-400 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5 cursor-help select-none"
+              className="inline-flex items-center gap-1 text-[8px] font-bold tracking-wider text-slate-400 bg-slate-100 border border-slate-200 rounded px-1 py-0.5 cursor-help select-none"
             >
-              <Lock className="w-2.5 h-2.5" />
+              <Lock className="w-2 h-2" />
               {isRTL ? 'مقفل' : 'Verrouillé'}
             </span>
           )}
           {editable && !locked && (
-            <Pencil className={`w-3 h-3 ${theme.iconColor} opacity-0 group-hover:opacity-50 transition-opacity`} />
+            <Pencil className={`w-2.5 h-2.5 ${theme.iconColor} opacity-0 group-hover:opacity-40 transition-opacity`} />
           )}
         </div>
 
-        {/* Edit input OR read-only value */}
         {isEditing && editable && !locked ? (
           <input
             ref={inputRef}
@@ -353,18 +488,15 @@ function FieldRow({
             value={editValue ?? ''}
             onChange={(e) => onEditChange(e.target.value)}
             dir={forceDir ?? (isRTL ? 'rtl' : 'ltr')}
-            className={`w-full px-3 py-1.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 bg-slate-50/60 focus:bg-white outline-none transition duration-150 ${theme.editRing}`}
+            className={`w-full px-2.5 py-1 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 bg-slate-50 focus:bg-white outline-none transition ${theme.editRing}`}
           />
         ) : (
-          <div className={`flex items-center gap-2 flex-wrap ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
-            <span
-              dir={forceDir}
-              className={`text-sm font-semibold text-slate-800 truncate ${type === 'email' || forceDir === 'ltr' ? 'font-mono' : ''}`}
-            >
-              {value || '—'}
-            </span>
-            {badge}
-          </div>
+          <span
+            dir={forceDir}
+            className={`text-sm font-semibold text-slate-800 truncate block ${type === 'email' || forceDir === 'ltr' ? 'font-mono' : ''}`}
+          >
+            {displayValue}
+          </span>
         )}
       </div>
     </div>
@@ -372,18 +504,17 @@ function FieldRow({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PROFILE CARD WRAPPER
+// CARD WRAPPER
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ProfileCard({ title, icon: TitleIcon, theme, isRTL, children, action }) {
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white/60 shadow-md overflow-hidden">
-      {/* Header */}
-      <div className={`px-5 py-4 border-b border-slate-100 flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${theme.badgeBgLight}`}>
-          <TitleIcon className={`w-4 h-4 ${theme.iconColor}`} />
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className={`px-4 py-3 border-b border-slate-100 flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${theme.badgeBgLight}`}>
+          <TitleIcon className={`w-3.5 h-3.5 ${theme.iconColor}`} />
         </div>
-        <h2 className={`flex-1 text-xs font-bold uppercase tracking-widest text-slate-600 ${isRTL ? 'text-right' : 'text-left'}`}>
+        <h2 className={`flex-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 ${isRTL ? 'text-right' : 'text-left'}`}>
           {title}
         </h2>
         {action && <div className="flex-shrink-0">{action}</div>}
@@ -394,112 +525,89 @@ function ProfileCard({ title, icon: TitleIcon, theme, isRTL, children, action })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// HERO CARD
+// HERO BANNER — Compact horizontal layout
 // ─────────────────────────────────────────────────────────────────────────────
 
-function HeroCard({ user, role, theme, strings }) {
+function HeroBanner({ user, role, theme, strings }) {
   const { isRTL } = strings;
   const initials  = getInitials(user);
-  const fullName  = user ? `${user.prenom} ${user.nom}` : '—';
+  const fullName  = user
+    ? `${user.prenom ?? ''} ${user.nom ?? ''}`.trim() || '—'
+    : '—';
 
   return (
-    <div className="rounded-3xl overflow-hidden shadow-lg border border-white/40">
-      {/* Banner */}
-      <div className="relative h-40 overflow-hidden" style={{ background: theme.gradientBanner }}>
-        {/* Dot watermark */}
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{ backgroundImage: DOT_PATTERN, backgroundSize: '40px 40px' }}
-        />
-        {/* Glow blobs */}
-        <div
-          className="absolute -top-10 opacity-20 w-64 h-64 rounded-full blur-3xl"
-          style={{ background: theme.accent, [isRTL ? 'right' : 'left']: '-32px' }}
-        />
-        <div
-          className="absolute bottom-0 opacity-10 w-48 h-32 rounded-full blur-2xl"
-          style={{ background: '#60A5FA', [isRTL ? 'left' : 'right']: '10%' }}
-        />
-        {/* Corner stamp */}
-        <span
-          className={`absolute top-4 ${isRTL ? 'left-5' : 'right-5'} text-[9px] font-bold tracking-[0.25em] uppercase text-white/30 select-none`}
-        >
-          CSPJ Mail — Espace Sécurisé
-        </span>
-      </div>
-
-      {/* Avatar + info */}
+    <div
+      className="relative rounded-2xl overflow-hidden shadow-md border border-white/20"
+      style={{ background: theme.gradientBanner }}
+    >
+      {/* Dot watermark */}
+      <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: DOT_PATTERN, backgroundSize: '40px 40px' }} />
+      {/* Glow blob */}
       <div
-        className="relative px-6 pb-6"
-        style={{ background: 'linear-gradient(to bottom, #f8fafc, #ffffff)' }}
-      >
-        <div className={`flex items-end gap-5 ${isRTL ? 'flex-row-reverse' : ''} -mt-14`}>
-          {/* Avatar */}
-          <div className="relative flex-shrink-0">
-            <div
-              className={`w-24 h-24 rounded-2xl flex items-center justify-center text-white text-2xl font-extrabold uppercase border-4 border-white shadow-xl select-none ring-4 ${theme.ringColor}`}
-              style={{ background: theme.avatarGrad }}
-            >
-              {initials}
-            </div>
-            {/* Live status badge */}
-            <div
-              className={`absolute -bottom-1 ${isRTL ? '-left-1' : '-right-1'} flex items-center gap-1 bg-white border border-emerald-100 rounded-xl px-2 py-1 shadow-sm`}
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              <span className="text-[9px] font-bold text-emerald-700 whitespace-nowrap">
-                {strings.statusActive}
-              </span>
-            </div>
-          </div>
+        className="absolute -top-12 opacity-20 w-56 h-56 rounded-full blur-3xl pointer-events-none"
+        style={{ background: theme.accent, [isRTL ? 'right' : 'left']: '-24px' }}
+      />
 
-          {/* Name + email */}
-          <div className={`flex-1 min-w-0 pt-16 ${isRTL ? 'text-right' : 'text-left'}`}>
-            <h1 className="text-xl font-extrabold text-slate-900 leading-tight truncate">
-              {fullName}
-            </h1>
-            <p className="text-xs text-slate-500 font-mono mt-0.5 truncate" dir="ltr"
-              style={{ textAlign: isRTL ? 'right' : 'left' }}>
-              {user?.email || '—'}
-            </p>
+      <div className={`relative flex items-center gap-4 px-5 py-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        {/* Avatar */}
+        <div className="relative flex-shrink-0">
+          <div
+            className={`w-14 h-14 rounded-xl flex items-center justify-center text-white text-lg font-extrabold uppercase select-none border-2 border-white/20 ring-4 ${theme.ringColor}`}
+            style={{ background: theme.avatarGrad }}
+          >
+            {initials}
           </div>
-
-          {/* Role badge chip */}
-          <div className="pb-1 flex-shrink-0">
-            <span
-              className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl border ${theme.badgeBgLight} ${theme.badgeText} ${theme.badgeBorder}`}
-            >
-              <BadgeCheck className="w-3.5 h-3.5" />
-              {getRoleShortLabel(role)}
+          {/* Online indicator */}
+          <div className="absolute -bottom-1 -right-1 flex items-center gap-1 bg-white/10 backdrop-blur-sm border border-emerald-400/30 rounded-full px-1.5 py-0.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
             </span>
           </div>
         </div>
 
-        {/* Role banner divider */}
-        <div className={`mt-4 flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-slate-200" />
-          <span
-            className={`text-[10px] font-bold tracking-[0.18em] uppercase px-3 py-1 rounded-full border select-none whitespace-nowrap ${theme.badgeBgLight} ${theme.badgeText} ${theme.badgeBorder}`}
+        {/* Name / email */}
+        <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <h1 className="text-base font-extrabold text-white leading-tight truncate">{fullName}</h1>
+          <p
+            className="text-[11px] text-white/60 font-mono mt-0.5 truncate"
+            dir="ltr"
+            style={{ textAlign: isRTL ? 'right' : 'left' }}
           >
-            {getRoleBadgeLabel(role)}
-          </span>
-          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-slate-200" />
+            {user?.email || '—'}
+          </p>
         </div>
+
+        {/* Role chip + online label */}
+        <div className={`flex flex-col gap-1.5 flex-shrink-0 ${isRTL ? 'items-start' : 'items-end'}`}>
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-white/90 bg-white/10 border border-white/20 rounded-xl px-2.5 py-1">
+            <BadgeCheck className="w-3 h-3" />
+            {getRoleShortLabel(role)}
+          </span>
+          <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-300 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            {strings.statusActive}
+          </span>
+        </div>
+      </div>
+
+      {/* Role stripe */}
+      <div className="relative border-t border-white/10 px-5 py-2">
+        <p className={`text-[9px] font-bold tracking-[0.2em] uppercase text-white/30 select-none ${isRTL ? 'text-right' : 'text-left'}`}>
+          {getRoleBadgeLabel(role)}
+        </p>
       </div>
     </div>
   );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CARD A — Personal & Identity
+// COMBINED CARD A — Personal Info + Role & Institution (Left/Main column)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function PersonalInfoCard({ user, role, theme, strings, onSaved }) {
-  const { isRTL } = strings;
-  const { updateProfile } = useAuth();
+function PersonalAndRoleCard({ user, role, theme, strings, onSaved }) {
+  const { isRTL, isAdmin } = strings;
+  const { updateProfile }  = useAuth();
 
   const [isEditing,    setIsEditing]    = useState(false);
   const [editPrenom,   setEditPrenom]   = useState('');
@@ -538,14 +646,19 @@ function PersonalInfoCard({ user, role, theme, strings, onSaved }) {
     }
   };
 
+  // Derived data — strictly from user object, no hardcoded placeholders
+  const roleLabel        = getRoleDisplayLabel(role, isAdmin);
+  const institutionLabel = getInstitutionLabel(user?.institutionId, isAdmin);
+  const systemId         = user?.id != null ? String(user.id) : '—';
+
   const cardAction = (
-    <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+    <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
       {!isEditing ? (
         <button
           onClick={handleEditStart}
-          className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl border transition hover:shadow-sm ${theme.badgeBgLight} ${theme.badgeText} ${theme.badgeBorder}`}
+          className={`flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border transition hover:shadow-sm ${theme.badgeBgLight} ${theme.badgeText} ${theme.badgeBorder}`}
         >
-          <Pencil className="w-3 h-3" />
+          <Pencil className="w-2.5 h-2.5" />
           {strings.editBtn}
         </button>
       ) : (
@@ -553,19 +666,19 @@ function PersonalInfoCard({ user, role, theme, strings, onSaved }) {
           <button
             onClick={handleCancel}
             disabled={isSaving}
-            className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition disabled:opacity-50"
+            className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition disabled:opacity-50"
           >
-            <X className="w-3 h-3" />
+            <X className="w-2.5 h-2.5" />
             {strings.cancelBtn}
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-xl text-white transition shadow-sm disabled:opacity-60 ${theme.btnPrimary}`}
+            className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider px-2.5 py-1.5 rounded-lg text-white transition shadow-sm disabled:opacity-60 ${theme.btnPrimary}`}
           >
             {isSaving
-              ? <span className="block w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-              : <Check className="w-3 h-3" />
+              ? <span className="w-2.5 h-2.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              : <Check className="w-2.5 h-2.5" />
             }
             {isSaving ? strings.savingBtn : strings.saveBtn}
           </button>
@@ -577,74 +690,67 @@ function PersonalInfoCard({ user, role, theme, strings, onSaved }) {
   return (
     <ProfileCard title={strings.cardATitle} icon={User} theme={theme} isRTL={isRTL} action={cardAction}>
       <div>
+        {/* Personal fields */}
         <FieldRow
           icon={User} label={strings.labelPrenom}
-          value={user?.prenom || '—'}
+          value={user?.prenom}
           editable isEditing={isEditing}
           editValue={editPrenom} onEditChange={setEditPrenom}
           isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
         />
         <FieldRow
           icon={User} label={strings.labelNom}
-          value={user?.nom || '—'}
+          value={user?.nom}
           editable isEditing={isEditing}
           editValue={editNom} onEditChange={setEditNom}
           isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
         />
         <FieldRow
-          icon={Mail} label={strings.labelEmail}
-          value={user?.email || '—'}
+          icon={Mail} label={isAdmin ? 'Adresse e-mail' : 'البريد الإلكتروني'}
+          value={user?.email}
           forceDir="ltr" type="email"
           editable isEditing={isEditing}
           editValue={editEmail} onEditChange={setEditEmail}
           isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
         />
 
-        {/* ── Phone (local-only) ── */}
-        <div className={`flex items-center gap-4 py-3.5 px-5 border-b border-slate-100 last:border-b-0 group transition-colors hover:bg-slate-50/60 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors ${theme.badgeBgLight}`}>
-            <Phone className={`w-3.5 h-3.5 ${theme.iconColor}`} />
+        {/* Phone (local-only) */}
+        <div className={`flex items-center gap-3 py-3 px-4 border-b border-slate-100 group transition-colors hover:bg-slate-50/60 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${theme.badgeBgLight}`}>
+            <Phone className={`w-3 h-3 ${theme.iconColor}`} />
           </div>
           <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-            {/* Label row */}
-            <div className={`flex items-center gap-2 mb-0.5 flex-wrap ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                {strings.labelPhone}
-              </span>
-              {/* Non-sync badge + tooltip */}
+            <div className={`flex items-center gap-1.5 mb-0.5 ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{strings.labelPhone}</span>
               <div className="relative">
                 <button
                   onMouseEnter={() => setShowPhoneTip(true)}
-                  onFocus={()       => setShowPhoneTip(true)}
+                  onFocus={() => setShowPhoneTip(true)}
                   onMouseLeave={() => setShowPhoneTip(false)}
-                  onBlur={()        => setShowPhoneTip(false)}
-                  className="inline-flex items-center gap-1 text-[9px] font-bold tracking-wider text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-0.5 cursor-help select-none"
+                  onBlur={() => setShowPhoneTip(false)}
+                  className="inline-flex items-center gap-1 text-[8px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 cursor-help select-none"
                 >
-                  <Info className="w-2.5 h-2.5" />
+                  <Info className="w-2 h-2" />
                   {strings.phoneDemo}
                 </button>
                 {showPhoneTip && (
                   <div
-                    className={`absolute z-20 bottom-full mb-2 w-60 bg-slate-900 text-white text-[10px] leading-relaxed rounded-xl px-3 py-2.5 shadow-xl pointer-events-none ${isRTL ? 'right-0' : 'left-0'}`}
+                    className={`absolute z-20 bottom-full mb-2 w-56 bg-slate-900 text-white text-[10px] leading-relaxed rounded-xl px-3 py-2.5 shadow-xl pointer-events-none ${isRTL ? 'right-0' : 'left-0'}`}
                     dir={isRTL ? 'rtl' : 'ltr'}
                   >
                     {strings.phoneDemoTip}
-                    <span
-                      className={`absolute top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-slate-900 ${isRTL ? 'right-3' : 'left-3'}`}
-                    />
                   </div>
                 )}
               </div>
             </div>
-            {/* Input or display */}
             {isEditing ? (
               <input
                 type="tel"
                 value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
+                onChange={e => setEditPhone(e.target.value)}
                 placeholder="+212 6xx xxx xxx"
                 dir="ltr"
-                className={`w-full px-3 py-1.5 border border-slate-200 rounded-xl text-sm font-semibold text-slate-800 font-mono bg-slate-50/60 focus:bg-white outline-none transition duration-150 ${theme.editRing}`}
+                className={`w-full px-2.5 py-1 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 font-mono bg-slate-50 focus:bg-white outline-none transition ${theme.editRing}`}
               />
             ) : (
               <span dir="ltr" className="text-sm font-semibold text-slate-800 font-mono">
@@ -653,10 +759,57 @@ function PersonalInfoCard({ user, role, theme, strings, onSaved }) {
             )}
           </div>
         </div>
+
+        {/* Institutional section divider */}
+        <div className={`px-4 pt-3.5 pb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">
+            {isAdmin ? 'Informations institutionnelles' : 'المعلومات المؤسسية'}
+          </span>
+        </div>
+
+        {/* Role — from user.role, no fake values */}
+        <FieldRow
+          icon={Shield} label={strings.labelRole}
+          value={roleLabel}
+          locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
+        />
+
+        {/* Institution — from user.institutionId, mapped or dash */}
+        <FieldRow
+          icon={Building2}
+          label={role === ROLE.ASSOCIATION ? strings.labelAssocName : strings.labelInstitution}
+          value={institutionLabel}
+          locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
+        />
+
+        {/* Direction (Fonctionnaire only) */}
+        {role === ROLE.FONCTIONNAIRE && (
+          <FieldRow
+            icon={Building2} label={strings.labelDirection}
+            value={institutionLabel}
+            locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
+          />
+        )}
+
+        {/* Representative status (Association only) */}
+        {role === ROLE.ASSOCIATION && (
+          <FieldRow
+            icon={BadgeCheck} label={strings.labelRepStatus}
+            value={isRTL ? 'ممثل رسمي معتمد' : 'Représentant officiel accrédité'}
+            locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
+          />
+        )}
+
+        {/* System ID — user.id directly as string, no CSPJ-XXXXX formatting */}
+        <FieldRow
+          icon={Hash} label={strings.labelMatricule}
+          value={systemId}
+          forceDir="ltr"
+          locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
+        />
       </div>
 
-      {/* Footnote */}
-      <div className={`px-5 py-3 bg-slate-50 border-t border-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
+      <div className={`px-4 py-2.5 bg-slate-50 border-t border-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
         <p className="text-[9px] text-slate-400 leading-relaxed">{strings.editableNote}</p>
       </div>
     </ProfileCard>
@@ -664,157 +817,57 @@ function PersonalInfoCard({ user, role, theme, strings, onSaved }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CARD B — Role & Organisation
-// ─────────────────────────────────────────────────────────────────────────────
-
-function RoleOrgCard({ user, role, theme, strings }) {
-  const { isRTL } = strings;
-  const institutionLabel = getInstitutionLabel(user?.institutionId, role);
-  const roleLabel        = getRoleDisplayLabel(role);
-  const systemId         = user?.id ? `CSPJ-${String(user.id).padStart(5, '0')}` : '—';
-
-  const LockBadge = () => (
-    <span className="inline-flex items-center gap-1 text-[9px] font-bold tracking-wider text-slate-400 bg-slate-100 border border-slate-200 rounded-md px-1.5 py-0.5 select-none flex-shrink-0">
-      <Lock className="w-2.5 h-2.5" />
-      {isRTL ? 'مقفل' : 'Verrouillé'}
-    </span>
-  );
-
-  return (
-    <ProfileCard title={strings.cardBTitle} icon={Building2} theme={theme} isRTL={isRTL}>
-      <div>
-        <FieldRow
-          icon={Shield} label={strings.labelRole}
-          value={roleLabel}
-          locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
-          badge={<LockBadge />}
-        />
-        <FieldRow
-          icon={Building2}
-          label={role === ROLE.ASSOCIATION ? strings.labelAssocName : strings.labelInstitution}
-          value={institutionLabel}
-          locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
-          badge={<LockBadge />}
-        />
-        {role === ROLE.FONCTIONNAIRE && (
-          <FieldRow
-            icon={Building2} label={strings.labelDirection}
-            value={institutionLabel}
-            locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
-            badge={<LockBadge />}
-          />
-        )}
-        {role === ROLE.ASSOCIATION && (
-          <FieldRow
-            icon={BadgeCheck} label={strings.labelRepStatus}
-            value={isRTL ? 'ممثل رسمي معتمد' : 'Représentant officiel accrédité'}
-            locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
-            badge={<LockBadge />}
-          />
-        )}
-        <FieldRow
-          icon={Hash} label={strings.labelMatricule}
-          value={systemId}
-          forceDir="ltr"
-          locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
-          badge={<LockBadge />}
-        />
-      </div>
-      <div className={`px-5 py-3 bg-slate-50 border-t border-slate-100 ${isRTL ? 'text-right' : 'text-left'}`}>
-        <p className="text-[9px] text-slate-400 leading-relaxed">{strings.readOnlyNote}</p>
-      </div>
-    </ProfileCard>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CARD C — Security & Authentication
+// CARD B — Security & Authentication (Right/Side column)
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SecurityCard({ theme, strings, onChangePwd }) {
   const { isRTL } = strings;
 
-  const sessionLabel = new Date().toLocaleString(isRTL ? 'ar-MA' : 'fr-FR', {
-    weekday: 'short',
-    day:     '2-digit',
-    month:   'short',
-    year:    'numeric',
-    hour:    '2-digit',
-    minute:  '2-digit',
-  });
-
   return (
-    <ProfileCard title={strings.cardCTitle} icon={ShieldCheck} theme={theme} isRTL={isRTL}>
+    <ProfileCard title={strings.cardBTitle} icon={ShieldCheck} theme={theme} isRTL={isRTL}>
       <div>
-        {/* 2FA */}
-        <div className={`flex items-center gap-4 py-3.5 px-5 border-b border-slate-100 hover:bg-slate-50/60 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-emerald-50">
-            <Fingerprint className="w-3.5 h-3.5 text-emerald-600" />
+        {/* 2FA status */}
+        <div className={`flex items-center gap-3 py-3 px-4 border-b border-slate-100 hover:bg-slate-50/60 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-50">
+            <Fingerprint className="w-3 h-3 text-emerald-600" />
           </div>
           <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
               {strings.label2FA}
             </p>
             <div className={`flex items-center gap-2 flex-wrap ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 py-1">
-                <ShieldCheck className="w-3.5 h-3.5" />
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-0.5">
+                <ShieldCheck className="w-3 h-3" />
                 {strings.status2FAOn}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono" dir="ltr">TOTP / RFC 6238</span>
+              <span className="text-[9px] text-slate-400 font-mono" dir="ltr">TOTP / RFC 6238</span>
             </div>
           </div>
         </div>
 
-        {/* Session */}
-        <div className={`flex items-center gap-4 py-3.5 px-5 border-b border-slate-100 hover:bg-slate-50/60 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${theme.badgeBgLight}`}>
-            <Clock className={`w-3.5 h-3.5 ${theme.iconColor}`} />
+        {/* Change password button */}
+        <div className={`flex items-center gap-3 py-4 px-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-rose-50">
+            <KeyRound className="w-3 h-3 text-rose-500" />
           </div>
           <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
-              {strings.labelLastLogin}
-            </p>
-            <div className={`flex items-center gap-2 flex-wrap ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-700">
-                <span className="relative flex h-2 w-2 flex-shrink-0">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                </span>
-                {strings.sessionActive}
-              </span>
-              <span className="text-[10px] text-slate-400 font-mono" dir="ltr">{sessionLabel}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Change Password */}
-        <div className={`flex items-center gap-4 py-4 px-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 bg-rose-50">
-            <KeyRound className="w-3.5 h-3.5 text-rose-500" />
-          </div>
-          <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">
               {strings.quickAction}
             </p>
             <button
+              id="btn-change-password"
               onClick={onChangePwd}
-              className={`
-                inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold
-                border border-rose-200 text-rose-600 bg-rose-50
-                hover:bg-rose-500 hover:text-white hover:border-rose-500
-                transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98]
-                ${isRTL ? 'flex-row-reverse' : ''}
-              `}
+              className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-bold border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-500 hover:text-white hover:border-rose-500 transition-all duration-200 shadow-sm hover:shadow-md active:scale-[0.98] ${isRTL ? 'flex-row-reverse' : ''}`}
             >
-              <KeyRound className="w-4 h-4" />
+              <KeyRound className="w-3.5 h-3.5" />
               {strings.changePwdBtn}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Security note */}
-      <div className={`px-5 py-3 border-t border-slate-100 flex items-start gap-2 bg-slate-50 ${isRTL ? 'flex-row-reverse text-right' : 'text-left'}`}>
+      {/* Security footer note */}
+      <div className={`px-4 py-2.5 border-t border-slate-100 flex items-start gap-2 bg-slate-50 ${isRTL ? 'flex-row-reverse text-right' : ''}`}>
         <Wifi className="w-3 h-3 text-slate-400 flex-shrink-0 mt-0.5" />
         <p className="text-[9px] text-slate-400 leading-relaxed">{strings.securityNote}</p>
       </div>
@@ -835,13 +888,8 @@ export default function ProfilePage() {
   const strings = useStrings(role);
   const { isRTL } = strings;
 
-  const [toast,       setToast]       = useState({ type: '', text: '', isRTL: false });
+  const [toast,        setToast]        = useState({ type: '', text: '', isRTL: false });
   const [showPwdModal, setShowPwdModal] = useState(false);
-
-  const handleChangePwdConfirm = () => {
-    setShowPwdModal(false);
-    navigate('/forgot-password');
-  };
 
   const BackIcon = isRTL ? ChevronRight : ChevronLeft;
 
@@ -853,8 +901,8 @@ export default function ProfilePage() {
         <ChangePasswordModal
           strings={strings}
           theme={theme}
-          onConfirm={handleChangePwdConfirm}
           onClose={() => setShowPwdModal(false)}
+          onSuccess={setToast}
         />
       )}
 
@@ -863,8 +911,11 @@ export default function ProfilePage() {
         className="flex flex-col flex-1 min-h-0 overflow-y-auto"
         style={{ background: 'linear-gradient(160deg, #EFF6FF 0%, #F0F4F8 50%, #F1F5F9 100%)' }}
       >
-        {/* ── Top Nav ─────────────────────────────────────────────────────── */}
-        <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/70 h-14 flex items-center justify-between px-6 shrink-0 sticky top-0 z-10 shadow-sm">
+        {/* Top Nav */}
+        <header
+          className="bg-white/80 backdrop-blur-md border-b border-slate-200/70 flex items-center justify-between px-5 shrink-0 sticky top-0 z-10 shadow-sm"
+          style={{ height: '52px' }}
+        >
           <button
             onClick={() => navigate(-1)}
             className={`flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors group ${isRTL ? 'flex-row-reverse' : ''}`}
@@ -881,23 +932,42 @@ export default function ProfilePage() {
 
           <button
             onClick={logout}
-            className={`flex items-center gap-2 text-xs font-semibold text-slate-500 border border-slate-200 rounded-xl px-4 py-1.5 hover:border-rose-200 hover:text-rose-600 hover:bg-rose-50 transition-all duration-150 ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`flex items-center gap-2 text-xs font-semibold text-slate-500 border border-slate-200 rounded-xl px-3.5 py-1.5 hover:border-rose-200 hover:text-rose-600 hover:bg-rose-50 transition-all duration-150 ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <LogOut className="w-3.5 h-3.5" />
             {strings.logout}
           </button>
         </header>
 
-        {/* ── Main Content ─────────────────────────────────────────────────── */}
-        <main className="flex-1 flex justify-center px-4 sm:px-6 py-8">
-          <div className="w-full max-w-2xl space-y-5">
-            <HeroCard user={user} role={role} theme={theme} strings={strings} />
-            <PersonalInfoCard user={user} role={role} theme={theme} strings={strings} onSaved={setToast} />
-            <RoleOrgCard user={user} role={role} theme={theme} strings={strings} />
-            <SecurityCard theme={theme} strings={strings} onChangePwd={() => setShowPwdModal(true)} />
+        {/* Main Content */}
+        <main className="flex-1 flex justify-center px-4 sm:px-6 py-6">
+          <div className="w-full max-w-3xl space-y-4">
 
+            {/* Hero banner — full width */}
+            <HeroBanner user={user} role={role} theme={theme} strings={strings} />
+
+            {/* 2-column responsive grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
+              {/* Left: Personal + Institutional combined */}
+              <PersonalAndRoleCard
+                user={user}
+                role={role}
+                theme={theme}
+                strings={strings}
+                onSaved={setToast}
+              />
+
+              {/* Right: Security */}
+              <SecurityCard
+                theme={theme}
+                strings={strings}
+                onChangePwd={() => setShowPwdModal(true)}
+              />
+            </div>
+
+            {/* Footer */}
             <p
-              className={`text-center text-[10px] text-slate-400 pb-4 ${isRTL ? 'font-medium' : ''}`}
+              className={`text-center text-[10px] text-slate-400 pb-3 ${isRTL ? 'font-medium' : ''}`}
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               {strings.footer}
