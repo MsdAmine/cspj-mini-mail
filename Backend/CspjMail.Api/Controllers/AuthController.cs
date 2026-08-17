@@ -251,6 +251,29 @@ namespace CspjMail.Api.Controllers
             });
         }
 
+        // ─── Change Password (authenticated) ─────────────────────────────────────
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+        {
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim, out int userId))
+                return Unauthorized();
+
+            var user = await _context.Utilisateurs.FindAsync(userId);
+            if (user == null || !user.Actif)
+                return Unauthorized();
+
+            // Verify that the supplied current password is correct before allowing the change.
+            if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.MotDePasseHash))
+                return BadRequest(new { message = "كلمة المرور الحالية غير صحيحة. / Mot de passe actuel incorrect." });
+
+            user.MotDePasseHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "تم تحديث كلمة المرور بنجاح. / Mot de passe mis à jour avec succès." });
+        }
+
         // ─── Forgot Password (TOTP flow) ──────────────────────────────────────────
         [HttpPost("forgot-password")]
         [EnableRateLimiting("totp-ops")]

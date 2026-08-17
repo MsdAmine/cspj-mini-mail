@@ -63,4 +63,17 @@ namespace CspjMail.Api.DTOs
             ErrorMessage = "Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.")]
         public string NewPassword { get; set; } = null!;
     }
+
+    // ── Authenticated change-password flow ────────────────────────────────────
+
+    /// <summary>Authenticated user changing their own password.</summary>
+    public class ChangePasswordDto
+    {
+        [Required]
+        public string CurrentPassword { get; set; } = null!;
+
+        [Required]
+        [StringLength(128, MinimumLength = 1)]
+        public string NewPassword { get; set; } = null!;
+    }
 }
