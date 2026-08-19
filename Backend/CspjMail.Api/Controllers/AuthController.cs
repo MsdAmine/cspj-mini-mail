@@ -428,10 +428,6 @@ namespace CspjMail.Api.Controllers
 
             user.MotDePasseHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
 
-            // Invalidate any legacy email-based reset token as a belt-and-suspenders measure.
-            user.PasswordResetToken = null;
-            user.ResetTokenExpiry   = null;
-
             await _context.SaveChangesAsync();
 
             // Blacklist the jti *after* successful DB write so a DB failure doesn't
@@ -439,38 +435,6 @@ namespace CspjMail.Api.Controllers
             _cache.Set(jtiCacheKey, true, TimeSpan.FromMinutes(10));
 
             return Ok(new { success = true, message = "Votre mot de passe a été réinitialisé avec succès." });
-        }
-
-        // ─── Reset Password (legacy email-link flow) ──────────────────────────────
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
-        {
-            if (string.IsNullOrWhiteSpace(dto.Email) ||
-                string.IsNullOrWhiteSpace(dto.Token) ||
-                string.IsNullOrWhiteSpace(dto.NewPassword))
-                return BadRequest("Tous les champs sont requis.");
-
-            var user = await _context.Utilisateurs
-                .FirstOrDefaultAsync(u => u.Email == dto.Email.Trim().ToLower());
-
-            if (user == null ||
-                user.PasswordResetToken != dto.Token ||
-                user.ResetTokenExpiry == null ||
-                user.ResetTokenExpiry < DateTime.UtcNow)
-            {
-                return BadRequest("Le lien de réinitialisation est invalide ou a expiré.");
-            }
-
-            // Hash the new password using the same BCrypt mechanism as registration
-            user.MotDePasseHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-
-            // Invalidate the token immediately after use
-            user.PasswordResetToken = null;
-            user.ResetTokenExpiry   = null;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new { message = "Votre mot de passe a été réinitialisé avec succès." });
         }
     }
 }

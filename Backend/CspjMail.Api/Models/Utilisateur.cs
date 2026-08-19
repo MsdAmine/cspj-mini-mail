@@ -44,18 +44,6 @@ public partial class Utilisateur
     [InverseProperty("Expediteur")]
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
-    [StringLength(6)]
-    [Unicode(false)]
-    public string? TwoFactorCode { get; set; }
-
-    public DateTime? TwoFactorExpiry { get; set; }
-
-    [StringLength(256)]
-    [Unicode(false)]
-    public string? PasswordResetToken { get; set; }
-
-    public DateTime? ResetTokenExpiry { get; set; }
-
     public bool IsDeleted { get; set; }
 
     /// <summary>
