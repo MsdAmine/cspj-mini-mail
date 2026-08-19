@@ -10,24 +10,6 @@ namespace CspjMail.Api.DTOs
         public string Email { get; set; } = null!;
     }
 
-    public class ResetPasswordDto
-    {
-        [Required]
-        [EmailAddress]
-        [StringLength(150)]
-        public string Email { get; set; } = null!;
-
-        [Required]
-        [StringLength(512)]
-        public string Token { get; set; } = null!;
-
-        [Required]
-        [StringLength(128, MinimumLength = 8, ErrorMessage = "Le mot de passe doit contenir au moins 8 caractères.")]
-        [RegularExpression(
-            @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,128}$",
-            ErrorMessage = "Le mot de passe doit contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.")]
-        public string NewPassword { get; set; } = null!;
-    }
 
     // ── OTP flow ──────────────────────────────────────────────────────────────
 
