@@ -110,17 +110,15 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async ({ prenom, nom, email, telephone }) => {
     try {
-      const response = await api.put('/auth/profile', { prenom, nom, email, telephone });
-      const updated = response.data;
+      // 1. Persist the changes on the server
+      await api.put('/auth/profile', { prenom, nom, email, telephone });
 
-      const updatedUser = {
-        ...user,
-        prenom:        updated.prenom,
-        nom:           updated.nom,
-        email:         updated.email,
-        telephone:     updated.telephone ?? null,
-        nomEntreprise: updated.nomEntreprise ?? user?.nomEntreprise ?? null,
-      };
+      // 2. Re-fetch the full authoritative profile so the context user object
+      //    always has the exact same shape as the /auth/me response.
+      //    This mirrors the pattern used by verifyTwoFactor and prevents
+      //    shape-mismatch render crashes after a successful save.
+      const meResponse = await api.get('/auth/me');
+      const updatedUser = meResponse.data;
 
       localStorage.setItem('cspj_user', JSON.stringify(updatedUser));
       setUser(updatedUser);

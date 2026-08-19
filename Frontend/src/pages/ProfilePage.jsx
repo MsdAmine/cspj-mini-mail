@@ -472,8 +472,8 @@ function FieldRow({
             type={type}
             value={editValue ?? ''}
             onChange={(e) => onEditChange(e.target.value)}
-            dir={forceDir ?? (isRTL ? 'rtl' : 'ltr')}
-            className={`w-full px-2.5 py-1 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 bg-slate-50 focus:bg-white outline-none transition ${theme.editRing}`}
+            dir="ltr"
+            className={`w-full px-2.5 py-1 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 text-left bg-slate-50 focus:bg-white outline-none transition ${theme.editRing}`}
           />
         ) : (
           <span
