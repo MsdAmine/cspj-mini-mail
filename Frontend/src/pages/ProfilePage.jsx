@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
 import {
   User,
   Mail,
@@ -17,7 +18,7 @@ import {
   ChevronRight,
   ChevronLeft,
   AlertCircle,
-  CheckCircle2,
+  BadgeCheck,
   Fingerprint,
   Wifi,
   Eye,
@@ -817,7 +818,7 @@ export default function ProfilePage() {
   const BackIcon = isRTL ? ChevronRight : ChevronLeft;
 
   return (
-    <>
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
       <Toast message={toast} onDismiss={() => setToast({ type: '', text: '', isRTL: false })} />
 
       {showPwdModal && (
@@ -898,6 +899,6 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
-    </>
+    </div>
   );
 }
