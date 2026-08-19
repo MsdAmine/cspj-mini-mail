@@ -20,7 +20,6 @@ import {
   AlertCircle,
   CheckCircle2,
   BadgeCheck,
-  Fingerprint,
   Wifi,
   Eye,
   EyeOff,
@@ -751,26 +750,7 @@ function SecurityCard({ theme, strings, onChangePwd }) {
   return (
     <ProfileCard title={strings.cardBTitle} icon={ShieldCheck} theme={theme} isRTL={isRTL}>
       <div>
-        {/* 2FA status */}
-        <div className={`flex items-center gap-3 py-3 px-4 border-b border-slate-100 hover:bg-slate-50/60 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-50">
-            <Fingerprint className="w-3 h-3 text-emerald-600" />
-          </div>
-          <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
-              {strings.label2FA}
-            </p>
-            <div className={`flex items-center gap-2 flex-wrap ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-0.5">
-                <ShieldCheck className="w-3 h-3" />
-                {strings.status2FAOn}
-              </span>
-              <span className="text-[9px] text-slate-400 font-mono" dir="ltr">TOTP / RFC 6238</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Change password button */}
+        {/* Change password quick action */}
         <div className={`flex items-center gap-3 py-4 px-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-rose-50">
             <KeyRound className="w-3 h-3 text-rose-500" />
@@ -865,14 +845,14 @@ export default function ProfilePage() {
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 flex justify-center px-4 sm:px-6 py-6">
-          <div className="w-full max-w-3xl space-y-4">
+        <main className="flex-1 flex justify-center px-4 sm:px-6 py-3 overflow-hidden">
+          <div className="w-full max-w-3xl space-y-3">
 
             {/* Hero banner — full width */}
             <HeroBanner user={user} role={role} theme={theme} strings={strings} />
 
             {/* 2-column responsive grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-3 items-start">
               {/* Left: Personal + Institutional combined */}
               <PersonalAndRoleCard
                 user={user}
@@ -892,7 +872,7 @@ export default function ProfilePage() {
 
             {/* Footer */}
             <p
-              className={`text-center text-[10px] text-slate-400 pb-3 ${isRTL ? 'font-medium' : ''}`}
+              className={`text-center text-[10px] text-slate-400 pb-1 ${isRTL ? 'font-medium' : ''}`}
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               {strings.footer}
