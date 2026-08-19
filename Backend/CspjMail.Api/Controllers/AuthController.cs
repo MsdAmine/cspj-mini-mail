@@ -201,7 +201,9 @@ namespace CspjMail.Api.Controllers
             if (userIdClaim == null || !int.TryParse(userIdClaim, out int userId))
                 return Unauthorized();
 
-            var user = await _context.Utilisateurs.FindAsync(userId);
+            var user = await _context.Utilisateurs
+                .Include(u => u.Entreprise)
+                .FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null || !user.Actif) return Unauthorized();
 
             return Ok(new
@@ -211,7 +213,9 @@ namespace CspjMail.Api.Controllers
                 nom           = user.Nom,
                 prenom        = user.Prenom,
                 role          = user.Role,
-                institutionId = user.EntrepriseId
+                institutionId = user.EntrepriseId,
+                nomEntreprise = user.Entreprise.Nom,
+                telephone     = user.Telephone
             });
         }
 
@@ -223,7 +227,9 @@ namespace CspjMail.Api.Controllers
             if (userIdClaim == null || !int.TryParse(userIdClaim, out int userId))
                 return Unauthorized();
 
-            var user = await _context.Utilisateurs.FindAsync(userId);
+            var user = await _context.Utilisateurs
+                .Include(u => u.Entreprise)
+                .FirstOrDefaultAsync(u => u.Id == userId);
             if (user == null) return NotFound("Utilisateur introuvable.");
 
             // Check email uniqueness if changed
@@ -235,9 +241,12 @@ namespace CspjMail.Api.Controllers
                     return BadRequest("Cette adresse e-mail est déjà utilisée par un autre compte.");
             }
 
-            user.Prenom = dto.Prenom.Trim();
-            user.Nom    = dto.Nom.Trim();
-            user.Email  = dto.Email.Trim().ToLower();
+            user.Prenom    = dto.Prenom.Trim();
+            user.Nom       = dto.Nom.Trim();
+            user.Email     = dto.Email.Trim().ToLower();
+            // Telephone: null means "clear the value"; omit the key in the JSON to leave unchanged.
+            // The DTO property defaults to null, so an explicit null from the client clears the field.
+            user.Telephone = string.IsNullOrWhiteSpace(dto.Telephone) ? null : dto.Telephone.Trim();
 
             await _context.SaveChangesAsync();
 
@@ -247,7 +256,9 @@ namespace CspjMail.Api.Controllers
                 nom           = user.Nom,
                 email         = user.Email,
                 role          = user.Role,
-                institutionId = user.EntrepriseId
+                institutionId = user.EntrepriseId,
+                nomEntreprise = user.Entreprise.Nom,
+                telephone     = user.Telephone
             });
         }
 

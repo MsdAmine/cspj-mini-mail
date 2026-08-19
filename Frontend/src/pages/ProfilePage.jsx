@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
 import {
   User,
   Mail,
@@ -10,8 +9,6 @@ import {
   Shield,
   ShieldCheck,
   KeyRound,
-  Hash,
-  BadgeCheck,
   Lock,
   Pencil,
   X,
@@ -25,7 +22,6 @@ import {
   Wifi,
   Eye,
   EyeOff,
-  Info,
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -154,21 +150,13 @@ function getRoleShortLabel(role) {
 }
 
 /**
- * Maps institutionId to a human-readable name.
- * Returns dash for unknown/null — NO fake placeholders.
+ * Reads the institution name directly from the API-supplied nomEntreprise field.
+ * Falls back to a dash only when the value is genuinely absent.
  */
-function getInstitutionLabel(institutionId, isAdmin) {
-  if (institutionId == null) return '—';
-  if (institutionId === 1)
-    return isAdmin
-      ? 'CSPJ — Conseil Supérieur du Pouvoir Judiciaire'
-      : 'المجلس الأعلى للسلطة القضائية — CSPJ';
-  if (institutionId === 2)
-    return isAdmin
-      ? 'Association des Magistrats Marocains'
-      : 'جمعية القضاة المغاربة';
-  // Unknown but real institution ID: show it as-is
-  return `ID-${institutionId}`;
+function getInstitutionLabel(user) {
+  if (user?.nomEntreprise) return user.nomEntreprise;
+  if (user?.institutionId == null) return '—';
+  return `ID-${user.institutionId}`; // safety fallback while cache warms up
 }
 
 /**
@@ -605,20 +593,18 @@ function PersonalAndRoleCard({ user, role, theme, strings, onSaved }) {
   const { isRTL, isAdmin } = strings;
   const { updateProfile }  = useAuth();
 
-  const [isEditing,    setIsEditing]    = useState(false);
-  const [editPrenom,   setEditPrenom]   = useState('');
-  const [editNom,      setEditNom]      = useState('');
-  const [editEmail,    setEditEmail]    = useState('');
-  const [editPhone,    setEditPhone]    = useState('');
-  const [localPhone,   setLocalPhone]   = useState('');
-  const [isSaving,     setIsSaving]     = useState(false);
-  const [showPhoneTip, setShowPhoneTip] = useState(false);
+  const [isEditing,  setIsEditing]  = useState(false);
+  const [editPrenom, setEditPrenom] = useState('');
+  const [editNom,    setEditNom]    = useState('');
+  const [editEmail,  setEditEmail]  = useState('');
+  const [editPhone,  setEditPhone]  = useState('');
+  const [isSaving,   setIsSaving]   = useState(false);
 
   const handleEditStart = () => {
     setEditPrenom(user?.prenom ?? '');
     setEditNom(user?.nom ?? '');
     setEditEmail(user?.email ?? '');
-    setEditPhone(localPhone);
+    setEditPhone(user?.telephone ?? '');
     setIsEditing(true);
   };
 
@@ -631,8 +617,12 @@ function PersonalAndRoleCard({ user, role, theme, strings, onSaved }) {
     }
     setIsSaving(true);
     try {
-      await updateProfile({ prenom: editPrenom, nom: editNom, email: editEmail });
-      setLocalPhone(editPhone);
+      await updateProfile({
+        prenom:    editPrenom,
+        nom:       editNom,
+        email:     editEmail,
+        telephone: editPhone || null,
+      });
       setIsEditing(false);
       onSaved({ type: 'success', text: strings.saveSuccess, isRTL });
     } catch (err) {
@@ -642,10 +632,9 @@ function PersonalAndRoleCard({ user, role, theme, strings, onSaved }) {
     }
   };
 
-  // Derived data — strictly from user object, no hardcoded placeholders
+  // Derived data — institution name comes from the API, no hardcoded IDs
   const roleLabel        = getRoleDisplayLabel(role, isAdmin);
-  const institutionLabel = getInstitutionLabel(user?.institutionId, isAdmin);
-  const systemId         = user?.id != null ? String(user.id) : '—';
+  const institutionLabel = getInstitutionLabel(user);
 
   const cardAction = (
     <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -710,51 +699,15 @@ function PersonalAndRoleCard({ user, role, theme, strings, onSaved }) {
           isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
         />
 
-        {/* Phone (local-only) */}
-        <div className={`flex items-center gap-3 py-3 px-4 border-b border-slate-100 group transition-colors hover:bg-slate-50/60 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${theme.badgeBgLight}`}>
-            <Phone className={`w-3 h-3 ${theme.iconColor}`} />
-          </div>
-          <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
-            <div className={`flex items-center gap-1.5 mb-0.5 ${isRTL ? 'flex-row-reverse justify-end' : ''}`}>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">{strings.labelPhone}</span>
-              <div className="relative">
-                <button
-                  onMouseEnter={() => setShowPhoneTip(true)}
-                  onFocus={() => setShowPhoneTip(true)}
-                  onMouseLeave={() => setShowPhoneTip(false)}
-                  onBlur={() => setShowPhoneTip(false)}
-                  className="inline-flex items-center gap-1 text-[8px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 cursor-help select-none"
-                >
-                  <Info className="w-2 h-2" />
-                  {strings.phoneDemo}
-                </button>
-                {showPhoneTip && (
-                  <div
-                    className={`absolute z-20 bottom-full mb-2 w-56 bg-slate-900 text-white text-[10px] leading-relaxed rounded-xl px-3 py-2.5 shadow-xl pointer-events-none ${isRTL ? 'right-0' : 'left-0'}`}
-                    dir={isRTL ? 'rtl' : 'ltr'}
-                  >
-                    {strings.phoneDemoTip}
-                  </div>
-                )}
-              </div>
-            </div>
-            {isEditing ? (
-              <input
-                type="tel"
-                value={editPhone}
-                onChange={e => setEditPhone(e.target.value)}
-                placeholder="+212 6xx xxx xxx"
-                dir="ltr"
-                className={`w-full px-2.5 py-1 border border-slate-200 rounded-lg text-sm font-semibold text-slate-800 font-mono bg-slate-50 focus:bg-white outline-none transition ${theme.editRing}`}
-              />
-            ) : (
-              <span dir="ltr" className="text-sm font-semibold text-slate-800 font-mono">
-                {localPhone || '—'}
-              </span>
-            )}
-          </div>
-        </div>
+        {/* Phone — persisted in DB, editable */}
+        <FieldRow
+          icon={Phone} label={strings.labelPhone}
+          value={user?.telephone}
+          forceDir="ltr"
+          editable isEditing={isEditing}
+          editValue={editPhone} onEditChange={setEditPhone}
+          isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
+        />
 
         {/* Institutional section divider */}
         <div className={`px-4 pt-3.5 pb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -770,37 +723,11 @@ function PersonalAndRoleCard({ user, role, theme, strings, onSaved }) {
           locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
         />
 
-        {/* Institution — from user.institutionId, mapped or dash */}
+        {/* Institution — real name from API response */}
         <FieldRow
           icon={Building2}
           label={role === ROLE.ASSOCIATION ? strings.labelAssocName : strings.labelInstitution}
           value={institutionLabel}
-          locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
-        />
-
-        {/* Direction (Fonctionnaire only) */}
-        {role === ROLE.FONCTIONNAIRE && (
-          <FieldRow
-            icon={Building2} label={strings.labelDirection}
-            value={institutionLabel}
-            locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
-          />
-        )}
-
-        {/* Representative status (Association only) */}
-        {role === ROLE.ASSOCIATION && (
-          <FieldRow
-            icon={BadgeCheck} label={strings.labelRepStatus}
-            value={isRTL ? 'ممثل رسمي معتمد' : 'Représentant officiel accrédité'}
-            locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
-          />
-        )}
-
-        {/* System ID — user.id directly as string, no CSPJ-XXXXX formatting */}
-        <FieldRow
-          icon={Hash} label={strings.labelMatricule}
-          value={systemId}
-          forceDir="ltr"
           locked isRTL={isRTL} theme={theme} lockedTip={strings.lockedTip}
         />
       </div>

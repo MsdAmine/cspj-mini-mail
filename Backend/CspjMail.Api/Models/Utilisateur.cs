@@ -53,4 +53,11 @@ public partial class Utilisateur
     [StringLength(64)]
     [Unicode(false)]
     public string? TwoFactorSecret { get; set; }
+
+    /// <summary>
+    /// Optional professional phone number, persisted in the DB and editable by the user via their profile.
+    /// </summary>
+    [StringLength(20)]
+    [Unicode(false)]
+    public string? Telephone { get; set; }
 }

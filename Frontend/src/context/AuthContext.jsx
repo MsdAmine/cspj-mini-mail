@@ -108,16 +108,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateProfile = async ({ prenom, nom, email }) => {
+  const updateProfile = async ({ prenom, nom, email, telephone }) => {
     try {
-      const response = await api.put('/auth/profile', { prenom, nom, email });
+      const response = await api.put('/auth/profile', { prenom, nom, email, telephone });
       const updated = response.data;
 
       const updatedUser = {
         ...user,
-        prenom: updated.prenom,
-        nom: updated.nom,
-        email: updated.email,
+        prenom:        updated.prenom,
+        nom:           updated.nom,
+        email:         updated.email,
+        telephone:     updated.telephone ?? null,
+        nomEntreprise: updated.nomEntreprise ?? user?.nomEntreprise ?? null,
       };
 
       localStorage.setItem('cspj_user', JSON.stringify(updatedUser));
