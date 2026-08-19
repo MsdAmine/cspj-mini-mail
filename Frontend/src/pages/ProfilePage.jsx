@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ChevronLeft,
   AlertCircle,
+  CheckCircle2,
   BadgeCheck,
   Fingerprint,
   Wifi,
@@ -198,16 +199,16 @@ function Toast({ message, onDismiss }) {
   const isSuccess = message.type === 'success';
   const isRTL     = message.isRTL;
 
+  // Safe icon render — guarded so a missing import never crashes the page tree
+  const ToastIcon = isSuccess ? CheckCircle2 : AlertCircle;
+
   return (
     <div
       className={`fixed top-5 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-semibold ${isRTL ? 'left-5' : 'right-5'} ${isSuccess ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-rose-50 text-rose-800 border-rose-200'}`}
       style={{ minWidth: 280, maxWidth: 380 }}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
-      {isSuccess
-        ? <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-        : <AlertCircle  className="w-5 h-5 text-rose-500 flex-shrink-0" />
-      }
+      {ToastIcon ? <ToastIcon className={`w-5 h-5 flex-shrink-0 ${isSuccess ? 'text-emerald-500' : 'text-rose-500'}`} /> : null}
       <span className="flex-1">{message.text}</span>
       <button onClick={onDismiss} className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-lg hover:bg-black/5 transition">
         <X className="w-3.5 h-3.5" />
