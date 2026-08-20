@@ -157,27 +157,7 @@ export default function MailList() {
                     }
                   `}
                 >
-                  {/* Quick actions container */}
-                  <div className="absolute top-2 left-16 flex items-center gap-1 z-10">
-                    {/* Archive and Delete (only visible on hover) */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-white/90 backdrop-blur-sm p-1 rounded-lg border border-slate-200/60 shadow-sm">
-                      <button onClick={(e) => handleArchive(e, msg.threadId)} className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="أرشفة">
-                        <Archive size={14} />
-                      </button>
-                      <button onClick={(e) => handleDelete(e, msg.threadId)} className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="حذف">
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
 
-                    {/* Star (visible on hover OR if starred) */}
-                    <button 
-                      onClick={(e) => handleStar(e, msg.threadId, getIsStarred(msg))}
-                      className={`p-1.5 rounded-md transition-all duration-150 ${getIsStarred(msg) ? 'text-amber-400 opacity-100' : 'text-slate-300 hover:text-amber-400 opacity-0 group-hover:opacity-100'}`}
-                      title="تفضيل"
-                    >
-                      <Star size={16} className={getIsStarred(msg) ? 'fill-amber-400 text-amber-400' : ''} />
-                    </button>
-                  </div>
                   {/* Glowing unread dot */}
                   {showUnreadDot && (
                     <span className="absolute top-5 left-3 w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] flex-shrink-0" />
@@ -207,7 +187,7 @@ export default function MailList() {
 
                   {/* Preview content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-baseline gap-2 mb-1">
+                    <div className="flex justify-between items-center gap-2 mb-1">
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         {isGroup && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-violet-100 text-violet-700 border border-violet-200/80 flex-shrink-0">
@@ -220,12 +200,38 @@ export default function MailList() {
                             : msg.dernierExpediteurNom}
                         </h4>
                       </div>
-                      <span className={`text-[10px] font-mono whitespace-nowrap flex-shrink-0 ${showUnreadDot ? "font-bold text-indigo-600" : "font-medium text-slate-400"}`}>
-                        {new Date(msg.derniereActivite).toLocaleDateString("ar-MA", {
-                          month: "short",
-                          day:   "numeric",
-                        })}
-                      </span>
+                      {/* Date, Actions Swap, and Persistent Star */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {/* Swap Container */}
+                        <div className="flex items-center justify-end min-w-[55px] h-6">
+                          {/* Date (Default State) */}
+                          <span className={`block group-hover:hidden text-[10px] font-mono whitespace-nowrap ${showUnreadDot ? "font-bold text-indigo-600" : "font-medium text-slate-400"}`}>
+                            {new Date(msg.derniereActivite).toLocaleDateString("ar-MA", {
+                              month: "short",
+                              day:   "numeric",
+                            })}
+                          </span>
+
+                          {/* Quick Actions (Hovered State) */}
+                          <div className="hidden group-hover:flex items-center gap-1">
+                            <button onClick={(e) => handleArchive(e, msg.threadId)} className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors" title="أرشفة">
+                              <Archive size={14} />
+                            </button>
+                            <button onClick={(e) => handleDelete(e, msg.threadId)} className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="حذف">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Persistent Star Icon */}
+                        <button 
+                          onClick={(e) => handleStar(e, msg.threadId, getIsStarred(msg))}
+                          className={`p-1 flex items-center justify-center rounded-md transition-colors ${getIsStarred(msg) ? 'text-amber-400' : 'text-slate-300 hover:text-amber-400'}`}
+                          title="تفضيل"
+                        >
+                          <Star size={16} className={getIsStarred(msg) ? 'fill-amber-400 text-amber-400' : ''} />
+                        </button>
+                      </div>
                     </div>
 
                     {isGroup && msg.nombreParticipants > 0 && (
