@@ -1,14 +1,10 @@
 import React, { useState } from "react";
 import { useMail } from "../context/MailContext";
 import { useAuth } from "../context/AuthContext";
-import { Trash2 } from "lucide-react";
+import { Trash2, Star, Archive } from "lucide-react";
+import api from "../services/api";
 
 export default function MailList() {
-  const { user } = useAuth();
-  const [
-    hoveredThread,
-    setHoveredThread
-  ] = useState(null);
   const {
     messages,
     activeFolder,
@@ -18,7 +14,45 @@ export default function MailList() {
     searchQuery,
     setSearchQuery,
     deleteThread,
+    toggleArchiveMessage,
   } = useMail();
+
+  const [localStarred, setLocalStarred] = useState(new Set());
+  const [localUnstarred, setLocalUnstarred] = useState(new Set());
+
+  const getIsStarred = (msg) => {
+    if (localStarred.has(msg.threadId)) return true;
+    if (localUnstarred.has(msg.threadId)) return false;
+    return msg.isStarred;
+  };
+
+  const handleStar = async (e, threadId, currentlyStarred) => {
+    e.stopPropagation();
+    const willBeStarred = !currentlyStarred;
+    if (willBeStarred) {
+      setLocalStarred(new Set([...localStarred, threadId]));
+      setLocalUnstarred(new Set([...localUnstarred].filter(id => id !== threadId)));
+    } else {
+      setLocalUnstarred(new Set([...localUnstarred, threadId]));
+      setLocalStarred(new Set([...localStarred].filter(id => id !== threadId)));
+    }
+    try {
+      await api.put(`/messages/thread/${threadId}/star`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleArchive = async (e, threadId) => {
+    e.stopPropagation();
+    try {
+      if (toggleArchiveMessage) {
+        await toggleArchiveMessage(threadId);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleDelete = async (e, threadId) => {
     e.stopPropagation(); // don't select the thread
@@ -114,10 +148,8 @@ export default function MailList() {
                 <div
                   key={msg.threadId}
                   onClick={() => handleSelectMessage(msg)}
-                  onMouseEnter={() => setHoveredThread(msg.threadId)}
-                  onMouseLeave={() => setHoveredThread(null)}
                   className={`
-                    relative flex items-start gap-4 py-4 px-5 cursor-pointer
+                    group relative flex items-start gap-4 py-4 px-5 cursor-pointer
                     transition-all duration-200 border-b border-slate-100/80 last:border-0
                     ${isSelected
                       ? "bg-indigo-50/40 border-r-[3px] border-r-indigo-500 shadow-inner"
@@ -125,6 +157,27 @@ export default function MailList() {
                     }
                   `}
                 >
+                  {/* Quick actions container */}
+                  <div className="absolute top-2 left-16 flex items-center gap-1 z-10">
+                    {/* Archive and Delete (only visible on hover) */}
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-white/90 backdrop-blur-sm p-1 rounded-lg border border-slate-200/60 shadow-sm">
+                      <button onClick={(e) => handleArchive(e, msg.threadId)} className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors" title="أرشفة">
+                        <Archive size={14} />
+                      </button>
+                      <button onClick={(e) => handleDelete(e, msg.threadId)} className="p-1.5 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors" title="حذف">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+
+                    {/* Star (visible on hover OR if starred) */}
+                    <button 
+                      onClick={(e) => handleStar(e, msg.threadId, getIsStarred(msg))}
+                      className={`p-1.5 rounded-md transition-all duration-150 ${getIsStarred(msg) ? 'text-amber-400 opacity-100' : 'text-slate-300 hover:text-amber-400 opacity-0 group-hover:opacity-100'}`}
+                      title="تفضيل"
+                    >
+                      <Star size={16} className={getIsStarred(msg) ? 'fill-amber-400 text-amber-400' : ''} />
+                    </button>
+                  </div>
                   {/* Glowing unread dot */}
                   {showUnreadDot && (
                     <span className="absolute top-5 left-3 w-2 h-2 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] flex-shrink-0" />
@@ -206,17 +259,7 @@ export default function MailList() {
                     </div>
                   </div>
 
-                  {/* Per-row Delete button — visible on hover */}
-                  {hoveredThread === msg.threadId && (
-                    <button
-                      id={`btn-delete-row-${msg.threadId}`}
-                      onClick={(e) => handleDelete(e, msg.threadId)}
-                      className="absolute top-3 left-3 p-1.5 rounded-lg bg-white border border-red-200/80 text-red-500 hover:bg-red-50 hover:border-red-300 shadow-sm active:scale-95 transition-all duration-150 cursor-pointer z-10"
-                      title="حذف هذه المحادثة"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
+                  {/* Old Per-row Delete button removed (now in quick actions toolbar) */}
                 </div>
               );
             })}
