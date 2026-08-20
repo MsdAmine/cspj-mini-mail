@@ -8,7 +8,7 @@ import MailList from '../components/MailList';
 import TiptapEditor from '../components/TiptapEditor';
 import Groups from './Groups';
 import DraftsView from '../components/DraftsView';
-import { Send, AlertTriangle } from 'lucide-react';
+import { Send, AlertTriangle, Trash2 } from 'lucide-react';
 
 // ── Role → Arabic label helper ──────────────────────────────────────────────
 
@@ -69,6 +69,7 @@ export default function Dashboard() {
     selectedMessage, 
     replyToThread, 
     toggleArchiveMessage,
+    deleteThread,
     activeFolder,
   } = useMail();
   
@@ -82,6 +83,17 @@ export default function Dashboard() {
     if (!replyBody.trim()) return;
     await replyToThread(selectedMessage.threadId, replyBody);
     setReplyBody('');
+  };
+
+  const handleDeleteThread = async (threadId) => {
+    try {
+      await deleteThread(threadId);
+      setToast({ message: 'تم حذف المحادثة بنجاح.', type: 'success' });
+      setTimeout(() => setToast(null), 3500);
+    } catch {
+      setToast({ message: 'تعذّر حذف المحادثة. يرجى المحاولة مجدداً.', type: 'error' });
+      setTimeout(() => setToast(null), 3500);
+    }
   };
 
   // ── Admin dashboard redirect ─────────────────────────────────────────────
@@ -222,16 +234,30 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    {/* Archive action button */}
-                    <button
-                      onClick={() => toggleArchiveMessage(selectedMessage.threadId)}
-                      className="px-3.5 py-2 text-xs font-semibold text-slate-600 bg-white/90 border border-slate-200/80 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-sm active:scale-95 transition-all duration-150 flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
-                    >
-                      <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                      </svg>
-                      {selectedMessage.estArchive ? "إلغاء الأرشفة" : "أرشفة"}
-                    </button>
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Archive button */}
+                      <button
+                        onClick={() => toggleArchiveMessage(selectedMessage.threadId)}
+                        className="px-3.5 py-2 text-xs font-semibold text-slate-600 bg-white/90 border border-slate-200/80 rounded-xl hover:bg-slate-50 hover:border-slate-300 shadow-sm active:scale-95 transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        {selectedMessage.estArchive ? "إلغاء الأرشفة" : "أرشفة"}
+                      </button>
+
+                      {/* Delete button */}
+                      <button
+                        id="btn-delete-thread"
+                        onClick={() => handleDeleteThread(selectedMessage.threadId)}
+                        className="px-3.5 py-2 text-xs font-semibold text-red-600 bg-white/90 border border-red-200/80 rounded-xl hover:bg-red-50 hover:border-red-300 shadow-sm active:scale-95 transition-all duration-150 flex items-center gap-1.5 cursor-pointer"
+                        title="حذف هذه المحادثة من صندوقك"
+                      >
+                        <Trash2 size={13} className="flex-shrink-0" />
+                        حذف
+                      </button>
+                    </div>
                   </div>
                 </div>
 

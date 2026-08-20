@@ -539,6 +539,8 @@ namespace CspjMail.Api.Controllers
             //   The message's DestinataireId directly equals the current user.
             var threads = await _context.Threads
                 .Where(t => !t.EstArchive &&
+                    // Exclude threads soft-deleted by this user
+                    !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
                     (
                         // Modern path: participant in thread + has received at least one message
                         (
@@ -599,6 +601,8 @@ namespace CspjMail.Api.Controllers
             // user replied (so their reply appears in their Sent view).
             var threads = await _context.Threads
                 .Where(t => !t.EstArchive &&
+                    // Exclude threads soft-deleted by this user
+                    !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
                     t.Messages.Any(m => m.ExpediteurId == currentUserId))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
@@ -689,6 +693,8 @@ namespace CspjMail.Api.Controllers
 
             var threads = await _context.Threads
                 .Where(t => t.EstArchive &&
+                    // Exclude threads soft-deleted by this user
+                    !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
                     (t.Participants.Any(tp => tp.UserId == currentUserId) ||
                      t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)))
                 .Include(t => t.Messages)
@@ -851,6 +857,8 @@ namespace CspjMail.Api.Controllers
             var threads = await _context.Threads
                 .Where(t => !t.EstArchive &&
                             !t.EstGroupe &&
+                            // Exclude threads soft-deleted by this user
+                            !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
                             (
                                 t.Participants.Any(tp => tp.UserId == currentUserId) ||
                                 t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)
@@ -905,7 +913,9 @@ namespace CspjMail.Api.Controllers
             var threads = await _context.Threads
                 .Where(t => !t.EstArchive &&
                             t.EstGroupe &&
-                            t.Participants.Any(tp => tp.UserId == currentUserId))
+                            t.Participants.Any(tp => tp.UserId == currentUserId) &&
+                            // Exclude threads soft-deleted by this user
+                            !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser))
                 .Include(t => t.Messages)
                     .ThenInclude(m => m.Expediteur)
                 .Include(t => t.Participants)
@@ -1037,6 +1047,64 @@ namespace CspjMail.Api.Controllers
                 NombreParticipants = allParticipantIds.Count,
                 Message          = "تم إنشاء المجموعة بنجاح."
             });
+        }
+
+        // ─── 14. DELETE: api/messages/thread/{id} ─────────────────────────────────
+        /// <summary>
+        /// Soft-deletes a thread for the current user only.
+        /// Sets IsDeletedForUser = true on the ThreadParticipant row so the thread
+        /// disappears from every folder for this user while remaining intact for others.
+        /// Falls back to a legacy check (DestinataireId / ExpediteurId) for old threads
+        /// that predate the ThreadParticipant table.
+        /// </summary>
+        [HttpDelete("thread/{threadId}")]
+        public async Task<IActionResult> DeleteThreadForUser(int threadId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            // ── Locate the participant row ─────────────────────────────────────────
+            var participant = await _context.ThreadParticipants
+                .FirstOrDefaultAsync(tp => tp.ThreadId == threadId && tp.UserId == currentUserId);
+
+            if (participant != null)
+            {
+                // Modern path: mark as deleted for this user
+                participant.IsDeletedForUser = true;
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                // Legacy path: verify the user is genuinely a participant via message columns
+                bool legacyAccess = await _context.Messages
+                    .AnyAsync(m => m.ThreadId == threadId &&
+                                  (m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId));
+
+                if (!legacyAccess)
+                    return Forbid("Vous n'êtes pas autorisé à supprimer cette discussion.");
+
+                // For legacy threads insert a participant row marked as deleted
+                _context.ThreadParticipants.Add(new ThreadParticipant
+                {
+                    ThreadId          = threadId,
+                    UserId            = currentUserId,
+                    IsDeletedForUser  = true
+                });
+                await _context.SaveChangesAsync();
+            }
+
+            // ── Audit log ─────────────────────────────────────────────────────────
+            var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
+            _context.AuditLogs.Add(new AuditLog
+            {
+                DateHeure   = DateTime.UtcNow,
+                TypeAction  = "DELETE_THREAD",
+                Utilisateur = currentUser?.Email ?? "Inconnu",
+                Description = $"Discussion ID {threadId} supprimée (soft-delete) par l'utilisateur."
+            });
+            await _context.SaveChangesAsync();
+
+            return Ok(new { ThreadId = threadId, Message = "Discussion supprimée avec succès." });
         }
     }
 }

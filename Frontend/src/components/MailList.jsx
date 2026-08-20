@@ -1,9 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { useMail } from "../context/MailContext";
 import { useAuth } from "../context/AuthContext";
+import { Trash2 } from "lucide-react";
 
 export default function MailList() {
   const { user } = useAuth();
+  const [
+    hoveredThread,
+    setHoveredThread
+  ] = useState(null);
   const {
     messages,
     activeFolder,
@@ -11,7 +16,18 @@ export default function MailList() {
     setSelectedMessage,
     loading,
     searchQuery,
+    setSearchQuery,
+    deleteThread,
   } = useMail();
+
+  const handleDelete = async (e, threadId) => {
+    e.stopPropagation(); // don't select the thread
+    try {
+      await deleteThread(threadId);
+    } catch {
+      // errors are logged inside deleteThread
+    }
+  };
 
   const handleSelectMessage = (msg) => {
     setSelectedMessage(msg);
@@ -49,6 +65,7 @@ export default function MailList() {
         <div className="relative flex items-center w-full">
           <input
             type="text"
+            dir="ltr"
             placeholder="البحث في الرسائل..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -97,6 +114,8 @@ export default function MailList() {
                 <div
                   key={msg.threadId}
                   onClick={() => handleSelectMessage(msg)}
+                  onMouseEnter={() => setHoveredThread(msg.threadId)}
+                  onMouseLeave={() => setHoveredThread(null)}
                   className={`
                     relative flex items-start gap-4 py-4 px-5 cursor-pointer
                     transition-all duration-200 border-b border-slate-100/80 last:border-0
@@ -186,6 +205,18 @@ export default function MailList() {
                       )}
                     </div>
                   </div>
+
+                  {/* Per-row Delete button — visible on hover */}
+                  {hoveredThread === msg.threadId && (
+                    <button
+                      id={`btn-delete-row-${msg.threadId}`}
+                      onClick={(e) => handleDelete(e, msg.threadId)}
+                      className="absolute top-3 left-3 p-1.5 rounded-lg bg-white border border-red-200/80 text-red-500 hover:bg-red-50 hover:border-red-300 shadow-sm active:scale-95 transition-all duration-150 cursor-pointer z-10"
+                      title="حذف هذه المحادثة"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
                 </div>
               );
             })}
