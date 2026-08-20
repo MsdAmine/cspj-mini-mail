@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CspjMail.Api.Models;
 
@@ -10,6 +10,12 @@ public class ThreadParticipant
 {
     public int ThreadId { get; set; }
     public int UserId { get; set; }
+
+    /// <summary>
+    /// Soft-delete flag: when true this participant has deleted the thread from their own view.
+    /// Other participants are unaffected.
+    /// </summary>
+    public bool IsDeletedForUser { get; set; } = false;
 
     [ForeignKey("ThreadId")]
     public virtual Thread Thread { get; set; } = null!;

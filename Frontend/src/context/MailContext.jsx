@@ -183,6 +183,20 @@ export const MailProvider = ({ children }) => {
     }
   };
 
+  // Soft-delete a thread for the current user only
+  const deleteThread = async (threadId) => {
+    try {
+      await api.delete(`/messages/thread/${threadId}`);
+      // Remove immediately from local state (optimistic update)
+      setMessages(prev => prev.filter(m => m.threadId !== threadId));
+      // Clear the detail view if the deleted thread is currently selected
+      setSelectedMessage(prev => (prev?.threadId === threadId ? null : prev));
+    } catch (err) {
+      console.error("Erreur lors de la suppression de la discussion :", err);
+      throw err; // re-throw so the caller can show a toast
+    }
+  };
+
   const markAsReadMessage = () => {
     // Handled automatically on the backend upon fetching details
   };
@@ -232,6 +246,7 @@ export const MailProvider = ({ children }) => {
       createGroupThread,
       replyToThread,
       toggleArchiveMessage,
+      deleteThread,
       markAsReadMessage,
       drafts,
       saveDraft,
