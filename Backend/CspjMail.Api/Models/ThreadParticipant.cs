@@ -17,6 +17,8 @@ public class ThreadParticipant
     /// </summary>
     public bool IsDeletedForUser { get; set; } = false;
 
+    public bool IsStarred { get; set; } = false;
+
     [ForeignKey("ThreadId")]
     public virtual Thread Thread { get; set; } = null!;
 

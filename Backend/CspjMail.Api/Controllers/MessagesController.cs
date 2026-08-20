@@ -489,6 +489,7 @@ namespace CspjMail.Api.Controllers
                 Objet = thread.Objet,
                 DateCreation = thread.DateCreation,
                 EstArchive = thread.EstArchive,
+                IsStarred = thread.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
                 EstGroupe = thread.EstGroupe,
                 TitreGroupe = thread.TitreGroupe,
                 Destinataires = destinataires,
@@ -575,6 +576,7 @@ namespace CspjMail.Api.Controllers
                         (m.DestinataireId == currentUserId ||
                          t.Participants.Any(tp => tp.UserId == currentUserId))),
                     EstArchive = t.EstArchive,
+                    IsStarred = t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
                     EstGroupe = t.EstGroupe,
                     TitreGroupe = t.TitreGroupe,
                     NombreParticipants = t.Participants.Count > 0
@@ -639,6 +641,7 @@ namespace CspjMail.Api.Controllers
                             .FirstOrDefault() ?? "Inconnu",
                     ADesMessagesNonLus = false,
                     EstArchive = t.EstArchive,
+                    IsStarred = t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
                     EstGroupe = t.EstGroupe,
                     TitreGroupe = t.TitreGroupe,
                     NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
@@ -684,6 +687,25 @@ namespace CspjMail.Api.Controllers
                 Message = $"Thread archive status set to {thread.EstArchive}." });
         }
 
+        // ─── 6b. PUT: api/messages/thread/{id}/star ──────────────────────────────
+        [HttpPut("thread/{threadId}/star")]
+        public async Task<IActionResult> ToggleStarThread(int threadId)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            var participant = await _context.ThreadParticipants
+                .FirstOrDefaultAsync(tp => tp.ThreadId == threadId && tp.UserId == currentUserId);
+
+            if (participant == null) return NotFound("Thread context not located for current user.");
+
+            participant.IsStarred = !participant.IsStarred;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { ThreadId = threadId, IsStarred = participant.IsStarred,
+                Message = $"Thread star status set to {participant.IsStarred}." });
+        }
+
         // ─── 7. GET: api/messages/archive ─────────────────────────────────────────
         [HttpGet("archive")]
         public async Task<IActionResult> GetArchive()
@@ -717,6 +739,7 @@ namespace CspjMail.Api.Controllers
                         : "Inconnu",
                     ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
                     EstArchive = t.EstArchive,
+                    IsStarred = t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
                     EstGroupe = t.EstGroupe,
                     TitreGroupe = t.TitreGroupe,
                     NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
@@ -767,6 +790,7 @@ namespace CspjMail.Api.Controllers
                         : "Inconnu",
                     ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
                     EstArchive = t.EstArchive,
+                    IsStarred = t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
                     EstGroupe = t.EstGroupe,
                     TitreGroupe = t.TitreGroupe,
                     NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2

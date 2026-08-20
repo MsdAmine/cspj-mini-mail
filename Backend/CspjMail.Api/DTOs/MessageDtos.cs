@@ -43,6 +43,7 @@ namespace CspjMail.Api.DTOs
         public string Objet { get; set; } = null!;
         public DateTime DateCreation { get; set; }
         public bool EstArchive { get; set; }
+        public bool IsStarred { get; set; }
         public bool EstGroupe { get; set; }
         public string? TitreGroupe { get; set; }
         public List<MessageDisplayDto> Messages { get; set; } = new();
@@ -84,6 +85,7 @@ namespace CspjMail.Api.DTOs
         public string DernierExpediteurNom { get; set; } = null!;
         public bool ADesMessagesNonLus { get; set; }
         public bool EstArchive { get; set; }
+        public bool IsStarred { get; set; }
         /// <summary>True if this is a group thread.</summary>
         public bool EstGroupe { get; set; }
         /// <summary>Display name for group threads.</summary>
