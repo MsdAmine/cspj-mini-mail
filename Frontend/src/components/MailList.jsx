@@ -68,6 +68,9 @@ export default function MailList() {
   };
 
   const filteredMessages = messages.filter((msg) => {
+    // Filter out group threads from normal mail views
+    if (msg.estGroupe) return false;
+
     if (!searchQuery?.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     

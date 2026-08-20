@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ComposePage from './pages/ComposePage';
+import Groups from './pages/Groups';
 import Layout from './components/Layout';
 import ManageUsers from './components/ManageUsers';
 import ManageInstitutions from './components/ManageInstitutions';
@@ -88,6 +89,7 @@ function AppRoutes() {
       
       <Route element={<ProtectedRoute><MailProvider><Layout /></MailProvider></ProtectedRoute>}>
         <Route path="/dashboard" element={<DashboardRoute />} />
+        <Route path="/groups" element={<Groups />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/users" element={<ManageUsers />} />
         <Route path="/institutions" element={<ManageInstitutions />} />

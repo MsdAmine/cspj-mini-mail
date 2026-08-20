@@ -6,7 +6,6 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import MailList from '../components/MailList';
 import TiptapEditor from '../components/TiptapEditor';
-import Groups from './Groups';
 import DraftsView from '../components/DraftsView';
 import { Send, AlertTriangle, Trash2 } from 'lucide-react';
 
@@ -148,8 +147,6 @@ export default function Dashboard() {
       {/* ── Drafts view ── */}
       {activeFolder === 'drafts' ? (
         <DraftsView />
-      ) : activeFolder === 'groups' ? (
-        <Groups />
       ) : (
         <div className="flex flex-1 min-h-0 overflow-hidden" dir="rtl">
           {/* ── Mail List column ── */}
