@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Users } from 'lucide-react';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,11 +21,6 @@ export default function Sidebar() {
     { id: 'sent',     label: 'الرسائل المرسلة', icon: (
       <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-      </svg>
-    )},
-    { id: 'groups',   label: 'المجموعات',        icon: (
-      <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     )},
     { id: 'archived', label: 'الأرشيف',          icon: (
@@ -235,6 +231,26 @@ export default function Sidebar() {
                     </button>
                   );
                 })}
+
+                <NavLink
+                  to="/groups"
+                  onClick={closeMobile}
+                  title={isCollapsed ? 'المجموعات' : undefined}
+                  className={({ isActive }) => `relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
+                    isActive ? activeItemCls : inactiveItemCls
+                  }`}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <div className={`w-10 flex-shrink-0 flex items-center justify-center ${isActive ? activeIconCls : inactiveIconCls}`}>
+                        <Users className="w-4 h-4 flex-shrink-0" />
+                      </div>
+                      <span className={`truncate transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-2'}`}>
+                        المجموعات
+                      </span>
+                    </>
+                  )}
+                </NavLink>
               </nav>
             </>
           )}
