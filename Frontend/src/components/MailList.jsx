@@ -5,6 +5,8 @@ import { Trash2, Star, Archive } from "lucide-react";
 import api from "../services/api";
 
 export default function MailList() {
+  const [statusFilter, setStatusFilter] = useState('all');
+
   const {
     messages,
     activeFolder,
@@ -71,6 +73,11 @@ export default function MailList() {
     // Filter out group threads from normal mail views
     if (msg.estGroupe) return false;
 
+    // Filter by Read/Unread/Starred status
+    if (statusFilter === 'unread' && !msg.aDesMessagesNonLus) return false;
+    if (statusFilter === 'read' && msg.aDesMessagesNonLus) return false;
+    if (statusFilter === 'starred' && !getIsStarred(msg)) return false;
+
     if (!searchQuery?.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     
@@ -98,26 +105,42 @@ export default function MailList() {
           </span>
         </div>
         
-        {/* Search Input */}
-        <div className="relative flex items-center w-full">
-          <input
-            type="text"
-            dir="ltr"
-            placeholder="البحث في الرسائل..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pr-3 pl-8 py-1.5 bg-slate-50/50 border border-slate-200/80 rounded-lg text-xs focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute left-2 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
+        {/* Search & Filter */}
+        <div className="flex items-center gap-2 w-full">
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="text-xs py-1.5 px-2 pr-6 bg-slate-50/50 border border-slate-200/80 rounded-lg focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all cursor-pointer text-slate-600"
+            dir="rtl"
+          >
+            <option value="all">الكل</option>
+            <option value="unread">غير مقروءة</option>
+            <option value="read">مقروءة</option>
+            <option value="starred">المميزة بنجمة</option>
+          </select>
+          
+          {/* Search Input */}
+          <div className="relative flex items-center flex-1">
+            <input
+              type="text"
+              dir="rtl"
+              placeholder="البحث في الرسائل..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full text-right placeholder:text-right pr-3 pl-8 py-1.5 bg-slate-50/50 border border-slate-200/80 rounded-lg text-xs focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute left-2 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
