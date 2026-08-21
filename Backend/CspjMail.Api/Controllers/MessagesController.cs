@@ -525,133 +525,94 @@ namespace CspjMail.Api.Controllers
         [HttpGet("inbox")]
         public async Task<IActionResult> GetInbox()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
-
-            // INBOX = threads where the current user is a RECIPIENT of at least one message
-            // (i.e., someone else sent them a message in that thread).
-            //
-            // Condition A — modern threads (ThreadParticipant rows exist):
-            //   The user is a registered participant AND at least one message in the thread
-            //   was written by someone other than the current user.
-            //   This correctly excludes threads the current user started solo but never received a reply on.
-            //
-            // Condition B — legacy 1-to-1 threads (no ThreadParticipant rows):
-            //   The message's DestinataireId directly equals the current user.
-            var threads = await _context.Threads
-                .Where(t => !t.EstArchive &&
-                    // Exclude threads soft-deleted by this user
-                    !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
-                    (
-                        // Modern path: participant in thread + has received at least one message
-                        (
-                            t.Participants.Any(tp => tp.UserId == currentUserId) &&
-                            t.Messages.Any(m => m.ExpediteurId != currentUserId)
-                        ) ||
-                        // Legacy path: directly addressed as DestinataireId
-                        t.Messages.Any(m => m.DestinataireId == currentUserId)
-                    ))
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.Expediteur)
-                .Include(t => t.Participants)
-                .ToListAsync();
-
-            var summaries = threads.Select(t =>
+            try
             {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
-                if (lastMessage == null) return null;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-                return new ThreadSummaryDto
-                {
-                    ThreadId = t.Id,
-                    Objet = t.Objet,
-                    DerniereActivite = lastMessage.DateEnvoi,
-                    DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = lastMessage.Expediteur != null
-                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
-                        : "Inconnu",
-                    // Unread badge: count messages sent by others that haven't been read yet
-                    ADesMessagesNonLus = t.Messages.Any(m =>
-                        m.ExpediteurId != currentUserId && !m.EstLu &&
-                        (m.DestinataireId == currentUserId ||
-                         t.Participants.Any(tp => tp.UserId == currentUserId))),
-                    EstArchive = t.EstArchive,
-                    IsStarred = t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
-                    EstGroupe = t.EstGroupe,
-                    TitreGroupe = t.TitreGroupe,
-                    NombreParticipants = t.Participants.Count > 0
-                        ? t.Participants.Count
-                        : 2 // legacy 1-to-1 assumption
-                };
-            })
-            .Where(s => s != null)
-            .OrderByDescending(s => s!.DerniereActivite)
-            .ToList();
+                var threads = await _context.Threads
+                    .Where(t => t.EstArchive == false &&
+                        // Ensure soft-delete filters handle nulls safely
+                        !t.Participants.Any(tp => (tp.UserId == currentUserId && (tp.IsDeletedForUser))) &&
+                        (
+                            (t.Participants.Any(tp => tp.UserId == currentUserId) &&
+                             t.Messages.Any(m => m.ExpediteurId != currentUserId)) ||
+                            t.Messages.Any(m => m.DestinataireId == currentUserId)
+                        ))
+                    .Select(t => new ThreadSummaryDto
+                    {
+                        ThreadId = t.Id,
+                        Objet = t.Objet,
+                        DerniereActivite = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null 
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.DateEnvoi 
+                            : t.DateCreation,
+                        DernierMessageCorps = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null 
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Corps 
+                            : string.Empty,
+                        DernierExpediteurNom = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null && t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur != null 
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur.Prenom + " " + t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur.Nom
+                            : "Inconnu",
+                        ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu &&
+                            (m.DestinataireId == currentUserId || t.Participants.Any(tp => tp.UserId == currentUserId))),
+                        EstArchive = t.EstArchive,
+                        IsStarred = t.Participants.Where(tp => tp.UserId == currentUserId).Select(tp => (bool?)tp.IsStarred).FirstOrDefault() ?? false,
+                        EstGroupe = t.EstGroupe,
+                        TitreGroupe = t.TitreGroupe,
+                        NombreParticipants = t.Participants.Any() ? t.Participants.Count : 2
+                    })
+                    .OrderByDescending(s => s.DerniereActivite)
+                    .ToListAsync();
 
-            return Ok(summaries);
+                return Ok(threads);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message, details = ex.InnerException?.Message });
+            }
         }
 
         // ─── 5. GET: api/messages/sent ────────────────────────────────────────────
         [HttpGet("sent")]
         public async Task<IActionResult> GetSent()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
-
-            // SENT = threads where the current user is the SENDER of at least one message.
-            // This correctly includes both original thread starters and threads where the
-            // user replied (so their reply appears in their Sent view).
-            var threads = await _context.Threads
-                .Where(t => !t.EstArchive &&
-                    // Exclude threads soft-deleted by this user
-                    !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
-                    t.Messages.Any(m => m.ExpediteurId == currentUserId))
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.Expediteur)
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.Destinataire)
-                        .ThenInclude(u => u!.Entreprise)
-                .Include(t => t.Participants)
-                    .ThenInclude(tp => tp.Utilisateur)
-                        .ThenInclude(u => u.Entreprise)
-                .ToListAsync();
-
-            var sentSummaries = threads.Select(t =>
+            try
             {
-                // Use the last message sent BY the current user as the representative for "Sent"
-                var lastSentMessage = t.Messages
-                    .Where(m => m.ExpediteurId == currentUserId)
-                    .OrderByDescending(m => m.DateEnvoi)
-                    .FirstOrDefault();
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-                if (lastSentMessage == null) return null;
+                var threads = await _context.Threads
+                    .Where(t => t.EstArchive == false &&
+                        !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
+                        t.Messages.Any(m => m.ExpediteurId == currentUserId))
+                    .Select(t => new ThreadSummaryDto
+                    {
+                        ThreadId = t.Id,
+                        Objet = t.Objet,
+                        DerniereActivite = t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null 
+                            ? t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.DateEnvoi
+                            : t.DateCreation,
+                        DernierMessageCorps = t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null
+                            ? t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Corps
+                            : string.Empty,
+                        DernierExpediteurNom = t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null && t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Destinataire != null
+                            ? t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Destinataire.Prenom + " " + t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Destinataire.Nom
+                            : t.Participants.Where(tp => tp.UserId != currentUserId).Select(tp => tp.Utilisateur.Prenom + " " + tp.Utilisateur.Nom).FirstOrDefault() ?? "Inconnu",
+                        ADesMessagesNonLus = false,
+                        EstArchive = t.EstArchive,
+                        IsStarred = t.Participants.Where(tp => tp.UserId == currentUserId).Select(tp => (bool?)tp.IsStarred).FirstOrDefault() ?? false,
+                        EstGroupe = t.EstGroupe,
+                        TitreGroupe = t.TitreGroupe,
+                        NombreParticipants = t.Participants.Any() ? t.Participants.Count : 2
+                    })
+                    .OrderByDescending(s => s.DerniereActivite)
+                    .ToListAsync();
 
-                return new ThreadSummaryDto
-                {
-                    ThreadId = t.Id,
-                    Objet = t.Objet,
-                    DerniereActivite = lastSentMessage.DateEnvoi,
-                    DernierMessageCorps = lastSentMessage.Corps,
-                    // For the Sent view show the recipient's name (not the sender's own name)
-                    DernierExpediteurNom = lastSentMessage.Destinataire != null
-                        ? $"{lastSentMessage.Destinataire.Prenom} {lastSentMessage.Destinataire.Nom}"
-                        : t.Participants
-                            .Where(tp => tp.UserId != currentUserId)
-                            .Select(tp => $"{tp.Utilisateur.Prenom} {tp.Utilisateur.Nom}")
-                            .FirstOrDefault() ?? "Inconnu",
-                    ADesMessagesNonLus = false,
-                    EstArchive = t.EstArchive,
-                    IsStarred = t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
-                    EstGroupe = t.EstGroupe,
-                    TitreGroupe = t.TitreGroupe,
-                    NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
-                };
-            })
-            .Where(s => s != null)
-            .OrderByDescending(s => s!.DerniereActivite)
-            .ToList();
-
-            return Ok(sentSummaries);
+                return Ok(threads);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message, details = ex.InnerException?.Message });
+            }
         }
 
         // ─── 6. PUT: api/messages/thread/{id}/archive ─────────────────────────────
@@ -710,97 +671,96 @@ namespace CspjMail.Api.Controllers
         [HttpGet("archive")]
         public async Task<IActionResult> GetArchive()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
-
-            var threads = await _context.Threads
-                .Where(t => t.EstArchive &&
-                    // Exclude threads soft-deleted by this user
-                    !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
-                    (t.Participants.Any(tp => tp.UserId == currentUserId) ||
-                     t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)))
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.Expediteur)
-                .Include(t => t.Participants)
-                .ToListAsync();
-
-            var archiveSummaries = threads.Select(t =>
+            try
             {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
-                if (lastMessage == null) return null;
-                return new ThreadSummaryDto
-                {
-                    ThreadId = t.Id,
-                    Objet = t.Objet,
-                    DerniereActivite = lastMessage.DateEnvoi,
-                    DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = lastMessage.Expediteur != null
-                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
-                        : "Inconnu",
-                    ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
-                    EstArchive = t.EstArchive,
-                    IsStarred = t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
-                    EstGroupe = t.EstGroupe,
-                    TitreGroupe = t.TitreGroupe,
-                    NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
-                };
-            })
-            .Where(s => s != null)
-            .OrderByDescending(s => s!.DerniereActivite)
-            .ToList();
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            return Ok(archiveSummaries);
+                var threads = await _context.Threads
+                    .Where(t => t.EstArchive == true &&
+                        !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
+                        (t.Participants.Any(tp => tp.UserId == currentUserId) ||
+                         t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)))
+                    .Select(t => new ThreadSummaryDto
+                    {
+                        ThreadId = t.Id,
+                        Objet = t.Objet,
+                        DerniereActivite = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null 
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.DateEnvoi
+                            : t.DateCreation,
+                        DernierMessageCorps = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Corps
+                            : string.Empty,
+                        DernierExpediteurNom = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null && t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur != null
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur.Prenom + " " + t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur.Nom
+                            : "Inconnu",
+                        ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
+                        EstArchive = t.EstArchive,
+                        IsStarred = t.Participants.Where(tp => tp.UserId == currentUserId).Select(tp => (bool?)tp.IsStarred).FirstOrDefault() ?? false,
+                        EstGroupe = t.EstGroupe,
+                        TitreGroupe = t.TitreGroupe,
+                        NombreParticipants = t.Participants.Any() ? t.Participants.Count : 2
+                    })
+                    .OrderByDescending(s => s.DerniereActivite)
+                    .ToListAsync();
+
+                return Ok(threads);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message, details = ex.InnerException?.Message });
+            }
         }
 
         // ─── 8. GET: api/messages/search ──────────────────────────────────────────
         [HttpGet("search")]
         public async Task<IActionResult> SearchMessages([FromQuery] string searchTerm)
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
-
-            if (string.IsNullOrWhiteSpace(searchTerm)) return BadRequest("Search term cannot be empty.");
-
-            var normalizedTerm = searchTerm.ToLower();
-
-            var matchingThreads = await _context.Threads
-                .Where(t =>
-                    (t.Participants.Any(tp => tp.UserId == currentUserId) ||
-                     t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)) &&
-                    (t.Objet.ToLower().Contains(normalizedTerm) ||
-                     (t.TitreGroupe != null && t.TitreGroupe.ToLower().Contains(normalizedTerm)) ||
-                     t.Messages.Any(m => m.Corps.ToLower().Contains(normalizedTerm))))
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.Expediteur)
-                .Include(t => t.Participants)
-                .ToListAsync();
-
-            var results = matchingThreads.Select(t =>
+            try
             {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
-                if (lastMessage == null) return null;
-                return new ThreadSummaryDto
-                {
-                    ThreadId = t.Id,
-                    Objet = t.Objet,
-                    DerniereActivite = lastMessage.DateEnvoi,
-                    DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = lastMessage.Expediteur != null
-                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
-                        : "Inconnu",
-                    ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
-                    EstArchive = t.EstArchive,
-                    IsStarred = t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsStarred),
-                    EstGroupe = t.EstGroupe,
-                    TitreGroupe = t.TitreGroupe,
-                    NombreParticipants = t.Participants.Count > 0 ? t.Participants.Count : 2
-                };
-            })
-            .Where(s => s != null)
-            .OrderByDescending(s => s!.DerniereActivite)
-            .ToList();
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            return Ok(results);
+                if (string.IsNullOrWhiteSpace(searchTerm)) return BadRequest("Search term cannot be empty.");
+
+                var normalizedTerm = searchTerm.ToLower();
+
+                var matchingThreads = await _context.Threads
+                    .Where(t =>
+                        (t.Participants.Any(tp => tp.UserId == currentUserId) ||
+                         t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)) &&
+                        (t.Objet.ToLower().Contains(normalizedTerm) ||
+                         (t.TitreGroupe != null && t.TitreGroupe.ToLower().Contains(normalizedTerm)) ||
+                         t.Messages.Any(m => m.Corps.ToLower().Contains(normalizedTerm))))
+                    .Select(t => new ThreadSummaryDto
+                    {
+                        ThreadId = t.Id,
+                        Objet = t.Objet,
+                        DerniereActivite = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.DateEnvoi
+                            : t.DateCreation,
+                        DernierMessageCorps = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Corps
+                            : string.Empty,
+                        DernierExpediteurNom = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null && t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur != null
+                            ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur.Prenom + " " + t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur.Nom
+                            : "Inconnu",
+                        ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
+                        EstArchive = t.EstArchive,
+                        IsStarred = t.Participants.Where(tp => tp.UserId == currentUserId).Select(tp => (bool?)tp.IsStarred).FirstOrDefault() ?? false,
+                        EstGroupe = t.EstGroupe,
+                        TitreGroupe = t.TitreGroupe,
+                        NombreParticipants = t.Participants.Any() ? t.Participants.Count : 2
+                    })
+                    .OrderByDescending(s => s.DerniereActivite)
+                    .ToListAsync();
+
+                return Ok(matchingThreads);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message, details = ex.InnerException?.Message });
+            }
         }
 
         // ─── 9. GET: api/messages/contacts ────────────────────────────────────────
