@@ -201,4 +201,13 @@ namespace CspjMail.Api.DTOs
         /// <summary>IDs of participants to add (excluding the creator, who is auto-added).</summary>
         public List<int> ParticipantIds { get; set; } = new();
     }
-}
+
+    /// <summary>
+    /// Payload for PUT /api/admin/users/{id}/assignments.
+    /// Provides the full replacement list of Fonctionnaire IDs for an Association user.
+    /// </summary>
+    public class SetAssignmentsDto
+    {
+        public List<int> FonctionnaireIds { get; set; } = new();
+    }
+}
