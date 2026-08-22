@@ -65,6 +65,19 @@ namespace CspjMail.Api.Controllers
             _context.Utilisateurs.Add(newUser);
             await _context.SaveChangesAsync();
 
+            if (newUser.Role == "Association" && dto.FonctionnaireIds != null && dto.FonctionnaireIds.Any())
+            {
+                foreach (var fid in dto.FonctionnaireIds.Distinct())
+                {
+                    _context.AssociationFonctionnaires.Add(new AssociationFonctionnaire
+                    {
+                        AssociationId = newUser.Id,
+                        FonctionnaireId = fid
+                    });
+                }
+                await _context.SaveChangesAsync();
+            }
+
             // Dispatch Welcome Email
             try
             {

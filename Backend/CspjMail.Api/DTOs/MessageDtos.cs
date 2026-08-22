@@ -129,6 +129,8 @@ namespace CspjMail.Api.DTOs
 
         [Range(1, int.MaxValue)]
         public int InstitutionId { get; set; }
+
+        public List<int>? FonctionnaireIds { get; set; }
     }
 
     public class CreateInstitutionDto
