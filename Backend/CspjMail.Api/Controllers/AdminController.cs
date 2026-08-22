@@ -388,7 +388,7 @@ namespace CspjMail.Api.Controllers
             {
                 var isValidFonctionnaire = await _context.Utilisateurs
                     .AnyAsync(u => u.Id == fid && !u.IsDeleted && u.Actif &&
-                                   u.Role.Equals("Fonctionnaire", StringComparison.OrdinalIgnoreCase));
+                                   u.Role == "Fonctionnaire");
                 if (!isValidFonctionnaire)
                     return BadRequest($"L'utilisateur ID {fid} n'est pas un Fonctionnaire actif.");
             }
