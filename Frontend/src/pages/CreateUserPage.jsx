@@ -13,20 +13,32 @@ export default function CreateUserPage() {
   const [newInstitutionId, setNewInstitutionId] = useState('1');
   const [adminMessage, setAdminMessage] = useState({ type: '', text: '' });
   const [institutions, setInstitutions] = useState([]);
+  
+  const [fonctionnaires, setFonctionnaires] = useState([]);
+  const [selectedFonctionnaireIds, setSelectedFonctionnaireIds] = useState([]);
 
   useEffect(() => {
-    const fetchInstitutions = async () => {
+    const fetchData = async () => {
       try {
-        const response = await api.get('/admin/institutions');
-        setInstitutions(response.data || []);
-        if (response.data && response.data.length > 0) {
-          setNewInstitutionId(response.data[0].id.toString());
+        const [instRes, usersRes] = await Promise.all([
+          api.get('/admin/institutions'),
+          api.get('/admin/users')
+        ]);
+        
+        setInstitutions(instRes.data || []);
+        if (instRes.data && instRes.data.length > 0) {
+          setNewInstitutionId(instRes.data[0].id.toString());
         }
+
+        const foncs = (usersRes.data || []).filter(
+          u => u.role?.toLowerCase() === 'fonctionnaire' && u.actif
+        );
+        setFonctionnaires(foncs);
       } catch (err) {
-        console.error("Erreur lors de la récupération des institutions :", err);
+        console.error("Erreur lors de la récupération des données :", err);
       }
     };
-    fetchInstitutions();
+    fetchData();
   }, []);
 
   const handleCreateAccount = async (e) => {
@@ -39,14 +51,20 @@ export default function CreateUserPage() {
     }
 
     try {
-      await api.post('/admin/users', {
+      const payload = {
         prenom: newPrenom.trim(),
         nom: newNom.trim(),
         email: newEmail.trim().toLowerCase(),
         password: newPassword,
         role: newRole,
         institutionId: parseInt(newInstitutionId, 10)
-      });
+      };
+
+      if (newRole === 'Association' && selectedFonctionnaireIds.length > 0) {
+        payload.fonctionnaireIds = selectedFonctionnaireIds;
+      }
+
+      await api.post('/admin/users', payload);
 
       setAdminMessage({ 
         type: 'success', 
@@ -66,6 +84,7 @@ export default function CreateUserPage() {
       setNewEmail('');
       setNewPassword('');
       setNewRole('Fonctionnaire');
+      setSelectedFonctionnaireIds([]);
       if (institutions.length > 0) {
         setNewInstitutionId(institutions[0].id.toString());
       } else {
@@ -198,6 +217,46 @@ export default function CreateUserPage() {
                 )}
               </select>
             </div>
+
+            {newRole === 'Association' && (
+              <div className="pt-2">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                  Fonctionnaires assignés / الموظفون المكلفون
+                </label>
+                <div className="border border-slate-200 rounded-xl bg-white max-h-48 overflow-y-auto overflow-x-hidden">
+                  {fonctionnaires.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-400">Aucun fonctionnaire disponible.</div>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {fonctionnaires.map(f => {
+                        const checked = selectedFonctionnaireIds.includes(f.id);
+                        return (
+                          <label key={f.id} className={`flex items-center gap-3 px-3.5 py-2.5 cursor-pointer transition-colors duration-100 ${checked ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}>
+                            <input 
+                              type="checkbox" 
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedFonctionnaireIds(prev => 
+                                  prev.includes(f.id) ? prev.filter(x => x !== f.id) : [...prev, f.id]
+                                );
+                              }}
+                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-700 truncate">{f.prenom} {f.nom}</p>
+                              <p className="text-[10px] text-slate-400 truncate">{f.email}</p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+                {selectedFonctionnaireIds.length > 0 && (
+                  <p className="text-[10px] text-slate-500 mt-1.5">{selectedFonctionnaireIds.length} sélectionné(s)</p>
+                )}
+              </div>
+            )}
 
             <div className="pt-4">
               <button
