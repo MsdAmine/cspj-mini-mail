@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
-import { Send, Users, Plus, X, Search, ChevronRight } from 'lucide-react';
+import { Send, Users, Plus, X, Search, ChevronRight, Lock } from 'lucide-react';
 
 // ── Role → Arabic label + badge colour ───────────────────────────────────────
 const getRoleLabel = (role) => {
@@ -21,13 +21,34 @@ const initials = (name = '') =>
   name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '??';
 
 // ── Create Group Modal ────────────────────────────────────────────────────────
-function CreateGroupModal({ contacts, onClose, onCreate }) {
-  const [groupTitle,    setGroupTitle]    = useState('');
-  const [corps,         setCorps]         = useState('');
-  const [selectedIds,   setSelectedIds]   = useState([]);
-  const [contactSearch, setContactSearch] = useState('');
-  const [error,         setError]         = useState('');
-  const [loading,       setLoading]       = useState(false);
+function CreateGroupModal({ onClose, onCreate, currentUser }) {
+  const [groupTitle,       setGroupTitle]       = useState('');
+  const [corps,            setCorps]            = useState('');
+  const [selectedIds,      setSelectedIds]      = useState([]);
+  const [contactSearch,    setContactSearch]    = useState('');
+  const [error,            setError]            = useState('');
+  const [loading,          setLoading]          = useState(false);
+  const [contacts,         setContacts]         = useState([]);
+  const [loadingContacts,  setLoadingContacts]  = useState(true);
+
+  const isAssociation = currentUser?.role?.toLowerCase() === 'association';
+
+  // Fetch the role-aware assignable contact list on mount
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await api.get('/messages/assignable');
+        if (!cancelled) setContacts(res.data);
+      } catch (err) {
+        console.error('Erreur chargement contacts assignables :', err);
+      } finally {
+        if (!cancelled) setLoadingContacts(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = contacts.filter(c =>
     `${c.nomComplet} ${c.email} ${c.institutionNom}`
@@ -88,6 +109,23 @@ function CreateGroupModal({ contacts, onClose, onCreate }) {
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
               {error}
+            </div>
+          )}
+
+          {/* Restriction notice for Association users */}
+          {isAssociation && (
+            <div className="flex items-start gap-3 p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-xl">
+              <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 flex-shrink-0 mt-0.5">
+                <Lock size={13} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-amber-800 mb-0.5">
+                  يمكنك فقط إضافة الموظفين المكلفين بملفك إلى هذه المجموعة.
+                </p>
+                <p className="text-[11px] text-amber-700">
+                  Vous ne pouvez ajouter que les fonctionnaires assignés à votre dossier.
+                </p>
+              </div>
             </div>
           )}
 
@@ -160,8 +198,20 @@ function CreateGroupModal({ contacts, onClose, onCreate }) {
 
             {/* Contact list */}
             <div className="border border-slate-200/80 rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white/90">
-              {filtered.length === 0 ? (
-                <div className="p-4 text-center text-xs text-slate-400">لا توجد جهات اتصال.</div>
+              {loadingContacts ? (
+                <div className="p-6 flex items-center justify-center gap-2 text-slate-400">
+                  <svg className="animate-spin h-4 w-4 text-violet-400" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  <span className="text-xs">جارٍ التحميل...</span>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-400">
+                  {isAssociation
+                    ? 'لم يتم تعيين أي موظف لملفك بعد. تواصل مع المدير.'
+                    : 'لا توجد جهات اتصال.'}
+                </div>
               ) : (
                 filtered.map(contact => {
                   const isSelected = selectedIds.includes(contact.id);
@@ -638,9 +688,9 @@ export default function Groups() {
       {/* Create Group Modal */}
       {isModalOpen && (
         <CreateGroupModal
-          contacts={contacts}
           onClose={() => setIsModalOpen(false)}
           onCreate={createGroupThread}
+          currentUser={user}
         />
       )}
     </div>

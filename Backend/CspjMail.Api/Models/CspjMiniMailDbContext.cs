@@ -23,6 +23,11 @@ public partial class CspjMiniMailDbContext : DbContext
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
     public virtual DbSet<ThreadParticipant> ThreadParticipants { get; set; }
 
+    /// <summary>
+    /// Assigns specific Fonctionnaire users as points-of-contact for an Association user.
+    /// </summary>
+    public virtual DbSet<AssociationFonctionnaire> AssociationFonctionnaires { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
     }
@@ -111,6 +116,25 @@ public partial class CspjMiniMailDbContext : DbContext
                   .IsUnique()
                   .HasFilter("[IsDeleted] = 0")
                   .HasDatabaseName("UX_Utilisateurs_Email_Active");
+        });
+
+        // ── Association → Fonctionnaire assignment table ──────────────────────
+        modelBuilder.Entity<AssociationFonctionnaire>(entity =>
+        {
+            entity.HasKey(af => new { af.AssociationId, af.FonctionnaireId })
+                  .HasName("PK_AssociationFonctionnaires");
+
+            entity.HasOne(af => af.Association)
+                .WithMany()
+                .HasForeignKey(af => af.AssociationId)
+                .OnDelete(DeleteBehavior.ClientNoAction)
+                .HasConstraintName("FK_AF_Association");
+
+            entity.HasOne(af => af.Fonctionnaire)
+                .WithMany()
+                .HasForeignKey(af => af.FonctionnaireId)
+                .OnDelete(DeleteBehavior.ClientNoAction)
+                .HasConstraintName("FK_AF_Fonctionnaire");
         });
 
         OnModelCreatingPartial(modelBuilder);

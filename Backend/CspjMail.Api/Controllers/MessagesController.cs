@@ -763,7 +763,56 @@ namespace CspjMail.Api.Controllers
             }
         }
 
-        // ─── 9. GET: api/messages/contacts ────────────────────────────────────────
+        // ─── 9. GET: api/messages/assignable ──────────────────────────────────────
+        /// <summary>
+        /// Returns the set of users the caller is allowed to add to a group:
+        /// - Admin or Fonctionnaire → every active user except self.
+        /// - Association           → only the Fonctionnaires explicitly assigned to them.
+        /// </summary>
+        [HttpGet("assignable")]
+        public async Task<IActionResult> GetAssignableUsers()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
+
+            IQueryable<Utilisateur> query;
+
+            if (roleClaim.Equals("Association", StringComparison.OrdinalIgnoreCase))
+            {
+                // Associations see ONLY their assigned Fonctionnaires
+                var assignedIds = await _context.AssociationFonctionnaires
+                    .Where(af => af.AssociationId == currentUserId)
+                    .Select(af => af.FonctionnaireId)
+                    .ToListAsync();
+
+                query = _context.Utilisateurs
+                    .Where(u => u.Actif && !u.IsDeleted && assignedIds.Contains(u.Id));
+            }
+            else
+            {
+                // Admin and Fonctionnaire see everyone except themselves
+                query = _context.Utilisateurs
+                    .Where(u => u.Actif && !u.IsDeleted && u.Id != currentUserId);
+            }
+
+            var contacts = await query
+                .Include(u => u.Entreprise)
+                .Select(u => new ContactDto
+                {
+                    Id             = u.Id,
+                    Email          = u.Email,
+                    NomComplet     = $"{u.Prenom} {u.Nom}",
+                    Role           = u.Role,
+                    InstitutionNom = u.Entreprise != null ? u.Entreprise.Nom : "Structure inconnue"
+                })
+                .ToListAsync();
+
+            return Ok(contacts);
+        }
+
+        // ─── 10. GET: api/messages/contacts ────────────────────────────────────────
         [HttpGet("contacts")]
         public async Task<IActionResult> GetContactsList()
         {
@@ -785,6 +834,7 @@ namespace CspjMail.Api.Controllers
 
             return Ok(contacts);
         }
+
 
         // ─── 10. GET: api/messages/attachments/download/{id} ─────────────────────
         [HttpGet("attachments/download/{id:int}")]
@@ -965,6 +1015,25 @@ namespace CspjMail.Api.Controllers
 
             if (participantIds.Count == 0)
                 return BadRequest("يجب اختيار مشارك صالح على الأقل.");
+
+            // ── Authorization guard for Association users ────────────────────────────
+            // An Association user may only invite their explicitly assigned Fonctionnaires.
+            var callerRole = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
+            if (callerRole.Equals("Association", StringComparison.OrdinalIgnoreCase))
+            {
+                var allowedIds = await _context.AssociationFonctionnaires
+                    .Where(af => af.AssociationId == currentUserId)
+                    .Select(af => af.FonctionnaireId)
+                    .ToListAsync();
+
+                var forbiddenIds = participantIds.Except(allowedIds).ToList();
+                if (forbiddenIds.Any())
+                    return StatusCode(403, new
+                    {
+                        message = "ليس لديك صلاحية إضافة هؤلاء المستخدمين إلى مجموعتك.",
+                        forbiddenUserIds = forbiddenIds
+                    });
+            }
 
             // Validate all participant IDs exist
             foreach (var pid in participantIds)

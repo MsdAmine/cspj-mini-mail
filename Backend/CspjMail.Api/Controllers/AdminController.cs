@@ -338,5 +338,84 @@ namespace CspjMail.Api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, "Une erreur interne est survenue. Veuillez réessayer.");
             }
         }
+        // 6. GET: api/admin/users/{id}/assignments
+        // Returns the list of Fonctionnaire IDs assigned to a given Association user.
+        [HttpGet("users/{id}/assignments")]
+        public async Task<IActionResult> GetAssignments(int id)
+        {
+            var associationUser = await _context.Utilisateurs
+                .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
+            if (associationUser == null)
+                return NotFound("Utilisateur introuvable.");
+
+            if (!associationUser.Role.Equals("Association", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("Cet utilisateur n'est pas une Association.");
+
+            var assignments = await _context.AssociationFonctionnaires
+                .Where(af => af.AssociationId == id)
+                .Include(af => af.Fonctionnaire)
+                    .ThenInclude(f => f.Entreprise)
+                .Select(af => new
+                {
+                    fonctionnaireId  = af.FonctionnaireId,
+                    nomComplet       = $"{af.Fonctionnaire.Prenom} {af.Fonctionnaire.Nom}",
+                    email            = af.Fonctionnaire.Email,
+                    institutionNom   = af.Fonctionnaire.Entreprise != null
+                                          ? af.Fonctionnaire.Entreprise.Nom
+                                          : "Structure inconnue"
+                })
+                .ToListAsync();
+
+            return Ok(assignments);
+        }
+
+        // 7. PUT: api/admin/users/{id}/assignments
+        // Replaces the entire assignment list for the given Association user.
+        // Body: { "fonctionnaireIds": [1, 2, 3] }
+        [HttpPut("users/{id}/assignments")]
+        public async Task<IActionResult> SetAssignments(int id, [FromBody] SetAssignmentsDto dto)
+        {
+            var associationUser = await _context.Utilisateurs
+                .FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
+            if (associationUser == null)
+                return NotFound("Utilisateur introuvable.");
+
+            if (!associationUser.Role.Equals("Association", StringComparison.OrdinalIgnoreCase))
+                return BadRequest("Seul un utilisateur de type Association peut avoir des assignations.");
+
+            // Validate every fonctionnaire ID
+            foreach (var fid in dto.FonctionnaireIds)
+            {
+                var isValidFonctionnaire = await _context.Utilisateurs
+                    .AnyAsync(u => u.Id == fid && !u.IsDeleted && u.Actif &&
+                                   u.Role.Equals("Fonctionnaire", StringComparison.OrdinalIgnoreCase));
+                if (!isValidFonctionnaire)
+                    return BadRequest($"L'utilisateur ID {fid} n'est pas un Fonctionnaire actif.");
+            }
+
+            // Remove existing assignments and replace with new list
+            var existing = await _context.AssociationFonctionnaires
+                .Where(af => af.AssociationId == id)
+                .ToListAsync();
+            _context.AssociationFonctionnaires.RemoveRange(existing);
+
+            foreach (var fid in dto.FonctionnaireIds.Distinct())
+            {
+                _context.AssociationFonctionnaires.Add(new AssociationFonctionnaire
+                {
+                    AssociationId    = id,
+                    FonctionnaireId  = fid
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                AssociationId         = id,
+                AssignedFonctionnaires = dto.FonctionnaireIds.Distinct().Count(),
+                Message               = "Assignations mises à jour avec succès."
+            });
+        }
     }
 }
