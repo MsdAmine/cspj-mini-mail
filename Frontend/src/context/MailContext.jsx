@@ -71,6 +71,12 @@ export const MailProvider = ({ children }) => {
     }
   };
 
+  // Clear the selected message whenever the active folder changes so the
+  // reading pane never shows a thread that belongs to a different folder.
+  useEffect(() => {
+    setSelectedMessage(null);
+  }, [activeFolder]);
+
   useEffect(() => {
     loadMailbox();
     loadContacts();
