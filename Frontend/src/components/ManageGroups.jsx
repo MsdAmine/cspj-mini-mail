@@ -56,7 +56,41 @@ function GroupDetailsModal({ group, onClose, onGroupArchived, onMemberRemoved })
   const [error, setError] = useState('');
   const [localGroup, setLocalGroup] = useState(group);
 
+  const [transferring, setTransferring] = useState(false);
+  const [showTransferSelect, setShowTransferSelect] = useState(false);
+  const [newOwnerId, setNewOwnerId] = useState('');
+
   useEffect(() => setLocalGroup(group), [group]);
+
+  const handleTransferOwnership = async () => {
+    if (!newOwnerId) return;
+    setTransferring(true);
+    setError('');
+    try {
+      await api.put(`/admin/groups/${localGroup.id}/transfer-owner`, { newOwnerId: parseInt(newOwnerId) });
+      const newOwner = localGroup.participants.find(p => p.id === parseInt(newOwnerId));
+      if (newOwner) {
+        setLocalGroup(prev => ({
+          ...prev,
+          createdBy: {
+            name: newOwner.name,
+            email: newOwner.email,
+            role: newOwner.role
+          }
+        }));
+      }
+      setShowTransferSelect(false);
+      setNewOwnerId('');
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.response?.data ||
+          "Erreur lors du transfert de propriété."
+      );
+    } finally {
+      setTransferring(false);
+    }
+  };
 
   const handleRemoveMember = async (userId) => {
     setRemovingUserId(userId);
@@ -138,20 +172,57 @@ function GroupDetailsModal({ group, onClose, onGroupArchived, onMemberRemoved })
 
         {/* Creator info */}
         <div className="px-6 pt-4 flex-shrink-0">
-          <div className="flex items-center gap-3 p-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 uppercase shadow-sm">
-              {initials(creatorName)}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5 bg-slate-50/80 border border-slate-200/60 rounded-xl">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 uppercase shadow-sm">
+                {initials(creatorName)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-800 truncate leading-tight">
+                  Créé par : {creatorName}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate mt-0.5 font-mono">{creatorEmail}</p>
+              </div>
+              <span className={badge.className}>
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${badge.dot}`} />
+                {badge.label}
+              </span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-800 truncate leading-tight">
-                Créé par : {creatorName}
-              </p>
-              <p className="text-[10px] text-slate-400 truncate mt-0.5 font-mono">{creatorEmail}</p>
-            </div>
-            <span className={badge.className}>
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${badge.dot}`} />
-              {badge.label}
-            </span>
+            
+            {!showTransferSelect ? (
+              <button
+                onClick={() => setShowTransferSelect(true)}
+                className="text-[10px] font-semibold text-violet-600 bg-violet-50 hover:bg-violet-100 px-2.5 py-1.5 rounded-lg border border-violet-200 transition-colors flex-shrink-0 cursor-pointer active:scale-95"
+              >
+                Transfer Owner <span className="opacity-60">/ تغيير المشرف</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <select
+                  value={newOwnerId}
+                  onChange={(e) => setNewOwnerId(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-violet-400 bg-white text-slate-700"
+                >
+                  <option value="">Sélectionner...</option>
+                  {(localGroup.participants || []).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleTransferOwnership}
+                  disabled={transferring || !newOwnerId}
+                  className="text-[10px] font-semibold text-white bg-violet-500 hover:bg-violet-600 px-2.5 py-1.5 rounded-lg disabled:opacity-50 cursor-pointer active:scale-95"
+                >
+                  {transferring ? '...' : 'Valider'}
+                </button>
+                <button
+                  onClick={() => { setShowTransferSelect(false); setNewOwnerId(''); }}
+                  className="text-[10px] font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-lg cursor-pointer active:scale-95 border border-slate-200"
+                >
+                  Annuler
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

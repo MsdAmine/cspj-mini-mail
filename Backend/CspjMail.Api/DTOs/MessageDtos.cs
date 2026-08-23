@@ -212,4 +212,14 @@ namespace CspjMail.Api.DTOs
     {
         public List<int> FonctionnaireIds { get; set; } = new();
     }
+
+    public class TransferOwnerDto
+    {
+        public int NewOwnerId { get; set; }
+    }
+
+    public class ResetPasswordDto
+    {
+        public string? NewPassword { get; set; }
+    }
 }

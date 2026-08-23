@@ -431,6 +431,40 @@ namespace CspjMail.Api.Controllers
             });
         }
 
+        [HttpPost("users/{id}/reset-password")]
+        public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetPasswordDto dto)
+        {
+            var user = await _context.Utilisateurs.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
+            if (user == null) return NotFound("Utilisateur introuvable.");
+
+            string newPassword = string.IsNullOrWhiteSpace(dto.NewPassword) 
+                ? Guid.NewGuid().ToString("N").Substring(0, 8) 
+                : dto.NewPassword;
+
+            user.MotDePasseHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Mot de passe réinitialisé.", Password = newPassword });
+        }
+
+        [HttpGet("users/{id}/groups")]
+        public async Task<IActionResult> GetUserGroups(int id)
+        {
+            var user = await _context.Utilisateurs.FirstOrDefaultAsync(u => u.Id == id && !u.IsDeleted);
+            if (user == null) return NotFound("Utilisateur introuvable.");
+
+            var groups = await _context.Threads
+                .Where(t => t.EstGroupe && t.Participants.Any(p => p.UserId == id && !p.IsDeletedForUser))
+                .Select(t => new {
+                    id = t.Id,
+                    subject = t.Objet,
+                    isArchived = t.EstArchive
+                })
+                .ToListAsync();
+
+            return Ok(groups);
+        }
+
         // ── GROUP MANAGEMENT ──────────────────────────────────────────────────
 
         // 8. GET: api/admin/groups
@@ -524,6 +558,31 @@ namespace CspjMail.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "L'utilisateur a été retiré du groupe avec succès." });
+        }
+
+        // 11. PUT: api/admin/groups/{id}/transfer-owner
+        [HttpPut("groups/{id}/transfer-owner")]
+        public async Task<IActionResult> TransferGroupOwnership(int id, [FromBody] TransferOwnerDto dto)
+        {
+            var group = await _context.Threads
+                .Include(t => t.Participants)
+                .Include(t => t.Messages)
+                .FirstOrDefaultAsync(t => t.Id == id && t.EstGroupe);
+
+            if (group == null) return NotFound("Groupe introuvable.");
+
+            var newOwnerParticipant = group.Participants.FirstOrDefault(p => p.UserId == dto.NewOwnerId && !p.IsDeletedForUser);
+            if (newOwnerParticipant == null)
+                return BadRequest("Le nouveau propriétaire doit être un membre actif du groupe.");
+
+            var firstMessage = group.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault();
+            if (firstMessage != null)
+            {
+                firstMessage.ExpediteurId = dto.NewOwnerId;
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new { Message = "Propriétaire du groupe mis à jour avec succès." });
         }
     }
 }
