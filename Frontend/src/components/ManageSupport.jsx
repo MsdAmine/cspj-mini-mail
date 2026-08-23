@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LifeBuoy, Search, MessageSquare, Clock, CheckCircle2, 
+import {
+  LifeBuoy, Search, MessageSquare, Clock, CheckCircle2,
   ChevronRight, Send, X, RefreshCw, User, ShieldAlert,
   UserCheck, Building, Mail, Check, AlertTriangle, RotateCcw
 } from 'lucide-react';
@@ -56,7 +56,7 @@ export default function ManageSupport() {
   const [searchQuery, setSearchQuery] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
-  
+
   // Claiming & Status state
   const [claiming, setClaiming] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -161,13 +161,13 @@ export default function ManageSupport() {
 
   // Filtered tickets logic
   const filteredTickets = tickets.filter(t => {
-    const matchesTab = activeTab === 'All' 
-      ? true 
-      : activeTab === 'Resolved' 
-      ? (t.status === 'Resolved' || t.status === 'Closed')
-      : t.status === activeTab;
+    const matchesTab = activeTab === 'All'
+      ? true
+      : activeTab === 'Resolved'
+        ? (t.status === 'Resolved' || t.status === 'Closed')
+        : t.status === activeTab;
 
-    const matchesSearch = 
+    const matchesSearch =
       t.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.createdByName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -221,19 +221,18 @@ export default function ManageSupport() {
 
       {/* ── Main Work Area ── */}
       <div className="flex-1 flex overflow-hidden p-6 gap-6">
-        
+
         {/* Left Side: Ticket Management Table / Cards */}
         <div className="flex-1 flex flex-col bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
-          
+
           {/* Navigation Tabs */}
           <div className="px-4 pt-3 border-b border-slate-200/80 flex items-center gap-2 bg-slate-50/50 overflow-x-auto">
             <button
               onClick={() => setActiveTab('All')}
-              className={`px-3 py-2 text-xs font-semibold rounded-t-xl transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'All'
+              className={`px-3 py-2 text-xs font-semibold rounded-t-xl transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${activeTab === 'All'
                   ? 'border-blue-600 text-blue-700 bg-white shadow-xs font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <span>Tous les tickets</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 text-slate-600 font-mono">
@@ -243,11 +242,10 @@ export default function ManageSupport() {
 
             <button
               onClick={() => setActiveTab('Open')}
-              className={`px-3 py-2 text-xs font-semibold rounded-t-xl transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'Open'
+              className={`px-3 py-2 text-xs font-semibold rounded-t-xl transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${activeTab === 'Open'
                   ? 'border-amber-500 text-amber-700 bg-white shadow-xs font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <span className="w-2 h-2 rounded-full bg-amber-500" />
               <span>Ouverts (En attente)</span>
@@ -258,11 +256,10 @@ export default function ManageSupport() {
 
             <button
               onClick={() => setActiveTab('InProgress')}
-              className={`px-3 py-2 text-xs font-semibold rounded-t-xl transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'InProgress'
+              className={`px-3 py-2 text-xs font-semibold rounded-t-xl transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${activeTab === 'InProgress'
                   ? 'border-indigo-600 text-indigo-700 bg-white shadow-xs font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <span className="w-2 h-2 rounded-full bg-indigo-500" />
               <span>En cours</span>
@@ -273,11 +270,10 @@ export default function ManageSupport() {
 
             <button
               onClick={() => setActiveTab('Resolved')}
-              className={`px-3 py-2 text-xs font-semibold rounded-t-xl transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'Resolved'
+              className={`px-3 py-2 text-xs font-semibold rounded-t-xl transition-colors border-b-2 cursor-pointer flex items-center gap-1.5 ${activeTab === 'Resolved'
                   ? 'border-emerald-600 text-emerald-700 bg-white shadow-xs font-bold'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Résolus</span>
@@ -357,9 +353,8 @@ export default function ManageSupport() {
                   <div
                     key={t.id}
                     onClick={() => loadTicketDetails(t.id)}
-                    className={`p-4 hover:bg-slate-50/80 transition-colors cursor-pointer flex items-center justify-between gap-4 ${
-                      isSelected ? 'bg-blue-50/50 border-l-4 border-blue-600' : ''
-                    }`}
+                    className={`p-4 hover:bg-slate-50/80 transition-colors cursor-pointer flex items-center justify-between gap-4 ${isSelected ? 'bg-blue-50/50 border-l-4 border-blue-600' : ''
+                      }`}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -439,7 +434,7 @@ export default function ManageSupport() {
         {/* Right Side: Active Chat / Detail Pane */}
         {selectedTicket ? (
           <div className="w-full lg:w-[500px] bg-white rounded-2xl border border-slate-200/80 shadow-lg flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
-            
+
             {/* Thread Header */}
             <div className="p-4 border-b border-slate-200/80 bg-slate-50/70 flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
@@ -579,13 +574,12 @@ export default function ManageSupport() {
                       </div>
 
                       <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed ${
-                          isCurrentUser
+                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed ${isCurrentUser
                             ? 'bg-blue-600 text-white rounded-br-xs'
                             : isAdminRole
-                            ? 'bg-white text-slate-800 border border-blue-200 rounded-bl-xs'
-                            : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs'
-                        }`}
+                              ? 'bg-white text-slate-800 border border-blue-200 rounded-bl-xs'
+                              : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs'
+                          }`}
                       >
                         <p className="whitespace-pre-wrap">{m.content}</p>
                       </div>

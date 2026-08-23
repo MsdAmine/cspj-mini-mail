@@ -5,10 +5,10 @@ import { Building2, X, Check, RefreshCw } from 'lucide-react';
 export default function CreateInstitutionModal({ onClose, onSuccess, institutionToEdit = null }) {
   const isEditing = Boolean(institutionToEdit);
 
-  const [nom, setNom]                     = useState('');
+  const [nom, setNom] = useState('');
   const [estAssociation, setEstAssociation] = useState(false);
-  const [loading, setLoading]             = useState(false);
-  const [error, setError]                 = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   // Pre-fill fields when editing
   useEffect(() => {
@@ -58,9 +58,9 @@ export default function CreateInstitutionModal({ onClose, onSuccess, institution
         typeof err.response?.data === 'string'
           ? err.response.data
           : err.response?.data?.message ||
-            (isEditing
-              ? "Erreur lors de la modification de l'institution."
-              : "Erreur lors de la création de l'institution.");
+          (isEditing
+            ? "Erreur lors de la modification de l'institution."
+            : "Erreur lors de la création de l'institution.");
       setError(msg);
     } finally {
       setLoading(false);
@@ -123,11 +123,10 @@ export default function CreateInstitutionModal({ onClose, onSuccess, institution
             </label>
             <div className="grid grid-cols-2 gap-3 mt-1">
               <label
-                className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
-                  !estAssociation
+                className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${!estAssociation
                     ? 'bg-blue-50/60 border-blue-300 text-blue-900 font-semibold'
                     : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                }`}
+                  }`}
               >
                 <input
                   type="radio"
@@ -140,11 +139,10 @@ export default function CreateInstitutionModal({ onClose, onSuccess, institution
               </label>
 
               <label
-                className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${
-                  estAssociation
+                className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition-all ${estAssociation
                     ? 'bg-amber-50/60 border-amber-300 text-amber-900 font-semibold'
                     : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                }`}
+                  }`}
               >
                 <input
                   type="radio"

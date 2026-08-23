@@ -3,9 +3,9 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLogs } from '../context/LogContext';
 import CreateInstitutionModal from './CreateInstitutionModal';
-import { 
-  Building, Building2, Plus, Search, RefreshCw, 
-  Edit2, Trash2, Users, AlertTriangle, Check, X 
+import {
+  Building, Building2, Plus, Search, RefreshCw,
+  Edit2, Trash2, Users, AlertTriangle, Check, X
 } from 'lucide-react';
 
 // ── Delete Confirmation Modal ─────────────────────────────────────────────────
@@ -14,7 +14,7 @@ function DeleteConfirmModal({ institution, onCancel, onConfirm, loading }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
-        
+
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
           <div className="flex items-center gap-2.5">
@@ -180,7 +180,7 @@ export default function ManageInstitutions() {
 
   return (
     <div dir="ltr" className="flex-1 flex flex-col h-full bg-[#f8fafc] text-slate-800 overflow-hidden font-sans">
-      
+
       {/* ── Top Header ── */}
       <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-6 shadow-sm flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -288,11 +288,10 @@ export default function ManageInstitutions() {
                         <tr key={inst.id} className="hover:bg-slate-50/80 transition-colors">
                           <td className="px-6 py-4 font-semibold text-slate-800">
                             <div className="flex items-center gap-3">
-                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold ${
-                                inst.estAssociation 
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200/80' 
-                                  : 'bg-blue-50 text-blue-700 border border-blue-200/80'
-                              }`}>
+                              <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold ${inst.estAssociation
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200/80'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200/80'
+                                }`}>
                                 <Building className="w-4 h-4" />
                               </div>
                               <span className="text-sm font-semibold text-slate-900">{inst.nom}</span>
@@ -300,11 +299,10 @@ export default function ManageInstitutions() {
                           </td>
 
                           <td className="px-6 py-4">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
-                              inst.estAssociation 
-                                ? 'bg-amber-50 text-amber-700 border-amber-200/60' 
-                                : 'bg-blue-50 text-blue-700 border-blue-200/60'
-                            }`}>
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${inst.estAssociation
+                              ? 'bg-amber-50 text-amber-700 border-amber-200/60'
+                              : 'bg-blue-50 text-blue-700 border-blue-200/60'
+                              }`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${inst.estAssociation ? 'bg-amber-500' : 'bg-blue-500'}`} />
                               {inst.estAssociation ? 'Association' : 'Institution publique'}
                             </span>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { 
-  LifeBuoy, Plus, Search, MessageSquare, Clock, CheckCircle2, 
+import {
+  LifeBuoy, Plus, Search, MessageSquare, Clock, CheckCircle2,
   ChevronRight, Send, X, RefreshCw, User, ShieldAlert,
   HelpCircle, Filter, RotateCcw
 } from 'lucide-react';
@@ -119,7 +119,7 @@ export default function SupportPage() {
       setNewCategory('AccessRequest');
       setNewPriority('Normal');
       setNewMessage('');
-      
+
       await fetchTickets();
       setSelectedTicket(res.data);
     } catch (err) {
@@ -161,7 +161,7 @@ export default function SupportPage() {
 
   // Filtered tickets
   const filteredTickets = tickets.filter(t => {
-    const matchesSearch = 
+    const matchesSearch =
       t.ticketNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.subject.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === 'All' || t.category === filterCategory;
@@ -206,7 +206,7 @@ export default function SupportPage() {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          
+
           <button
             onClick={() => setIsCreateModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white rounded-lg text-sm font-medium transition-all shadow-sm active:scale-98 cursor-pointer"
@@ -220,10 +220,10 @@ export default function SupportPage() {
 
       {/* ── Main Layout ── */}
       <div className="flex-1 flex overflow-hidden p-6 gap-6">
-        
+
         {/* Left / Main Table View */}
         <div className="flex-1 flex flex-col bg-white rounded-xl border border-slate-200/80 shadow-xs overflow-hidden">
-          
+
           {/* Stats Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 border-b border-slate-200 bg-slate-50/50 p-3 gap-2 text-center">
             <div className="bg-white p-2.5 rounded-lg border border-slate-200/60">
@@ -262,7 +262,7 @@ export default function SupportPage() {
                 <Filter className="w-3.5 h-3.5" />
                 <span>الفلترة:</span>
               </div>
-              
+
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value)}
@@ -328,9 +328,8 @@ export default function SupportPage() {
                     <div
                       key={t.id}
                       onClick={() => loadTicketDetails(t.id)}
-                      className={`p-4 hover:bg-slate-50/80 transition-colors cursor-pointer flex items-center justify-between gap-4 ${
-                        isSelected ? 'bg-blue-50/50 border-r-4 border-blue-600' : ''
-                      }`}
+                      className={`p-4 hover:bg-slate-50/80 transition-colors cursor-pointer flex items-center justify-between gap-4 ${isSelected ? 'bg-blue-50/50 border-r-4 border-blue-600' : ''
+                        }`}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -422,8 +421,8 @@ export default function SupportPage() {
             {/* Quick Status Bar for Creator */}
             <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs flex items-center justify-between">
               <span className="text-slate-500">
-                {selectedTicket.assignedAdminName 
-                  ? `المشرف المسؤول: ${selectedTicket.assignedAdminName}` 
+                {selectedTicket.assignedAdminName
+                  ? `المشرف المسؤول: ${selectedTicket.assignedAdminName}`
                   : 'في انتظار تعيين مشرف للدعم'}
               </span>
 
@@ -474,13 +473,12 @@ export default function SupportPage() {
                       </div>
 
                       <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed ${
-                          isCurrentUser
+                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed ${isCurrentUser
                             ? 'bg-blue-600 text-white rounded-br-xs'
                             : isAdminReply
-                            ? 'bg-white text-slate-800 border border-blue-200/70 rounded-bl-xs'
-                            : 'bg-white text-slate-800 border border-slate-200 rounded-bl-xs'
-                        }`}
+                              ? 'bg-white text-slate-800 border border-blue-200/70 rounded-bl-xs'
+                              : 'bg-white text-slate-800 border border-slate-200 rounded-bl-xs'
+                          }`}
                       >
                         <p className="whitespace-pre-wrap">{m.content}</p>
                       </div>

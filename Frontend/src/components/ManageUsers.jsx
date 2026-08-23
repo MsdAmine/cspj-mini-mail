@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useLogs } from '../context/LogContext';
-import { 
-  Users, UserPlus, Search, RefreshCw, Edit2, Trash2, 
-  UserCheck, Shield, Eye, X, Check, AlertTriangle, 
+import {
+  Users, UserPlus, Search, RefreshCw, Edit2, Trash2,
+  UserCheck, Shield, Eye, X, Check, AlertTriangle,
   Building, Mail, Phone, Calendar
 } from 'lucide-react';
 
@@ -93,8 +93,8 @@ function AssignStaffModal({ association, onClose, onSaved }) {
               </p>
             </div>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             disabled={saving}
             className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
           >
@@ -142,11 +142,10 @@ function AssignStaffModal({ association, onClose, onSaved }) {
                 return (
                   <label
                     key={f.id}
-                    className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${
-                      checked 
-                        ? 'bg-blue-50/60 border-blue-300 text-blue-900' 
+                    className={`flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all ${checked
+                        ? 'bg-blue-50/60 border-blue-300 text-blue-900'
                         : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <input
@@ -173,17 +172,17 @@ function AssignStaffModal({ association, onClose, onSaved }) {
             {selectedIds.length} sélectionné(s)
           </span>
           <div className="flex items-center gap-2">
-            <button 
-              type="button" 
-              onClick={onClose} 
+            <button
+              type="button"
+              onClick={onClose}
               disabled={saving}
               className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 rounded-xl border border-slate-200 transition-colors cursor-pointer"
             >
               Annuler
             </button>
-            <button 
-              type="button" 
-              onClick={handleSave} 
+            <button
+              type="button"
+              onClick={handleSave}
               disabled={saving || loadingInit}
               className="px-4 py-1.5 text-xs font-semibold text-white bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
@@ -261,7 +260,7 @@ function EditUserModal({ user, onClose, onSaved }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
-        
+
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
           <div>
@@ -368,7 +367,7 @@ function UserAuditModal({ user, onClose }) {
     const fetchUserLogs = async () => {
       try {
         const res = await api.get('/admin/audit-logs');
-        const userLogs = (res.data || []).filter(l => 
+        const userLogs = (res.data || []).filter(l =>
           l.utilisateur?.toLowerCase() === user.email?.toLowerCase() ||
           l.description?.toLowerCase().includes(user.email?.toLowerCase())
         );
@@ -536,8 +535,8 @@ export default function ManageUsers() {
 
     const matchesRole = roleFilter === 'ALL' || (
       roleFilter === 'ADMIN' ? u.role?.toLowerCase().includes('admin') :
-      roleFilter === 'ASSOC' ? u.role?.toLowerCase().includes('assoc') :
-      u.role?.toLowerCase() === 'fonctionnaire'
+        roleFilter === 'ASSOC' ? u.role?.toLowerCase().includes('assoc') :
+          u.role?.toLowerCase() === 'fonctionnaire'
     );
 
     return matchesSearch && matchesRole;
@@ -545,7 +544,7 @@ export default function ManageUsers() {
 
   return (
     <div dir="ltr" className="flex-1 flex flex-col h-full bg-[#f8fafc] text-slate-800 overflow-hidden font-sans">
-      
+
       {/* ── Top Header ── */}
       <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-6 shadow-sm flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -696,14 +695,12 @@ export default function ManageUsers() {
                             <button
                               type="button"
                               onClick={() => handleToggleStatus(u)}
-                              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${
-                                u.actif ? 'bg-emerald-500' : 'bg-slate-200'
-                              }`}
+                              className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out outline-none ${u.actif ? 'bg-emerald-500' : 'bg-slate-200'
+                                }`}
                               title={u.actif ? 'Désactiver le compte' : 'Activer le compte'}
                             >
-                              <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${
-                                u.actif ? 'translate-x-4' : 'translate-x-0'
-                              }`} />
+                              <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs transition duration-200 ease-in-out ${u.actif ? 'translate-x-4' : 'translate-x-0'
+                                }`} />
                             </button>
                           </td>
 

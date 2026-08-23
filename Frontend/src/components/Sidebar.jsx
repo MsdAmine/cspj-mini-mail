@@ -13,26 +13,34 @@ export default function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const folders = [
-    { id: 'inbox',    label: 'العلبة الواردة',    icon: (
-      <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m13-4l-5 5-5-5" />
-      </svg>
-    )},
-    { id: 'sent',     label: 'الرسائل المرسلة', icon: (
-      <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-      </svg>
-    )},
-    { id: 'archived', label: 'الأرشيف',          icon: (
-      <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-      </svg>
-    )},
-    { id: 'drafts',   label: 'المسودات',          icon: (
-      <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-      </svg>
-    ), badge: drafts.length },
+    {
+      id: 'inbox', label: 'العلبة الواردة', icon: (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0H4m13-4l-5 5-5-5" />
+        </svg>
+      )
+    },
+    {
+      id: 'sent', label: 'الرسائل المرسلة', icon: (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+        </svg>
+      )
+    },
+    {
+      id: 'archived', label: 'الأرشيف', icon: (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+        </svg>
+      )
+    },
+    {
+      id: 'drafts', label: 'المسودات', icon: (
+        <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+        </svg>
+      ), badge: drafts.length
+    },
   ];
 
   const adminNavItems = [
@@ -108,14 +116,14 @@ export default function Sidebar() {
   const closeMobile = () => setMobileOpen(false);
 
   // ── Shared style tokens (Formal Institutional Theme) ────────────
-  const sidebarBg   = 'bg-[#0F172A]';
+  const sidebarBg = 'bg-[#0F172A]';
   const borderColor = 'border-slate-800';
-  const textMuted   = 'text-slate-400';
-  const labelColor  = 'text-slate-500';
+  const textMuted = 'text-slate-400';
+  const labelColor = 'text-slate-500';
 
-  const activeItemCls   = 'bg-slate-800 text-white font-medium rounded-lg border-s-4 border-slate-200 shadow-sm';
+  const activeItemCls = 'bg-slate-800 text-white font-medium rounded-lg border-s-4 border-slate-200 shadow-sm';
   const inactiveItemCls = 'text-slate-400 hover:bg-slate-800/60 hover:text-white rounded-lg border-s-4 border-transparent transition-colors';
-  const activeIconCls   = 'text-slate-200';
+  const activeIconCls = 'text-slate-200';
   const inactiveIconCls = 'text-slate-500';
 
   return (
@@ -166,7 +174,7 @@ export default function Sidebar() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
               </div>
-              
+
               <div className="w-auto opacity-100">
                 <h1 className="font-bold text-sm leading-none tracking-tight text-white whitespace-nowrap">CSPJ Mail</h1>
                 <div className="flex items-center gap-2 mt-0.5">
@@ -177,9 +185,9 @@ export default function Sidebar() {
               </div>
             </div>
           )}
-          
-          <button 
-            onClick={() => setIsCollapsed(!isCollapsed)} 
+
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
             className={`p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0 ${isCollapsed ? '' : 'hidden md:block'}`}
             title={isCollapsed ? "Développer" : "Réduire"}
           >
@@ -230,9 +238,8 @@ export default function Sidebar() {
                         closeMobile();
                       }}
                       title={isCollapsed ? folder.label : undefined}
-                      className={`relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
-                        isActive ? activeItemCls : inactiveItemCls
-                      }`}
+                      className={`relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${isActive ? activeItemCls : inactiveItemCls
+                        }`}
                     >
                       <div className={`w-10 flex-shrink-0 flex items-center justify-center ${isActive ? activeIconCls : inactiveIconCls}`}>
                         {folder.icon}
@@ -254,9 +261,8 @@ export default function Sidebar() {
                   to="/groups"
                   onClick={closeMobile}
                   title={isCollapsed ? 'المجموعات' : undefined}
-                  className={({ isActive }) => `relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
-                    isActive ? activeItemCls : inactiveItemCls
-                  }`}
+                  className={({ isActive }) => `relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${isActive ? activeItemCls : inactiveItemCls
+                    }`}
                 >
                   {({ isActive }) => (
                     <>
@@ -274,9 +280,8 @@ export default function Sidebar() {
                   to="/support"
                   onClick={closeMobile}
                   title={isCollapsed ? 'الدعم الفني' : undefined}
-                  className={({ isActive }) => `relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
-                    isActive ? activeItemCls : inactiveItemCls
-                  }`}
+                  className={({ isActive }) => `relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${isActive ? activeItemCls : inactiveItemCls
+                    }`}
                 >
                   {({ isActive }) => (
                     <>
@@ -307,9 +312,8 @@ export default function Sidebar() {
                   to={item.path}
                   onClick={closeMobile}
                   title={isCollapsed ? item.label : undefined}
-                  className={({ isActive }) => `relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${
-                    isActive ? activeItemCls : inactiveItemCls
-                  }`}
+                  className={({ isActive }) => `relative w-full flex items-center px-2 py-2.5 text-sm transition-all duration-150 cursor-pointer group ${isActive ? activeItemCls : inactiveItemCls
+                    }`}
                 >
                   {({ isActive }) => (
                     <>
@@ -341,7 +345,7 @@ export default function Sidebar() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </div>
-            
+
             <span className={`truncate transition-all duration-300 font-semibold tracking-wide ${isCollapsed ? 'w-0 opacity-0 ms-0' : 'w-auto opacity-100 ms-1'}`}>
               {isUserAdmin ? 'Déconnexion' : 'تسجيل الخروج'}
             </span>

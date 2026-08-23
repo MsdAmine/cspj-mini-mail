@@ -185,4 +185,4 @@ public partial class CspjMiniMailDbContext : DbContext
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
-}
+}
