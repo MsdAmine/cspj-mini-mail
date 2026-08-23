@@ -22,6 +22,8 @@ public partial class CspjMiniMailDbContext : DbContext
     public virtual DbSet<Utilisateur> Utilisateurs { get; set; }
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
     public virtual DbSet<ThreadParticipant> ThreadParticipants { get; set; }
+    public virtual DbSet<SupportTicket> SupportTickets { get; set; }
+    public virtual DbSet<TicketMessage> TicketMessages { get; set; }
 
     /// <summary>
     /// Assigns specific Fonctionnaire users as points-of-contact for an Association user.
@@ -135,6 +137,49 @@ public partial class CspjMiniMailDbContext : DbContext
                 .HasForeignKey(af => af.FonctionnaireId)
                 .OnDelete(DeleteBehavior.ClientNoAction)
                 .HasConstraintName("FK_AF_Fonctionnaire");
+        });
+
+        // ── Support Tickets & Messages ─────────────────────────────────────────
+        modelBuilder.Entity<SupportTicket>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Status).HasDefaultValue("Open");
+            entity.Property(e => e.Priority).HasDefaultValue("Normal");
+            entity.Property(e => e.Category).HasDefaultValue("Other");
+
+            entity.HasOne(e => e.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedByUserId)
+                .OnDelete(DeleteBehavior.ClientNoAction)
+                .HasConstraintName("FK_SupportTickets_CreatedByUser");
+
+            entity.HasOne(e => e.AssignedAdmin)
+                .WithMany()
+                .HasForeignKey(e => e.AssignedAdminId)
+                .OnDelete(DeleteBehavior.ClientNoAction)
+                .IsRequired(false)
+                .HasConstraintName("FK_SupportTickets_AssignedAdmin");
+        });
+
+        modelBuilder.Entity<TicketMessage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.IsInternalNote).HasDefaultValue(false);
+
+            entity.HasOne(e => e.Ticket)
+                .WithMany(t => t.Messages)
+                .HasForeignKey(e => e.TicketId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_TicketMessages_SupportTicket");
+
+            entity.HasOne(e => e.Sender)
+                .WithMany()
+                .HasForeignKey(e => e.SenderId)
+                .OnDelete(DeleteBehavior.ClientNoAction)
+                .HasConstraintName("FK_TicketMessages_Sender");
         });
 
         OnModelCreatingPartial(modelBuilder);
