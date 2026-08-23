@@ -361,7 +361,7 @@ namespace CspjMail.Api.Controllers
             if (associationUser == null)
                 return NotFound("Utilisateur introuvable.");
 
-            if (!associationUser.Role.Equals("Association", StringComparison.OrdinalIgnoreCase))
+            if (associationUser.Role.ToLower() != "association")
                 return BadRequest("Cet utilisateur n'est pas une Association.");
 
             var assignments = await _context.AssociationFonctionnaires
@@ -393,7 +393,7 @@ namespace CspjMail.Api.Controllers
             if (associationUser == null)
                 return NotFound("Utilisateur introuvable.");
 
-            if (!associationUser.Role.Equals("Association", StringComparison.OrdinalIgnoreCase))
+            if (associationUser.Role.ToLower() != "association")
                 return BadRequest("Seul un utilisateur de type Association peut avoir des assignations.");
 
             // Validate every fonctionnaire ID
@@ -401,7 +401,7 @@ namespace CspjMail.Api.Controllers
             {
                 var isValidFonctionnaire = await _context.Utilisateurs
                     .AnyAsync(u => u.Id == fid && !u.IsDeleted && u.Actif &&
-                                   u.Role.Equals("Fonctionnaire", StringComparison.OrdinalIgnoreCase));
+                                   u.Role.ToLower() == "fonctionnaire");
                 if (!isValidFonctionnaire)
                     return BadRequest($"L'utilisateur ID {fid} n'est pas un Fonctionnaire actif.");
             }
