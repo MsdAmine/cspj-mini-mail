@@ -167,7 +167,6 @@ public partial class CspjMiniMailDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.IsInternalNote).HasDefaultValue(false);
 
             entity.HasOne(e => e.Ticket)
                 .WithMany(t => t.Messages)

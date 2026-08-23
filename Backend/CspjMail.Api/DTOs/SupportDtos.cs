@@ -24,8 +24,6 @@ namespace CspjMail.Api.DTOs
     {
         [Required(ErrorMessage = "Le contenu du message est obligatoire.")]
         public string Content { get; set; } = string.Empty;
-
-        public bool IsInternalNote { get; set; } = false;
     }
 
     public class UpdateTicketStatusDto
@@ -43,7 +41,6 @@ namespace CspjMail.Api.DTOs
         public string SenderEmail { get; set; } = string.Empty;
         public string SenderRole { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
-        public bool IsInternalNote { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 

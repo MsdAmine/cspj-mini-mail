@@ -76,7 +76,6 @@ namespace CspjMail.Api.Controllers
                     TicketId = ticket.Id,
                     SenderId = currentUserId.Value,
                     Content = dto.Message.Trim(),
-                    IsInternalNote = false,
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.TicketMessages.Add(initialMsg);
@@ -161,9 +160,7 @@ namespace CspjMail.Api.Controllers
                 AssignedAdminEmail = t.AssignedAdmin?.Email,
                 CreatedAt = t.CreatedAt,
                 UpdatedAt = t.UpdatedAt,
-                MessagesCount = isAdmin 
-                    ? t.Messages.Count 
-                    : t.Messages.Count(m => !m.IsInternalNote)
+                MessagesCount = t.Messages.Count
             }).ToList();
 
             return Ok(dtos);
@@ -194,9 +191,7 @@ namespace CspjMail.Api.Controllers
                 return Forbid();
             }
 
-            // Filter internal notes if viewer is not Admin
             var visibleMessages = ticket.Messages
-                .Where(m => isAdmin || !m.IsInternalNote)
                 .OrderBy(m => m.CreatedAt)
                 .Select(m => new TicketMessageDto
                 {
@@ -207,7 +202,6 @@ namespace CspjMail.Api.Controllers
                     SenderEmail = m.Sender.Email,
                     SenderRole = m.Sender.Role,
                     Content = m.Content,
-                    IsInternalNote = m.IsInternalNote,
                     CreatedAt = m.CreatedAt
                 }).ToList();
 
@@ -286,15 +280,11 @@ namespace CspjMail.Api.Controllers
                 return Forbid();
             }
 
-            // Only admins can post internal notes
-            var isInternalNote = isAdmin && dto.IsInternalNote;
-
             var msg = new TicketMessage
             {
                 TicketId = ticket.Id,
                 SenderId = currentUserId.Value,
                 Content = dto.Content.Trim(),
-                IsInternalNote = isInternalNote,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -317,7 +307,6 @@ namespace CspjMail.Api.Controllers
                 SenderEmail = sender?.Email ?? "",
                 SenderRole = sender?.Role ?? "",
                 Content = msg.Content,
-                IsInternalNote = msg.IsInternalNote,
                 CreatedAt = msg.CreatedAt
             };
 
@@ -336,7 +325,7 @@ namespace CspjMail.Api.Controllers
             var ticket = await _context.SupportTickets.FirstOrDefaultAsync(t => t.Id == id);
             if (ticket == null) return NotFound("Ticket introuvable.");
 
-            // Permission check: regular user can update status (e.g. close/resolve) only for their own tickets
+            // Permission check: regular user can update status only for their own tickets
             if (!isAdmin && ticket.CreatedByUserId != currentUserId.Value)
             {
                 return Forbid();

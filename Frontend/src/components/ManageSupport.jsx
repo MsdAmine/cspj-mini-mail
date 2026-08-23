@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { 
   LifeBuoy, Search, MessageSquare, Clock, CheckCircle2, 
   ChevronRight, Send, X, RefreshCw, User, ShieldAlert,
-  Filter, UserCheck, Lock, Building, Mail, Check, AlertTriangle
+  UserCheck, Building, Mail, Check, AlertTriangle, RotateCcw
 } from 'lucide-react';
 
 const CATEGORY_MAP = {
@@ -59,12 +59,12 @@ export default function ManageSupport() {
   
   // Claiming & Status state
   const [claiming, setClaiming] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
   // Reply message state
   const [replyContent, setReplyContent] = useState('');
-  const [isInternalNote, setIsInternalNote] = useState(false);
   const [sendingReply, setSendingReply] = useState(false);
   const messagesEndRef = useRef(null);
 
@@ -111,7 +111,7 @@ export default function ManageSupport() {
     try {
       const res = await api.put(`/support/tickets/${ticketId}/claim`);
       setSelectedTicket(res.data);
-      setActionSuccess('Vous avez pris en charge ce ticket avec succès.');
+      setActionSuccess('Vous avez pris en charge ce ticket.');
       await fetchTickets();
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.response?.data || "Erreur lors de la prise en charge.";
@@ -121,16 +121,21 @@ export default function ManageSupport() {
     }
   };
 
-  const handleUpdateStatus = async (ticketId, status) => {
+  // Simplified Status Transition: Mark as Resolved or Reopen
+  const handleToggleResolve = async (ticketId, currentStatus) => {
+    setUpdatingStatus(true);
     setActionError('');
     setActionSuccess('');
+    const newStatus = currentStatus === 'Resolved' || currentStatus === 'Closed' ? 'InProgress' : 'Resolved';
     try {
-      const res = await api.put(`/support/tickets/${ticketId}/status`, { status });
+      const res = await api.put(`/support/tickets/${ticketId}/status`, { status: newStatus });
       setSelectedTicket(res.data);
-      setActionSuccess(`Statut mis à jour : ${STATUS_MAP[status]?.label || status}`);
+      setActionSuccess(newStatus === 'Resolved' ? 'Ticket marqué comme résolu.' : 'Ticket rouvert.');
       await fetchTickets();
     } catch (err) {
       setActionError(err.response?.data?.message || err.response?.data || "Erreur lors du changement de statut.");
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -143,10 +148,8 @@ export default function ManageSupport() {
     try {
       await api.post(`/support/tickets/${selectedTicket.id}/messages`, {
         content: replyContent.trim(),
-        isInternalNote: isInternalNote,
       });
       setReplyContent('');
-      setIsInternalNote(false);
       await loadTicketDetails(selectedTicket.id);
       fetchTickets();
     } catch (err) {
@@ -277,7 +280,7 @@ export default function ManageSupport() {
               }`}
             >
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span>Résolus & Fermés</span>
+              <span>Résolus</span>
               <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-50 text-emerald-700 font-mono border border-emerald-200/60">
                 {counts.resolved}
               </span>
@@ -495,8 +498,8 @@ export default function ManageSupport() {
               </button>
             </div>
 
-            {/* Quick Action & Assignment Bar */}
-            <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200/80 text-xs flex flex-wrap items-center justify-between gap-2">
+            {/* Quick Action Bar: Simplified Resolution Button & Assignment */}
+            <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200/80 text-xs flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 {selectedTicket.assignedAdminId ? (
                   <span className="text-slate-600">
@@ -514,31 +517,25 @@ export default function ManageSupport() {
                 )}
               </div>
 
-              {/* Status change quick actions */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-slate-400 text-[11px]">Changer état :</span>
-                {selectedTicket.status !== 'Resolved' && (
+              {/* Single Primary Resolution CTA */}
+              <div>
+                {selectedTicket.status !== 'Resolved' && selectedTicket.status !== 'Closed' ? (
                   <button
-                    onClick={() => handleUpdateStatus(selectedTicket.id, 'Resolved')}
-                    className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md text-[11px] font-semibold transition-colors cursor-pointer"
+                    onClick={() => handleToggleResolve(selectedTicket.id, selectedTicket.status)}
+                    disabled={updatingStatus}
+                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer active:scale-98 disabled:opacity-50"
                   >
-                    Résolu ✓
+                    {updatingStatus ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    <span>Marquer comme résolu</span>
                   </button>
-                )}
-                {selectedTicket.status !== 'Closed' && (
+                ) : (
                   <button
-                    onClick={() => handleUpdateStatus(selectedTicket.id, 'Closed')}
-                    className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-md text-[11px] font-semibold transition-colors cursor-pointer"
+                    onClick={() => handleToggleResolve(selectedTicket.id, selectedTicket.status)}
+                    disabled={updatingStatus}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
                   >
-                    Fermer
-                  </button>
-                )}
-                {(selectedTicket.status === 'Resolved' || selectedTicket.status === 'Closed') && (
-                  <button
-                    onClick={() => handleUpdateStatus(selectedTicket.id, 'InProgress')}
-                    className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md text-[11px] font-semibold transition-colors cursor-pointer"
-                  >
-                    Rouvrir
+                    {updatingStatus ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5 text-slate-500" />}
+                    <span>Rouvrir le ticket</span>
                   </button>
                 )}
               </div>
@@ -558,7 +555,7 @@ export default function ManageSupport() {
               </div>
             )}
 
-            {/* Thread Messages */}
+            {/* Thread Messages: Clean, standard messages between User and Admin */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/40">
               {ticketDetailsLoading ? (
                 <div className="flex justify-center py-12">
@@ -567,44 +564,31 @@ export default function ManageSupport() {
               ) : selectedTicket.messages && selectedTicket.messages.length > 0 ? (
                 selectedTicket.messages.map((m) => {
                   const isCurrentUser = m.senderId === user?.id;
-                  const isInternal = m.isInternalNote;
+                  const isAdminRole = m.senderRole === 'Administrateur';
 
                   return (
                     <div
                       key={m.id}
-                      className={`flex flex-col ${isInternal ? 'items-center' : isCurrentUser ? 'items-end' : 'items-start'}`}
+                      className={`flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}
                     >
-                      {isInternal ? (
-                        <div className="w-full my-1 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs shadow-xs">
-                          <div className="flex items-center justify-between mb-1 text-[11px] text-amber-800 font-semibold">
-                            <span className="flex items-center gap-1">
-                              <Lock className="w-3.5 h-3.5 text-amber-600" />
-                              Note Interne (Visible uniquement par les Admins)
-                            </span>
-                            <span>{m.senderName} • {formatDate(m.createdAt)}</span>
-                          </div>
-                          <p className="whitespace-pre-wrap leading-relaxed text-slate-800 mt-1">{m.content}</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-500">
-                            <span className="font-semibold text-slate-700">{m.senderName}</span>
-                            <span className="text-[10px] text-slate-400">({m.senderRole})</span>
-                            <span>•</span>
-                            <span>{formatDate(m.createdAt)}</span>
-                          </div>
+                      <div className="flex items-center gap-1.5 mb-1 px-1 text-[11px] text-slate-500">
+                        <span className="font-semibold text-slate-700">{m.senderName}</span>
+                        <span className="text-[10px] text-slate-400">({m.senderRole})</span>
+                        <span>•</span>
+                        <span>{formatDate(m.createdAt)}</span>
+                      </div>
 
-                          <div
-                            className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed ${
-                              isCurrentUser
-                                ? 'bg-blue-600 text-white rounded-br-xs'
-                                : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs'
-                            }`}
-                          >
-                            <p className="whitespace-pre-wrap">{m.content}</p>
-                          </div>
-                        </>
-                      )}
+                      <div
+                        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-xs shadow-xs leading-relaxed ${
+                          isCurrentUser
+                            ? 'bg-blue-600 text-white rounded-br-xs'
+                            : isAdminRole
+                            ? 'bg-white text-slate-800 border border-blue-200 rounded-bl-xs'
+                            : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs'
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap">{m.content}</p>
+                      </div>
                     </div>
                   );
                 })
@@ -618,67 +602,34 @@ export default function ManageSupport() {
 
             {/* Reply Input Box */}
             <div className="p-3 border-t border-slate-200/80 bg-white">
-              <form onSubmit={handleSendReply} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 text-xs font-semibold text-amber-700 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={isInternalNote}
-                      onChange={(e) => setIsInternalNote(e.target.checked)}
-                      className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                    />
-                    <span className="flex items-center gap-1">
-                      <Lock className="w-3 h-3 text-amber-600" />
-                      Note interne (Admins uniquement)
-                    </span>
-                  </label>
-
-                  <span className="text-[10px] text-slate-400">
-                    Entrée pour envoyer • Maj+Entrée nouvelle ligne
-                  </span>
-                </div>
-
-                <div className="flex gap-2 items-end">
-                  <textarea
-                    rows={2}
-                    placeholder={
-                      isInternalNote 
-                        ? "Rédiger une note confidentielle réservée aux administrateurs..." 
-                        : "Rédiger une réponse à l'utilisateur..."
+              <form onSubmit={handleSendReply} className="flex gap-2 items-end">
+                <textarea
+                  rows={2}
+                  placeholder="Rédiger une réponse à l'utilisateur..."
+                  value={replyContent}
+                  onChange={(e) => setReplyContent(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendReply();
                     }
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendReply();
-                      }
-                    }}
-                    className={`flex-1 p-2.5 text-xs rounded-xl focus:outline-none resize-none transition-colors ${
-                      isInternalNote 
-                        ? 'bg-amber-50/50 border border-amber-300 text-amber-950 placeholder:text-amber-600/60 focus:ring-2 focus:ring-amber-500/20' 
-                        : 'bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600'
-                    }`}
-                  />
-                  <button
-                    type="submit"
-                    disabled={sendingReply || !replyContent.trim()}
-                    className={`px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50 active:scale-98 ${
-                      isInternalNote 
-                        ? 'bg-amber-600 hover:bg-amber-700 text-white' 
-                        : 'bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white'
-                    }`}
-                  >
-                    {sendingReply ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span>{isInternalNote ? 'Ajouter note' : 'Répondre'}</span>
-                        <Send className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
+                  }}
+                  className="flex-1 p-2.5 text-xs rounded-xl focus:outline-none resize-none transition-colors bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+                />
+                <button
+                  type="submit"
+                  disabled={sendingReply || !replyContent.trim()}
+                  className="px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50 active:scale-98 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white"
+                >
+                  {sendingReply ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <span>Répondre</span>
+                      <Send className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </button>
               </form>
             </div>
           </div>
@@ -690,7 +641,7 @@ export default function ManageSupport() {
               </div>
               <h3 className="text-sm font-semibold text-slate-700">Aucun ticket sélectionné</h3>
               <p className="text-xs text-slate-500">
-                Sélectionnez un ticket dans la liste pour consulter les détails, échanger avec l'utilisateur ou ajouter des notes internes.
+                Sélectionnez un ticket dans la liste pour consulter les détails et échanger avec l'utilisateur.
               </p>
             </div>
           </div>
