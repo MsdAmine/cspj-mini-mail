@@ -2,8 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Send, Users, Plus, X, Search, ChevronRight, Lock } from 'lucide-react';
+
+// ── Role → French label helper ────────────────────────────────────────────────
+const getRoleFrenchLabel = (role) => {
+  if (!role) return '';
+  const lower = role.toString().toLowerCase();
+  if (lower === 'fonctionnaire') return 'Fonctionnaire';
+  if (lower === 'association')   return 'Association';
+  if (lower === 'admin' || lower === 'administrateur') return 'Administrateur';
+  return role;
+};
 
 // ── Role → Arabic label + badge colour ───────────────────────────────────────
 const getRoleLabel = (role) => {
@@ -300,7 +311,9 @@ function CreateGroupModal({ onClose, onCreate, currentUser }) {
 
 // ── Main Groups Page ──────────────────────────────────────────────────────────
 export default function Groups() {
+  const navigate = useNavigate();
   const { user } = useAuth();
+  const isAdmin = user?.role === 'Administrateur';
   const {
     messages: groupThreads,
     loading,
@@ -361,7 +374,46 @@ export default function Groups() {
   );
 
   return (
-    <div className="flex flex-1 min-h-0 overflow-hidden" dir="rtl">
+    <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
+
+      {/* ── Top header bar (mirrors Dashboard header) ── */}
+      <header dir="ltr" className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-end px-4 md:px-6 shadow-sm flex-shrink-0">
+        <div className="flex items-center">
+          {/* Profile avatar / link */}
+          <div
+            onClick={() => navigate('/profile')}
+            className="flex items-center space-x-3 cursor-pointer hover:bg-slate-50 px-3 py-1.5 rounded-xl border border-transparent hover:border-slate-200/80 transition-all duration-150 group"
+            title="عرض معلوماتي الشخصية"
+          >
+            <div className="text-left">
+              <p className="text-sm font-semibold text-slate-700 group-hover:text-blue-600 transition">
+                {user ? `${user.prenom} ${user.nom}` : ''}
+              </p>
+              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                user?.role === 'Administrateur' || user?.role?.toLowerCase() === 'admin'
+                  ? 'bg-blue-50 text-blue-700 border-blue-200/60'
+                  : user?.role === 'Association'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200/60'
+                  : 'bg-slate-100 text-slate-700 border-slate-200'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  user?.role === 'Administrateur' || user?.role?.toLowerCase() === 'admin' ? 'bg-blue-500' :
+                  user?.role === 'Association' ? 'bg-amber-500' : 'bg-slate-400'
+                }`} />
+                {isAdmin ? getRoleFrenchLabel(user?.role) : getRoleLabel(user?.role).label}
+              </span>
+            </div>
+
+            {/* Circular profile avatar */}
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-white font-semibold text-sm flex items-center justify-center border border-slate-700/50 shadow-md shadow-slate-900/20 group-hover:from-blue-500 group-hover:to-indigo-600 group-hover:border-blue-400/50 transition-all duration-200 uppercase font-mono">
+              {user?.prenom ? user.prenom.charAt(0) : 'U'}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Main groups content ── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden" dir="rtl">
 
       {/* ── Left panel: group list ────────────────────────────────────────── */}
       <div className={`w-full md:w-80 lg:w-96 bg-white/90 backdrop-blur-md border-l border-slate-200/80 flex flex-col flex-shrink-0 ${
@@ -693,6 +745,7 @@ export default function Groups() {
           currentUser={user}
         />
       )}
+      </div>{/* end main groups content */}
     </div>
   );
 }

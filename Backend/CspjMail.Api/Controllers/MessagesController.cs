@@ -937,53 +937,64 @@ namespace CspjMail.Api.Controllers
         /// <summary>
         /// Returns all group threads (EstGroupe == true) the current user participates in,
         /// ordered by most recent activity. Includes participant count and group title.
+        /// Works for ALL roles (Admin, Fonctionnaire, Association) by querying purely on
+        /// the ThreadParticipant junction table — no role-string comparisons are used.
         /// </summary>
         [HttpGet("groups")]
         public async Task<IActionResult> GetGroupMessages()
         {
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
-
-            var threads = await _context.Threads
-                .Where(t => !t.EstArchive &&
-                            t.EstGroupe &&
-                            t.Participants.Any(tp => tp.UserId == currentUserId) &&
-                            // Exclude threads soft-deleted by this user
-                            !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser))
-                .Include(t => t.Messages)
-                    .ThenInclude(m => m.Expediteur)
-                .Include(t => t.Participants)
-                    .ThenInclude(tp => tp.Utilisateur)
-                .ToListAsync();
-
-            var summaries = threads.Select(t =>
+            try
             {
-                var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
-                if (lastMessage == null) return null;
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-                return new ThreadSummaryDto
+                // Fetch all non-archived group threads where:
+                //   1. The current user has a ThreadParticipant row (any role).
+                //   2. That row is NOT marked as soft-deleted for this user.
+                // Both conditions use plain == comparisons that EF Core can translate.
+                var threads = await _context.Threads
+                    .Where(t => t.EstGroupe == true &&
+                                t.EstArchive == false &&
+                                t.Participants.Any(tp => tp.UserId == currentUserId && !tp.IsDeletedForUser))
+                    .Include(t => t.Messages)
+                        .ThenInclude(m => m.Expediteur)
+                    .Include(t => t.Participants)
+                        .ThenInclude(tp => tp.Utilisateur)
+                    .ToListAsync();
+
+                var summaries = threads.Select(t =>
                 {
-                    ThreadId = t.Id,
-                    Objet = t.Objet,
-                    DerniereActivite = lastMessage.DateEnvoi,
-                    DernierMessageCorps = lastMessage.Corps,
-                    DernierExpediteurNom = lastMessage.Expediteur != null
-                        ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
-                        : "Inconnu",
-                    ADesMessagesNonLus = t.Messages.Any(m =>
-                        m.ExpediteurId != currentUserId && !m.EstLu &&
-                        t.Participants.Any(tp => tp.UserId == currentUserId)),
-                    EstArchive = t.EstArchive,
-                    EstGroupe = true,
-                    TitreGroupe = t.TitreGroupe,
-                    NombreParticipants = t.Participants.Count
-                };
-            })
-            .Where(s => s != null)
-            .OrderByDescending(s => s!.DerniereActivite)
-            .ToList();
+                    var lastMessage = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault();
+                    if (lastMessage == null) return null;
 
-            return Ok(summaries);
+                    return new ThreadSummaryDto
+                    {
+                        ThreadId = t.Id,
+                        Objet = t.Objet,
+                        DerniereActivite = lastMessage.DateEnvoi,
+                        DernierMessageCorps = lastMessage.Corps,
+                        DernierExpediteurNom = lastMessage.Expediteur != null
+                            ? $"{lastMessage.Expediteur.Prenom} {lastMessage.Expediteur.Nom}"
+                            : "Inconnu",
+                        ADesMessagesNonLus = t.Messages.Any(m =>
+                            m.ExpediteurId != currentUserId && !m.EstLu &&
+                            t.Participants.Any(tp => tp.UserId == currentUserId)),
+                        EstArchive = t.EstArchive,
+                        EstGroupe = true,
+                        TitreGroupe = t.TitreGroupe,
+                        NombreParticipants = t.Participants.Count
+                    };
+                })
+                .Where(s => s != null)
+                .OrderByDescending(s => s!.DerniereActivite)
+                .ToList();
+
+                return Ok(summaries);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message, details = ex.InnerException?.Message });
+            }
         }
 
         // ─── 13. POST: api/messages/groups/create ─────────────────────────────────
