@@ -16,8 +16,6 @@ public partial class TicketMessage
     [Required]
     public string Content { get; set; } = null!;
 
-    public bool IsInternalNote { get; set; } = false;
-
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [ForeignKey("TicketId")]
