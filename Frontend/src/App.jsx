@@ -13,6 +13,7 @@ import Layout from './components/Layout';
 import ManageUsers from './components/ManageUsers';
 import ManageInstitutions from './components/ManageInstitutions';
 import ManageLogs from './components/ManageLogs';
+import ManageGroups from './components/ManageGroups';
 import ProfilePage from './pages/ProfilePage';
 import CreateUserPage from './pages/CreateUserPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
@@ -90,6 +91,7 @@ function AppRoutes() {
       <Route element={<ProtectedRoute><MailProvider><Layout /></MailProvider></ProtectedRoute>}>
         <Route path="/dashboard" element={<DashboardRoute />} />
         <Route path="/groups" element={<Groups />} />
+        <Route path="/admin/groups" element={<ManageGroups />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/users" element={<ManageUsers />} />
         <Route path="/institutions" element={<ManageInstitutions />} />
