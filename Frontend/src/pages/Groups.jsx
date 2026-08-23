@@ -309,26 +309,66 @@ function CreateGroupModal({ onClose, onCreate, currentUser }) {
   );
 }
 
+// ── Skeleton row for loading state ───────────────────────────────────────────
+function GroupSkeletonRow() {
+  return (
+    <div className="p-4 flex items-start gap-3 border-b border-slate-100/80 animate-pulse">
+      <div className="w-10 h-10 rounded-xl bg-slate-200 flex-shrink-0" />
+      <div className="flex-1 space-y-2 py-0.5">
+        <div className="h-3 bg-slate-200 rounded-full w-3/4" />
+        <div className="h-2.5 bg-slate-100 rounded-full w-1/3" />
+        <div className="h-2.5 bg-slate-100 rounded-full w-full" />
+      </div>
+    </div>
+  );
+}
+
 // ── Main Groups Page ──────────────────────────────────────────────────────────
 export default function Groups() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isAdmin = user?.role === 'Administrateur';
   const {
-    messages: groupThreads,
-    loading,
-    contacts,
     createGroupThread,
     replyToThread,
     toggleArchiveMessage,
   } = useMail();
 
-  const [selectedThread,  setSelectedThread]  = useState(null);
-  const [isModalOpen,     setIsModalOpen]      = useState(false);
-  const [replyBody,       setReplyBody]        = useState('');
-  const [isReplying,      setIsReplying]       = useState(false);
-  const [search,          setSearch]           = useState('');
+  // ── Local data state — fetched directly on every mount ───────────────────────
+  // We intentionally do NOT use `messages` from MailContext here because that
+  // state is driven by `activeFolder`, which Groups.jsx never sets. Fetching
+  // locally guarantees a fresh list every time the user navigates to /groups.
+  const [groupThreads,   setGroupThreads]   = useState([]);
+  const [loadingGroups,  setLoadingGroups]  = useState(true);
+
+  const [selectedThread, setSelectedThread] = useState(null);
+  const [isModalOpen,    setIsModalOpen]    = useState(false);
+  const [replyBody,      setReplyBody]      = useState('');
+  const [isReplying,     setIsReplying]     = useState(false);
+  const [search,         setSearch]         = useState('');
   const messagesEndRef = useRef(null);
+
+  // ── Fetch groups list from API ────────────────────────────────────────────────
+  const fetchGroups = async (signal) => {
+    setLoadingGroups(true);
+    try {
+      const res = await api.get('/messages/groups', signal ? { signal } : undefined);
+      setGroupThreads(res.data ?? []);
+    } catch (err) {
+      if (err.name !== 'CanceledError' && err.name !== 'AbortError') {
+        console.error('Erreur chargement groupes :', err);
+      }
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
+
+  // Re-fetch every time the component mounts (covers navigate-away-and-back).
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchGroups(controller.signal);
+    return () => controller.abort(); // cleanup on unmount
+  }, []);
 
   // Auto-scroll to bottom when a thread is selected or new messages arrive
   useEffect(() => {
@@ -354,10 +394,12 @@ export default function Groups() {
     setIsReplying(true);
     try {
       await replyToThread(selectedThread.threadId, replyBody);
-      // Re-fetch updated thread
+      // Re-fetch updated thread detail
       const res = await api.get(`/messages/thread/${selectedThread.threadId}`);
       setSelectedThread(res.data);
       setReplyBody('');
+      // Refresh the sidebar list so the new reply shows up
+      await fetchGroups();
     } finally {
       setIsReplying(false);
     }
@@ -367,6 +409,14 @@ export default function Groups() {
     if (!selectedThread) return;
     await toggleArchiveMessage(selectedThread.threadId);
     setSelectedThread(null);
+    // Refresh the list — archived group should disappear from the sidebar
+    await fetchGroups();
+  };
+
+  // Callback passed to CreateGroupModal: re-fetch list after creation
+  const handleCreate = async (payload) => {
+    await createGroupThread(payload);
+    await fetchGroups();
   };
 
   const filtered = groupThreads.filter(t =>
@@ -457,13 +507,10 @@ export default function Groups() {
 
         {/* Group thread list */}
         <div className="flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="p-10 flex flex-col items-center justify-center gap-3 text-slate-400">
-              <svg className="animate-spin h-6 w-6 text-violet-400" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              <span className="text-xs font-medium">جارٍ التحميل...</span>
+          {loadingGroups ? (
+            // Skeleton rows — prevents the empty-state from flashing before data arrives
+            <div className="divide-y divide-slate-100/80">
+              {[1, 2, 3].map(i => <GroupSkeletonRow key={i} />)}
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full py-16 text-center px-6 gap-3">
@@ -741,7 +788,7 @@ export default function Groups() {
       {isModalOpen && (
         <CreateGroupModal
           onClose={() => setIsModalOpen(false)}
-          onCreate={createGroupThread}
+          onCreate={handleCreate}
           currentUser={user}
         />
       )}
