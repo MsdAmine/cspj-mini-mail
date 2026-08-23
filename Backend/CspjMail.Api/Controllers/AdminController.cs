@@ -430,5 +430,100 @@ namespace CspjMail.Api.Controllers
                 Message               = "Assignations mises à jour avec succès."
             });
         }
+
+        // ── GROUP MANAGEMENT ──────────────────────────────────────────────────
+
+        // 8. GET: api/admin/groups
+        // Returns all group threads in the system with creator and participant info.
+        [HttpGet("groups")]
+        public async Task<IActionResult> GetGroups()
+        {
+            var groups = await _context.Threads
+                .Where(t => t.EstGroupe)
+                .Include(t => t.Participants)
+                    .ThenInclude(tp => tp.Utilisateur)
+                        .ThenInclude(u => u.Entreprise)
+                .Include(t => t.Messages)
+                    .ThenInclude(m => m.Expediteur)
+                .OrderByDescending(t => t.DateCreation)
+                .Select(t => new
+                {
+                    id = t.Id,
+                    subject = t.Objet,
+                    createdAt = t.DateCreation,
+                    isArchived = t.EstArchive,
+                    participantCount = t.Participants.Count(tp => !tp.IsDeletedForUser),
+                    createdBy = t.Messages
+                        .OrderBy(m => m.DateEnvoi)
+                        .Select(m => new
+                        {
+                            name  = m.Expediteur.Prenom + " " + m.Expediteur.Nom,
+                            role  = m.Expediteur.Role,
+                            email = m.Expediteur.Email
+                        })
+                        .FirstOrDefault(),
+                    participants = t.Participants
+                        .Where(tp => !tp.IsDeletedForUser)
+                        .Select(tp => new
+                        {
+                            id    = tp.UserId,
+                            name  = tp.Utilisateur.Prenom + " " + tp.Utilisateur.Nom,
+                            email = tp.Utilisateur.Email,
+                            role  = tp.Utilisateur.Role
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            return Ok(groups);
+        }
+
+        // 9. DELETE: api/admin/groups/{id}
+        // Archives (soft-deletes) the specified group thread for all participants.
+        [HttpDelete("groups/{id}")]
+        public async Task<IActionResult> ArchiveGroup(int id)
+        {
+            var thread = await _context.Threads
+                .Include(t => t.Participants)
+                .FirstOrDefaultAsync(t => t.Id == id && t.EstGroupe);
+
+            if (thread == null)
+                return NotFound("Groupe introuvable ou n'est pas un groupe.");
+
+            // Soft-archive: mark as archived and set IsDeletedForUser for all participants
+            thread.EstArchive = true;
+            foreach (var participant in thread.Participants)
+            {
+                participant.IsDeletedForUser = true;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Le groupe a été archivé et masqué pour tous les participants." });
+        }
+
+        // 10. DELETE: api/admin/groups/{id}/members/{userId}
+        // Removes a specific user from a group's participant list.
+        [HttpDelete("groups/{id}/members/{userId}")]
+        public async Task<IActionResult> RemoveGroupMember(int id, int userId)
+        {
+            var thread = await _context.Threads
+                .FirstOrDefaultAsync(t => t.Id == id && t.EstGroupe);
+
+            if (thread == null)
+                return NotFound("Groupe introuvable ou n'est pas un groupe.");
+
+            var participant = await _context.ThreadParticipants
+                .FirstOrDefaultAsync(tp => tp.ThreadId == id && tp.UserId == userId);
+
+            if (participant == null)
+                return NotFound("Cet utilisateur n'est pas membre de ce groupe.");
+
+            // Soft-remove: mark as deleted for this user only
+            participant.IsDeletedForUser = true;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "L'utilisateur a été retiré du groupe avec succès." });
+        }
     }
 }
