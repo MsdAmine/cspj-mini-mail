@@ -222,4 +222,12 @@ namespace CspjMail.Api.DTOs
     {
         public string? NewPassword { get; set; }
     }
+
+    public class UpdateUserDto
+    {
+        public string Nom { get; set; } = null!;
+        public string Prenom { get; set; } = null!;
+        public string Email { get; set; } = null!;
+        public int InstitutionId { get; set; }
+    }
 }
