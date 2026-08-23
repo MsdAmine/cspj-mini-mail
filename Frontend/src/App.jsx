@@ -17,6 +17,8 @@ import ManageGroups from './components/ManageGroups';
 import ProfilePage from './pages/ProfilePage';
 import CreateUserPage from './pages/CreateUserPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import SupportPage from './pages/SupportPage';
+import ManageSupport from './components/ManageSupport';
 /**
  * Protected Route wrapper
  */
@@ -92,6 +94,8 @@ function AppRoutes() {
         <Route path="/dashboard" element={<DashboardRoute />} />
         <Route path="/groups" element={<Groups />} />
         <Route path="/admin/groups" element={<ManageGroups />} />
+        <Route path="/support" element={<SupportPage />} />
+        <Route path="/admin/support" element={<ManageSupport />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/users" element={<ManageUsers />} />
         <Route path="/institutions" element={<ManageInstitutions />} />

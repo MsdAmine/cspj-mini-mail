@@ -1,8 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import { 
+  UserPlus, Users, ArrowLeft, Check, AlertTriangle, 
+  Building2, Mail, Lock, Shield, RefreshCw 
+} from 'lucide-react';
 
 export default function CreateUserPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   
   const [newPrenom, setNewPrenom] = useState('');
@@ -13,6 +19,7 @@ export default function CreateUserPage() {
   const [newInstitutionId, setNewInstitutionId] = useState('1');
   const [adminMessage, setAdminMessage] = useState({ type: '', text: '' });
   const [institutions, setInstitutions] = useState([]);
+  const [loading, setLoading] = useState(false);
   
   const [fonctionnaires, setFonctionnaires] = useState([]);
   const [selectedFonctionnaireIds, setSelectedFonctionnaireIds] = useState([]);
@@ -50,6 +57,7 @@ export default function CreateUserPage() {
       return;
     }
 
+    setLoading(true);
     try {
       const payload = {
         prenom: newPrenom.trim(),
@@ -96,177 +104,219 @@ export default function CreateUserPage() {
         ? err.response.data 
         : err.response?.data?.message || err.message || "Erreur lors de la création du compte.";
       setAdminMessage({ type: 'error', text: errorMessage });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div dir="ltr" className="flex-1 bg-[#f8fafc] p-8 overflow-y-auto flex flex-col items-center text-left">
-      <div className="w-full max-w-xl bg-white rounded-2xl border border-slate-200/60 shadow-[0_1px_3px_0_rgb(0_0_0/_0.04),_0_4px_6px_-2px_rgb(0_0_0/_0.04)] hover:shadow-[0_4px_16px_-4px_rgb(0_0_0/_0.1)] transition-shadow duration-300 overflow-hidden animate-fade-in">
-        {/* Prismatic accent bar */}
-        <div className="h-px w-full bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
-        {/* Card header */}
-        <div className="px-6 py-5 bg-slate-50/60 border-b border-slate-100">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/25 flex-shrink-0">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-              </svg>
+    <div dir="ltr" className="flex-1 flex flex-col h-full bg-[#f8fafc] text-slate-800 overflow-hidden font-sans">
+      
+      {/* ── Top Header ── */}
+      <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 flex items-center justify-between px-6 shadow-sm flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shadow-xs">
+            <UserPlus className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-base font-bold text-slate-900 tracking-tight">Créer un Compte</h1>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-50 text-blue-700 border border-blue-200/60 uppercase tracking-wider">
+                Nouvel Utilisateur
+              </span>
             </div>
-            <div>
-              <h2 className="text-base font-bold tracking-tight text-slate-900 leading-none">Enregistrer un nouvel utilisateur</h2>
-              <p className="text-slate-500 text-xs mt-0.5">Le compte créé sera actif et recevra automatiquement ses accès sécurisés.</p>
-            </div>
+            <p className="text-xs text-slate-500">
+              Enregistrement et attribution des accès sur le réseau CSPJ Mail
+            </p>
           </div>
         </div>
 
-        <div className="p-6">
-          {adminMessage.text && (
-            <div className={`p-4 rounded-xl text-xs font-semibold mb-5 flex items-center gap-2 ${
-              adminMessage.type === 'success' 
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                : 'bg-rose-50 text-rose-800 border border-rose-200'
-            }`}>
-              {adminMessage.type === 'success' ? (
-                <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
-              ) : (
-                <svg className="w-4 h-4 text-rose-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-              )}
-              {adminMessage.text}
-            </div>
-          )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate('/users')}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200/80 rounded-xl text-xs font-semibold text-slate-700 shadow-xs transition-colors cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-400" />
+            <span>Liste des utilisateurs</span>
+          </button>
+        </div>
+      </header>
 
-          <form onSubmit={handleCreateAccount} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+      {/* ── Scrollable Body ── */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="max-w-3xl mx-auto">
+          
+          {/* Card Form */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200/80 bg-slate-50/50 flex items-center justify-between">
               <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Prénom *</label>
-                <input
-                  type="text"
-                  required
-                  value={newPrenom}
-                  onChange={(e) => setNewPrenom(e.target.value)}
-                  placeholder="Ex: Sanaa"
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Nom *</label>
-                <input
-                  type="text"
-                  required
-                  value={newNom}
-                  onChange={(e) => setNewNom(e.target.value)}
-                  placeholder="Ex: Benjelloun"
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
-                />
+                <h3 className="text-sm font-bold tracking-tight text-slate-900">Formulaire d'enregistrement</h3>
+                <p className="text-xs text-slate-500 mt-0.5">Remplissez les informations du compte à créer</p>
               </div>
             </div>
 
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Adresse Email Professionnelle *</label>
-              <input
-                type="email"
-                required
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="Ex: s.benjelloun@cspj.ma"
-                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Mot de passe provisoire *</label>
-              <input
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50/50 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Rôle affecté</label>
-              <select
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
-              >
-                <option value="Fonctionnaire">Fonctionnaire</option>
-                <option value="Association">Association (جمعية)</option>
-                <option value="Administrateur">Administrateur</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                Institution / Structure Affectée <span className="text-rose-500">*</span>
-              </label>
-              <select
-                required
-                value={newInstitutionId}
-                onChange={(e) => setNewInstitutionId(e.target.value)}
-                className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition duration-150 cursor-pointer"
-              >
-                {institutions.length === 0 ? (
-                  <option value="" disabled>Chargement des structures...</option>
-                ) : (
-                  institutions.map(inst => (
-                    <option key={inst.id} value={inst.id.toString()}>{inst.nom}</option>
-                  ))
-                )}
-              </select>
-            </div>
-
-            {newRole === 'Association' && (
-              <div className="pt-2">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Fonctionnaires assignés / الموظفون المكلفون
-                </label>
-                <div className="border border-slate-200 rounded-xl bg-white max-h-48 overflow-y-auto overflow-x-hidden">
-                  {fonctionnaires.length === 0 ? (
-                    <div className="p-4 text-center text-xs text-slate-400">Aucun fonctionnaire disponible.</div>
+            <div className="p-6">
+              {adminMessage.text && (
+                <div className={`p-4 rounded-xl text-xs font-semibold mb-6 flex items-center gap-2.5 ${
+                  adminMessage.type === 'success' 
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                }`}>
+                  {adminMessage.type === 'success' ? (
+                    <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                   ) : (
-                    <div className="divide-y divide-slate-100">
-                      {fonctionnaires.map(f => {
-                        const checked = selectedFonctionnaireIds.includes(f.id);
-                        return (
-                          <label key={f.id} className={`flex items-center gap-3 px-3.5 py-2.5 cursor-pointer transition-colors duration-100 ${checked ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}>
-                            <input 
-                              type="checkbox" 
-                              checked={checked}
-                              onChange={() => {
-                                setSelectedFonctionnaireIds(prev => 
-                                  prev.includes(f.id) ? prev.filter(x => x !== f.id) : [...prev, f.id]
-                                );
-                              }}
-                              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
-                            />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-slate-700 truncate">{f.prenom} {f.nom}</p>
-                              <p className="text-[10px] text-slate-400 truncate">{f.email}</p>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
+                    <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
                   )}
+                  <span>{adminMessage.text}</span>
                 </div>
-                {selectedFonctionnaireIds.length > 0 && (
-                  <p className="text-[10px] text-slate-500 mt-1.5">{selectedFonctionnaireIds.length} sélectionné(s)</p>
-                )}
-              </div>
-            )}
+              )}
 
-            <div className="pt-4">
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 text-white rounded-xl text-sm font-semibold hover:from-slate-700 hover:to-slate-800 active:scale-[0.98] transition-all duration-150 shadow-md shadow-slate-900/20 cursor-pointer focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 outline-none"
-              >
-                Créer le compte utilisateur
-              </button>
+              <form onSubmit={handleCreateAccount} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Prénom <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newPrenom}
+                      onChange={(e) => setNewPrenom(e.target.value)}
+                      placeholder="Ex: Sanaa"
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition duration-150 text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Nom <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newNom}
+                      onChange={(e) => setNewNom(e.target.value)}
+                      placeholder="Ex: Benjelloun"
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition duration-150 text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Adresse Email Professionnelle <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="Ex: s.benjelloun@cspj.ma"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition duration-150 text-slate-800 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Mot de passe initial <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition duration-150 text-slate-800"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Rôle utilisateur <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={newRole}
+                      onChange={(e) => setNewRole(e.target.value)}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-xs focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition duration-150 text-slate-800 cursor-pointer"
+                    >
+                      <option value="Fonctionnaire">Fonctionnaire</option>
+                      <option value="Association">Association (جمعية)</option>
+                      <option value="Administrateur">Administrateur</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Structure / Institution <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={newInstitutionId}
+                      onChange={(e) => setNewInstitutionId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-xs focus:bg-white focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 outline-none transition duration-150 text-slate-800 cursor-pointer"
+                    >
+                      {institutions.length === 0 ? (
+                        <option value="" disabled>Chargement des structures...</option>
+                      ) : (
+                        institutions.map(inst => (
+                          <option key={inst.id} value={inst.id.toString()}>{inst.nom}</option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                {newRole === 'Association' && (
+                  <div className="pt-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Fonctionnaires assignés / الموظفون المكلفون
+                    </label>
+                    <div className="border border-slate-200 rounded-xl bg-slate-50/50 max-h-48 overflow-y-auto divide-y divide-slate-100">
+                      {fonctionnaires.length === 0 ? (
+                        <div className="p-4 text-center text-xs text-slate-400">Aucun fonctionnaire actif disponible.</div>
+                      ) : (
+                        fonctionnaires.map(f => {
+                          const checked = selectedFonctionnaireIds.includes(f.id);
+                          return (
+                            <label key={f.id} className={`flex items-center gap-3 px-3.5 py-2.5 cursor-pointer transition-colors ${checked ? 'bg-blue-50/70' : 'hover:bg-slate-50'}`}>
+                              <input 
+                                type="checkbox" 
+                                checked={checked}
+                                onChange={() => {
+                                  setSelectedFonctionnaireIds(prev => 
+                                    prev.includes(f.id) ? prev.filter(x => x !== f.id) : [...prev, f.id]
+                                  );
+                                }}
+                                className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" 
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-slate-800 truncate">{f.prenom} {f.nom}</p>
+                                <p className="text-[11px] text-slate-400 font-mono truncate">{f.email} {f.institutionNom ? `• ${f.institutionNom}` : ''}</p>
+                              </div>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                    {selectedFonctionnaireIds.length > 0 && (
+                      <p className="text-[11px] text-blue-600 font-medium mt-1.5">{selectedFonctionnaireIds.length} fonctionnaire(s) sélectionné(s)</p>
+                    )}
+                  </div>
+                )}
+
+                <div className="pt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2.5 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white rounded-xl text-xs font-semibold shadow-sm transition-all duration-150 active:scale-98 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
+                    <span>Créer le compte</span>
+                  </button>
+                </div>
+              </form>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>
