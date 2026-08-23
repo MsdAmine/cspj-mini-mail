@@ -298,6 +298,41 @@ namespace CspjMail.Api.Controllers
             return Ok(new { entry.Id, entry.DateHeure });
         }
 
+        // 3.8 PUT: api/admin/users/{id} (Update user profile)
+        [HttpPut("users/{id}")]
+        public async Task<IActionResult> UpdateUser(int id, [FromBody] UpdateUserDto dto)
+        {
+            var user = await _context.Utilisateurs.FindAsync(id);
+            if (user == null || user.IsDeleted)
+            {
+                return NotFound("Utilisateur introuvable.");
+            }
+
+            // Check if email is unique among active users
+            var emailExists = await _context.Utilisateurs
+                .AnyAsync(u => u.Id != id && u.Email.ToLower() == dto.Email.ToLower() && !u.IsDeleted);
+            if (emailExists)
+            {
+                return BadRequest("Cet email est déjà utilisé par un autre utilisateur.");
+            }
+
+            // Verify institution exists
+            var enterpriseExists = await _context.Entreprises.AnyAsync(e => e.Id == dto.InstitutionId);
+            if (!enterpriseExists)
+            {
+                return BadRequest("La structure ou l'institution assignée n'existe pas.");
+            }
+
+            user.Nom = dto.Nom;
+            user.Prenom = dto.Prenom;
+            user.Email = dto.Email;
+            user.EntrepriseId = dto.InstitutionId;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Profil utilisateur mis à jour avec succès." });
+        }
+
         // 4. PUT: api/admin/users/{id}/status (Modify active status of a user)
         [HttpPut("users/{id}/status")]
         public async Task<IActionResult> UpdateUserStatus(int id, [FromBody] UpdateUserStatusDto dto)

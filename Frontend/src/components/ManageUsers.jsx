@@ -237,6 +237,119 @@ function AssignStaffModal({ association, onClose, onSaved }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// EditUserModal
+// ─────────────────────────────────────────────────────────────────────────────
+function EditUserModal({ user, onClose, onSaved }) {
+  const [formData, setFormData] = useState({
+    nom: user.nom || '',
+    prenom: user.prenom || '',
+    email: user.email || '',
+    institutionId: user.institutionId || ''
+  });
+  const [institutions, setInstitutions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchInstitutions = async () => {
+      setLoading(true);
+      try {
+        const res = await api.get('/admin/institutions');
+        if (!cancelled) setInstitutions(res.data || []);
+      } catch (err) {
+        if (!cancelled) setError("Erreur lors du chargement des institutions.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchInstitutions();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    if (!formData.nom || !formData.prenom || !formData.email || !formData.institutionId) {
+      setError("Tous les champs sont obligatoires.");
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await api.put(`/admin/users/${user.id}`, {
+        nom: formData.nom,
+        prenom: formData.prenom,
+        email: formData.email,
+        institutionId: parseInt(formData.institutionId)
+      });
+      const selectedInst = institutions.find(i => i.id === parseInt(formData.institutionId));
+      onSaved({
+        ...formData,
+        institutionId: parseInt(formData.institutionId),
+        institutionNom: selectedInst ? selectedInst.nom : user.institutionNom
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || err.response?.data || "Erreur lors de la modification.");
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200/60 overflow-hidden flex flex-col">
+        <div className="bg-gradient-to-r from-blue-700 to-indigo-700 px-6 py-5 flex items-center justify-between">
+          <h3 className="font-bold text-white text-sm">Modifier l'utilisateur</h3>
+          <button onClick={onClose} disabled={saving} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition-all cursor-pointer">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <div className="p-6 overflow-y-auto">
+          {loading ? (
+            <div className="py-8 text-center"><div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div></div>
+          ) : (
+            <form onSubmit={handleSave} className="space-y-4">
+              {error && <div className="p-3 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200">{error}</div>}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Prénom</label>
+                  <input type="text" name="prenom" value={formData.prenom} onChange={handleChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50 outline-none transition-all" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1.5">Nom</label>
+                  <input type="text" name="nom" value={formData.nom} onChange={handleChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50 outline-none transition-all" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email</label>
+                <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50 outline-none transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Structure / Institution</label>
+                <select name="institutionId" value={formData.institutionId} onChange={handleChange} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-50 outline-none transition-all">
+                  <option value="">Sélectionner une structure</option>
+                  {institutions.map(inst => (
+                    <option key={inst.id} value={inst.id}>{inst.nom} {inst.estAssociation ? '(Association)' : ''}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="pt-2 flex justify-end gap-2">
+                <button type="button" onClick={onClose} disabled={saving} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-50">Annuler</button>
+                <button type="submit" disabled={saving} className="px-5 py-2 bg-blue-600 text-white text-xs font-semibold rounded-xl hover:bg-blue-700 flex items-center gap-2">
+                  {saving ? 'Sauvegarde...' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UserAuditModal
 // ─────────────────────────────────────────────────────────────────────────────
 function UserAuditModal({ user, onClose }) {
@@ -351,6 +464,7 @@ export default function ManageUsers() {
   const [auditingUser, setAuditingUser] = useState(null);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
   const [assigningUser, setAssigningUser] = useState(null); // NEW
+  const [editingUser, setEditingUser] = useState(null);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -604,6 +718,15 @@ export default function ManageUsers() {
                         {/* Actions */}
                         <td className="px-5 py-4 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {/* Edit button */}
+                            <button type="button" onClick={() => setEditingUser(u)}
+                              className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                              title="Modifier l'utilisateur">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </button>
+
                             {/* Inspect button */}
                             <button type="button" onClick={() => setAuditingUser(u)}
                               className="p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
@@ -643,6 +766,21 @@ export default function ManageUsers() {
             </div>
           )}
         </div>
+
+        {/* Edit User Modal */}
+        {editingUser && (
+          <EditUserModal
+            user={editingUser}
+            onClose={() => setEditingUser(null)}
+            onSaved={(updatedData) => {
+              addLog('UPDATE_USER', `Profil utilisateur mis à jour : ${updatedData.email}`, currentUser?.email);
+              setSuccess(`Le profil de ${updatedData.prenom} a été mis à jour.`);
+              setUsers(prev => prev.map(u => u.id === editingUser.id ? { ...u, ...updatedData } : u));
+              setEditingUser(null);
+              setTimeout(() => setSuccess(''), 4000);
+            }}
+          />
+        )}
 
         {/* Assign Staff Modal */}
         {assigningUser && (
