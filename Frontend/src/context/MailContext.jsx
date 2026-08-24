@@ -280,6 +280,63 @@ export const MailProvider = ({ children }) => {
     }
   };
 
+  // ── Bulk operations ──────────────────────────────────────────────────
+  const bulkMarkAsRead = async (threadIds, isRead = true) => {
+    if (!threadIds || threadIds.length === 0) return;
+    try {
+      // Optimistic update
+      setMessages(prev => prev.map(m => {
+        if (threadIds.includes(m.threadId)) {
+          return { ...m, aDesMessagesNonLus: !isRead };
+        }
+        return m;
+      }));
+      await api.post('/messages/bulk-read', { threadIds, isRead });
+      await refreshUnreadCount();
+    } catch (err) {
+      console.error("Erreur lors de la mise à jour par lot (lecture) :", err);
+      await loadMailbox();
+      throw err;
+    }
+  };
+
+  const bulkArchive = async (threadIds, isArchived = true) => {
+    if (!threadIds || threadIds.length === 0) return;
+    try {
+      if (activeFolder === 'inbox' || activeFolder === 'sent') {
+        setMessages(prev => prev.filter(m => !threadIds.includes(m.threadId)));
+      } else if (activeFolder === 'archived' && !isArchived) {
+        setMessages(prev => prev.filter(m => !threadIds.includes(m.threadId)));
+      }
+      if (selectedMessage && threadIds.includes(selectedMessage.threadId)) {
+        setSelectedMessage(null);
+      }
+      await api.post('/messages/bulk-archive', { threadIds, isArchived });
+      await refreshUnreadCount();
+      await loadMailbox();
+    } catch (err) {
+      console.error("Erreur lors de l'archivage par lot :", err);
+      await loadMailbox();
+      throw err;
+    }
+  };
+
+  const bulkDelete = async (threadIds) => {
+    if (!threadIds || threadIds.length === 0) return;
+    try {
+      setMessages(prev => prev.filter(m => !threadIds.includes(m.threadId)));
+      if (selectedMessage && threadIds.includes(selectedMessage.threadId)) {
+        setSelectedMessage(null);
+      }
+      await api.post('/messages/bulk-delete', { threadIds });
+      await refreshUnreadCount();
+    } catch (err) {
+      console.error("Erreur lors de la suppression par lot :", err);
+      await loadMailbox();
+      throw err;
+    }
+  };
+
   return (
     <MailContext.Provider value={{
       messages,
@@ -295,6 +352,9 @@ export const MailProvider = ({ children }) => {
       toggleArchiveMessage,
       deleteThread,
       markAsReadMessage,
+      bulkMarkAsRead,
+      bulkArchive,
+      bulkDelete,
       drafts,
       saveDraft,
       deleteDraft,

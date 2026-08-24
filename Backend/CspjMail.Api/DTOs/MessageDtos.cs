@@ -231,4 +231,21 @@ namespace CspjMail.Api.DTOs
         public string Email { get; set; } = null!;
         public int InstitutionId { get; set; }
     }
+
+    public class BulkReadDto
+    {
+        public List<int> ThreadIds { get; set; } = new();
+        public bool IsRead { get; set; } = true;
+    }
+
+    public class BulkArchiveDto
+    {
+        public List<int> ThreadIds { get; set; } = new();
+        public bool IsArchived { get; set; } = true;
+    }
+
+    public class BulkDeleteDto
+    {
+        public List<int> ThreadIds { get; set; } = new();
+    }
 }

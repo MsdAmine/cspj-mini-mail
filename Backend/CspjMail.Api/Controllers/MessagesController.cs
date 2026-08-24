@@ -1198,5 +1198,139 @@ namespace CspjMail.Api.Controllers
 
             return Ok(new { ThreadId = threadId, Message = "Discussion supprimée avec succès." });
         }
+
+        // ─── 15. POST: api/messages/bulk-read ────────────────────────────────────
+        [HttpPost("bulk-read")]
+        public async Task<IActionResult> BulkRead([FromBody] BulkReadDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            if (dto.ThreadIds == null || dto.ThreadIds.Count == 0)
+                return BadRequest("Aucun identifiant de discussion fourni.");
+
+            var distinctThreadIds = dto.ThreadIds.Distinct().ToList();
+
+            var authorizedThreadIds = await _context.Threads
+                .Where(t => distinctThreadIds.Contains(t.Id) &&
+                            (t.Participants.Any(tp => tp.UserId == currentUserId && !tp.IsDeletedForUser) ||
+                             t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)))
+                .Select(t => t.Id)
+                .ToListAsync();
+
+            if (authorizedThreadIds.Count == 0)
+                return Ok(new { updatedCount = 0, message = "Aucune discussion correspondante trouvée." });
+
+            var messages = await _context.Messages
+                .Where(m => authorizedThreadIds.Contains(m.ThreadId) && m.ExpediteurId != currentUserId)
+                .ToListAsync();
+
+            foreach (var msg in messages)
+            {
+                msg.EstLu = dto.IsRead;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                updatedCount = authorizedThreadIds.Count,
+                message = dto.IsRead ? "تم تعيين المحادثات المحددة كـ مقروءة." : "تم تعيين المحادثات المحددة كـ غير مقروءة."
+            });
+        }
+
+        // ─── 16. POST: api/messages/bulk-archive ─────────────────────────────────
+        [HttpPost("bulk-archive")]
+        public async Task<IActionResult> BulkArchive([FromBody] BulkArchiveDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            if (dto.ThreadIds == null || dto.ThreadIds.Count == 0)
+                return BadRequest("Aucun identifiant de discussion fourni.");
+
+            var distinctThreadIds = dto.ThreadIds.Distinct().ToList();
+
+            var authorizedThreads = await _context.Threads
+                .Where(t => distinctThreadIds.Contains(t.Id) &&
+                            (t.Participants.Any(tp => tp.UserId == currentUserId && !tp.IsDeletedForUser) ||
+                             t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)))
+                .ToListAsync();
+
+            foreach (var thread in authorizedThreads)
+            {
+                thread.EstArchive = dto.IsArchived;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                updatedCount = authorizedThreads.Count,
+                message = dto.IsArchived ? "تم أرشفة المحادثات المحددة بنجاح." : "تم إلغاء أرشفة المحادثات المحددة."
+            });
+        }
+
+        // ─── 17. POST: api/messages/bulk-delete ──────────────────────────────────
+        [HttpPost("bulk-delete")]
+        public async Task<IActionResult> BulkDelete([FromBody] BulkDeleteDto dto)
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+            if (dto.ThreadIds == null || dto.ThreadIds.Count == 0)
+                return BadRequest("Aucun identifiant de discussion fourni.");
+
+            var distinctThreadIds = dto.ThreadIds.Distinct().ToList();
+
+            var authorizedThreadIds = await _context.Threads
+                .Where(t => distinctThreadIds.Contains(t.Id) &&
+                            (t.Participants.Any(tp => tp.UserId == currentUserId) ||
+                             t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)))
+                .Select(t => t.Id)
+                .ToListAsync();
+
+            if (authorizedThreadIds.Count == 0)
+                return Ok(new { deletedCount = 0, message = "Aucune discussion correspondante trouvée." });
+
+            var existingParticipants = await _context.ThreadParticipants
+                .Where(tp => authorizedThreadIds.Contains(tp.ThreadId) && tp.UserId == currentUserId)
+                .ToListAsync();
+
+            foreach (var p in existingParticipants)
+            {
+                p.IsDeletedForUser = true;
+            }
+
+            var participantThreadIds = existingParticipants.Select(p => p.ThreadId).ToHashSet();
+            var missingThreadIds = authorizedThreadIds.Where(id => !participantThreadIds.Contains(id)).ToList();
+
+            foreach (var tid in missingThreadIds)
+            {
+                _context.ThreadParticipants.Add(new ThreadParticipant
+                {
+                    ThreadId = tid,
+                    UserId = currentUserId,
+                    IsDeletedForUser = true
+                });
+            }
+
+            var currentUser = await _context.Utilisateurs.FindAsync(currentUserId);
+            _context.AuditLogs.Add(new AuditLog
+            {
+                DateHeure = DateTime.UtcNow,
+                TypeAction = "BULK_DELETE_THREADS",
+                Utilisateur = currentUser?.Email ?? "Inconnu",
+                Description = $"حذف جماعي لـ {authorizedThreadIds.Count} محادثة بواسطة المستخدم."
+            });
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                deletedCount = authorizedThreadIds.Count,
+                message = $"تم حذف {authorizedThreadIds.Count} محادثة بنجاح."
+            });
+        }
     }
 }
