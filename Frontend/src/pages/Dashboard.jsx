@@ -7,7 +7,8 @@ import api from '../services/api';
 import MailList from '../components/MailList';
 import TiptapEditor from '../components/TiptapEditor';
 import DraftsView from '../components/DraftsView';
-import { Send, AlertTriangle, Trash2 } from 'lucide-react';
+import AttachmentPreviewModal from '../components/AttachmentPreviewModal';
+import { Send, AlertTriangle, Trash2, Eye, Download, FileText, Image as ImageIcon, File as FileIcon, Paperclip } from 'lucide-react';
 
 // ── Role → Arabic label helper ──────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ export default function Dashboard() {
   
   const [replyBody, setReplyBody] = useState('');
   const [toast, setToast] = useState(null);
+  const [previewAttachment, setPreviewAttachment] = useState(null);
 
   const isAdmin = user?.role === 'Administrateur';
 
@@ -333,7 +335,7 @@ export default function Dashboard() {
                         {msg.piecesJointes && msg.piecesJointes.length > 0 && (
                           <div className="mt-5 pt-4 border-t border-slate-100/80">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.586 6.586a6 6 0 108.486 8.486L20 13" /></svg>
+                              <Paperclip className="w-3.5 h-3.5" />
                               المرفقات ({msg.piecesJointes.length})
                             </p>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -341,9 +343,14 @@ export default function Dashboard() {
                                 const sizeKb = (file.tailleOctets / 1024).toFixed(1);
                                 const sizeMb = (file.tailleOctets / (1024 * 1024)).toFixed(2);
                                 const displaySize = file.tailleOctets >= 1024 * 1024 ? `${sizeMb} Mo` : `${sizeKb} Ko`;
+                                
+                                const ext = file.nomFichier?.split('.').pop()?.toLowerCase() || '';
+                                const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext) || file.typeContenu?.startsWith('image/');
+                                const isPdf = ext === 'pdf' || file.typeContenu === 'application/pdf';
 
                                 const handleDownload = async (e) => {
                                   e.preventDefault();
+                                  e.stopPropagation();
                                   try {
                                     const response = await api.get(
                                       `/messages/attachments/download/${file.id}`,
@@ -364,21 +371,52 @@ export default function Dashboard() {
                                 };
 
                                 return (
-                                  <button
+                                  <div
                                     key={file.id}
-                                    type="button"
-                                    onClick={handleDownload}
-                                    className="flex items-center gap-3 p-3 bg-slate-50/50 hover:bg-white border border-slate-200/80 hover:border-indigo-300 rounded-xl text-right active:scale-95 transition-all duration-200 group cursor-pointer shadow-sm hover:shadow-md hover:shadow-indigo-500/5"
-                                    title={`تنزيل ${file.nomFichier}`}
+                                    onClick={() => setPreviewAttachment(file)}
+                                    className="group relative flex items-center gap-3 p-3 bg-slate-50/70 hover:bg-white border border-slate-200/80 hover:border-indigo-300 rounded-xl text-right transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md hover:shadow-indigo-500/5 select-none"
+                                    title={`معاينة ${file.nomFichier}`}
                                   >
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-200 flex-shrink-0">
-                                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors duration-200 ${
+                                      isImg
+                                        ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white'
+                                        : isPdf
+                                        ? 'bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white'
+                                        : 'bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white'
+                                    }`}>
+                                      {isImg ? (
+                                        <ImageIcon className="w-4 h-4" />
+                                      ) : isPdf ? (
+                                        <FileText className="w-4 h-4" />
+                                      ) : (
+                                        <FileIcon className="w-4 h-4" />
+                                      )}
                                     </div>
+
                                     <div className="flex-1 min-w-0">
-                                      <p className="text-xs font-semibold text-slate-700 group-hover:text-indigo-700 truncate transition-colors">{file.nomFichier}</p>
-                                      <p className="text-[10px] text-slate-400 font-mono mt-0.5">{displaySize}</p>
+                                      <p className="text-xs font-semibold text-slate-700 group-hover:text-indigo-700 truncate transition-colors">
+                                        {file.nomFichier}
+                                      </p>
+                                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mt-0.5">
+                                        <span>{displaySize}</span>
+                                        <span>•</span>
+                                        <span className="text-indigo-600 group-hover:underline font-sans font-medium flex items-center gap-0.5">
+                                          <Eye className="w-2.5 h-2.5" />
+                                          معاينة
+                                        </span>
+                                      </div>
                                     </div>
-                                  </button>
+
+                                    {/* Direct Download Button */}
+                                    <button
+                                      type="button"
+                                      onClick={handleDownload}
+                                      className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer flex-shrink-0"
+                                      title={`تنزيل مباشر ${file.nomFichier}`}
+                                    >
+                                      <Download className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 );
                               })}
                             </div>
@@ -439,6 +477,12 @@ export default function Dashboard() {
           onClose={() => setToast(null)}
         />
       )}
+
+      {/* ── Attachment Preview Lightbox Modal ── */}
+      <AttachmentPreviewModal
+        attachment={previewAttachment}
+        onClose={() => setPreviewAttachment(null)}
+      />
     </div>
   );
 }
