@@ -521,6 +521,34 @@ namespace CspjMail.Api.Controllers
             return Ok(response);
         }
 
+        // ─── 3.9 GET: api/messages/unread-count ──────────────────────────────────
+        [HttpGet("unread-count")]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
+
+                var unreadCount = await _context.Threads
+                    .Where(t => t.EstArchive == false &&
+                        !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
+                        (
+                            (t.Participants.Any(tp => tp.UserId == currentUserId) && t.Messages.Any(m => m.ExpediteurId != currentUserId)) ||
+                            t.Messages.Any(m => m.DestinataireId == currentUserId)
+                        ) &&
+                        t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu &&
+                            (m.DestinataireId == currentUserId || t.Participants.Any(tp => tp.UserId == currentUserId))))
+                    .CountAsync();
+
+                return Ok(new { unreadCount });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = ex.Message, details = ex.InnerException?.Message });
+            }
+        }
+
         // ─── 4. GET: api/messages/inbox ───────────────────────────────────────────
         [HttpGet("inbox")]
         public async Task<IActionResult> GetInbox()
