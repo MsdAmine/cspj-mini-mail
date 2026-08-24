@@ -156,6 +156,7 @@ namespace CspjMail.Api.DTOs
         public int InstitutionId { get; set; }
         public string InstitutionNom { get; set; } = null!;
         public bool Actif { get; set; }
+        public bool HasTwoFactor { get; set; }
         public DateTime DateCreation { get; set; }
     }
 
