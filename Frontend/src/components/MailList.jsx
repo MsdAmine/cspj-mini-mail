@@ -13,15 +13,19 @@ import {
   Loader2,
   CheckSquare,
   Square,
-  MinusSquare
+  MinusSquare,
+  SlidersHorizontal,
+  Filter
 } from "lucide-react";
 import api from "../services/api";
+import SearchFilterDrawer from "./SearchFilterDrawer";
 
 export default function MailList() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedThreadIds, setSelectedThreadIds] = useState([]);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const {
     messages,
@@ -31,6 +35,10 @@ export default function MailList() {
     loading,
     searchQuery,
     setSearchQuery,
+    advancedFilters,
+    setAdvancedFilters,
+    clearAdvancedFilters,
+    hasActiveAdvancedFilters,
     deleteThread,
     toggleArchiveMessage,
     bulkMarkAsRead,
@@ -366,7 +374,133 @@ export default function MailList() {
                 </button>
               )}
             </div>
+
+            {/* Advanced Search Filter Drawer Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsDrawerOpen(true)}
+              className={`p-2 rounded-lg border transition-all flex items-center justify-center cursor-pointer relative flex-shrink-0 ${
+                hasActiveAdvancedFilters
+                  ? "bg-indigo-50 border-indigo-300 text-indigo-600 shadow-xs"
+                  : "bg-slate-50/50 border-slate-200/80 text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+              }`}
+              title="بحث وتصفية متقدمة"
+            >
+              <SlidersHorizontal size={15} />
+              {hasActiveAdvancedFilters && (
+                <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-indigo-600 ring-2 ring-white" />
+              )}
+            </button>
           </div>
+
+          {/* ── Active Filter Chips ── */}
+          {(searchQuery.trim() || hasActiveAdvancedFilters) && (
+            <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100/80 animate-fade-in">
+              <span className="text-[10px] font-bold text-slate-400">الفلاتر النشطة:</span>
+
+              {/* Search Query Chip */}
+              {searchQuery.trim() && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
+                  <span>نص: "{searchQuery}"</span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="hover:text-indigo-900 cursor-pointer p-0.5"
+                    title="إزالة هذا الفلتر"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+
+              {/* Start Date Chip */}
+              {advancedFilters.startDate && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
+                  <span>من: {advancedFilters.startDate}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedFilters((prev) => ({ ...prev, startDate: "" }))}
+                    className="hover:text-indigo-900 cursor-pointer p-0.5"
+                    title="إزالة هذا الفلتر"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+
+              {/* End Date Chip */}
+              {advancedFilters.endDate && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
+                  <span>إلى: {advancedFilters.endDate}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedFilters((prev) => ({ ...prev, endDate: "" }))}
+                    className="hover:text-indigo-900 cursor-pointer p-0.5"
+                    title="إزالة هذا الفلتر"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+
+              {/* Institution Chip */}
+              {advancedFilters.institutionId && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
+                  <span>مؤسسة مخصصة</span>
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedFilters((prev) => ({ ...prev, institutionId: "" }))}
+                    className="hover:text-indigo-900 cursor-pointer p-0.5"
+                    title="إزالة هذا الفلتر"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+
+              {/* Has Attachments Chip */}
+              {advancedFilters.hasAttachment !== null && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
+                  <span>{advancedFilters.hasAttachment ? "تحتوي على مرفقات" : "بدون مرفقات"}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedFilters((prev) => ({ ...prev, hasAttachment: null }))}
+                    className="hover:text-indigo-900 cursor-pointer p-0.5"
+                    title="إزالة هذا الفلتر"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+
+              {/* Read Status Chip */}
+              {advancedFilters.isRead !== null && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-indigo-50 text-indigo-700 border border-indigo-200/60 shadow-2xs">
+                  <span>{advancedFilters.isRead ? "مقروءة فقط" : "غير مقروءة فقط"}</span>
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedFilters((prev) => ({ ...prev, isRead: null }))}
+                    className="hover:text-indigo-900 cursor-pointer p-0.5"
+                    title="إزالة هذا الفلتر"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
+              )}
+
+              {/* Clear all */}
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  clearAdvancedFilters();
+                }}
+                className="text-[10px] font-bold text-rose-500 hover:text-rose-700 hover:underline cursor-pointer mr-auto"
+              >
+                مسح الكل
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -539,6 +673,12 @@ export default function MailList() {
           </div>
         )}
       </div>
+
+      {/* ── Search Filter Drawer Modal / Slide-over ── */}
+      <SearchFilterDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 }

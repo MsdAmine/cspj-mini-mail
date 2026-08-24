@@ -248,4 +248,14 @@ namespace CspjMail.Api.DTOs
     {
         public List<int> ThreadIds { get; set; } = new();
     }
+
+    public class MessageSearchFilterDto
+    {
+        public string? Query { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public int? InstitutionId { get; set; }
+        public bool? HasAttachment { get; set; }
+        public bool? IsRead { get; set; }
+    }
 }
