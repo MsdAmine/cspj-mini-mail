@@ -220,6 +220,7 @@ namespace CspjMail.Api.Controllers
                     InstitutionId = u.EntrepriseId,
                     InstitutionNom = u.Entreprise.Nom,
                     Actif = u.Actif,
+                    HasTwoFactor = !string.IsNullOrEmpty(u.TwoFactorSecret),
                     DateCreation = u.DateCreation
                 })
                 .ToListAsync();
@@ -480,6 +481,38 @@ namespace CspjMail.Api.Controllers
             await _context.SaveChangesAsync();
 
             return Ok(new { Message = "Mot de passe réinitialisé.", Password = newPassword });
+        }
+
+        // 7.6 POST: api/admin/users/{userId}/reset-2fa
+        // Resets/disables 2FA (TOTP) for a user who lost access to their Authenticator app
+        [HttpPost("users/{userId}/reset-2fa")]
+        public async Task<IActionResult> ResetUserTwoFactor(int userId)
+        {
+            var user = await _context.Utilisateurs.FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+            if (user == null)
+            {
+                return NotFound("Utilisateur introuvable.");
+            }
+
+            user.TwoFactorSecret = null;
+
+            var adminEmail = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                             ?? User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value 
+                             ?? "Admin";
+            var adminId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0";
+
+            var auditLog = new AuditLog
+            {
+                DateHeure = DateTime.UtcNow,
+                TypeAction = "RESET_2FA",
+                Utilisateur = adminEmail,
+                Description = $"User 2FA reset by Admin [{adminId}] ({adminEmail}) for user {user.Email} (ID: {user.Id})."
+            };
+
+            _context.AuditLogs.Add(auditLog);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { Message = "Le 2FA a été réinitialisé avec succès." });
         }
 
         [HttpGet("users/{id}/groups")]

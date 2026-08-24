@@ -6,7 +6,7 @@ import { useLogs } from '../context/LogContext';
 import {
   Users, UserPlus, Search, RefreshCw, Edit2, Trash2,
   UserCheck, Shield, Eye, X, Check, AlertTriangle,
-  Building, Mail, Phone, Calendar
+  Building, Mail, Phone, Calendar, ShieldAlert, KeyRound
 } from 'lucide-react';
 
 const initials = (prenom = '', nom = '') =>
@@ -449,6 +449,8 @@ export default function ManageUsers() {
   const [auditingUser, setAuditingUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
   const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+  const [resetting2FaUser, setResetting2FaUser] = useState(null);
+  const [isReset2FaLoading, setIsReset2FaLoading] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -494,6 +496,23 @@ export default function ManageUsers() {
       setError(err.response?.data?.message || err.response?.data || "Une erreur est survenue lors de la suppression.");
     } finally {
       setIsDeleteLoading(false);
+    }
+  };
+
+  const handleReset2FaConfirm = async () => {
+    if (!resetting2FaUser) return;
+    setIsReset2FaLoading(true); setError(''); setSuccess('');
+    try {
+      await api.post(`/admin/users/${resetting2FaUser.id}/reset-2fa`);
+      addLog('RESET_2FA', `2FA réinitialisé pour l'utilisateur ${resetting2FaUser.email}.`, currentUser?.email);
+      setSuccess(`Le 2FA a été réinitialisé avec succès pour ${resetting2FaUser.prenom} ${resetting2FaUser.nom}.`);
+      setUsers(prev => prev.map(u => u.id === resetting2FaUser.id ? { ...u, hasTwoFactor: false } : u));
+      setResetting2FaUser(null);
+      setTimeout(() => setSuccess(''), 4000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.response?.data || "Une erreur est survenue lors de la réinitialisation du 2FA.");
+    } finally {
+      setIsReset2FaLoading(false);
     }
   };
 
@@ -724,6 +743,17 @@ export default function ManageUsers() {
                                 <Eye className="w-4 h-4" />
                               </button>
 
+                              {/* Reset 2FA button */}
+                              {u.hasTwoFactor && (
+                                <button
+                                  onClick={() => setResetting2FaUser(u)}
+                                  className="p-1.5 rounded-lg text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
+                                  title="Réinitialiser la double authentification (2FA)"
+                                >
+                                  <ShieldAlert className="w-4 h-4" />
+                                </button>
+                              )}
+
                               {/* Assign button */}
                               {isAssoc && (
                                 <button
@@ -832,6 +862,64 @@ export default function ManageUsers() {
               >
                 {isDeleteLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                 <span>Supprimer</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2FA Reset Confirmation Modal */}
+      {resetting2FaUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
+                  <ShieldAlert className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 text-sm">Réinitialisation du 2FA</h3>
+                  <p className="text-xs text-slate-500">Double authentification (TOTP)</p>
+                </div>
+              </div>
+              <button onClick={() => setResetting2FaUser(null)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-3">
+              <p className="text-xs text-slate-700 leading-relaxed">
+                Êtes-vous sûr de vouloir réinitialiser le 2FA pour cet utilisateur ?
+              </p>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs space-y-1">
+                <p className="font-semibold text-slate-800">{resetting2FaUser.prenom} {resetting2FaUser.nom}</p>
+                <p className="text-slate-500 font-mono text-[11px]">{resetting2FaUser.email}</p>
+              </div>
+              <div className="p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-xl text-xs space-y-1">
+                <p className="font-semibold text-amber-900">Information importante :</p>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Le secret 2FA actuel sera supprimé. L'utilisateur devra scanner un nouveau QR code dans son application Authenticator lors de sa prochaine connexion.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 px-6 py-3.5 bg-slate-50 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setResetting2FaUser(null)}
+                disabled={isReset2FaLoading}
+                className="px-4 py-2 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-100 rounded-xl border border-slate-200"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleReset2FaConfirm}
+                disabled={isReset2FaLoading}
+                className="px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              >
+                {isReset2FaLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+                <span>Réinitialiser 2FA</span>
               </button>
             </div>
           </div>
