@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
@@ -23,9 +23,8 @@ const getRoleLabel = (role) => {
   const lower = role.toLowerCase();
   if (lower === 'fonctionnaire') return { label: 'موظف',   cls: 'bg-slate-100 text-slate-700 border-slate-200',        dot: 'bg-slate-400' };
   if (lower === 'association')   return { label: 'جمعية',  cls: 'bg-amber-50 text-amber-800 border-amber-200/60',      dot: 'bg-amber-500' };
-  if (lower === 'administrateur' || lower === 'admin')
-                                 return { label: 'مدير النظام', cls: 'bg-blue-50 text-blue-800 border-blue-200/60', dot: 'bg-blue-500'  };
-  return { label: role, cls: 'bg-slate-100 text-slate-600 border-slate-200', dot: 'bg-slate-400' };
+  if (lower === 'admin' || lower === 'administrateur') return { label: 'مدير',   cls: 'bg-purple-50 text-purple-800 border-purple-200/60',    dot: 'bg-purple-500' };
+  return { label: role, cls: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' };
 };
 
 // ── Participant avatar initials ───────────────────────────────────────────────
@@ -44,6 +43,9 @@ function CreateGroupModal({ onClose, onCreate, currentUser }) {
   const [loadingContacts,  setLoadingContacts]  = useState(true);
 
   const isAssociation = currentUser?.role?.toLowerCase() === 'association';
+  const isAdmin = currentUser?.role?.toLowerCase() === 'administrateur' ||
+                  currentUser?.role?.toLowerCase() === 'admin' ||
+                  currentUser?.role?.toLowerCase() === 'administrator';
 
   // Fetch the role-aware assignable contact list on mount
   useEffect(() => {
@@ -62,7 +64,15 @@ function CreateGroupModal({ onClose, onCreate, currentUser }) {
     return () => { cancelled = true; };
   }, []);
 
-  const filtered = contacts.filter(c =>
+  // Filter out Administrator accounts when caller is NOT an Admin
+  const availableContacts = useMemo(() => {
+    if (isAdmin) return contacts;
+    return contacts.filter(
+      (c) => c.role !== 'Administrateur' && c.role !== 'Admin' && c.role !== 'Administrator'
+    );
+  }, [contacts, isAdmin]);
+
+  const filtered = availableContacts.filter(c =>
     `${c.nomComplet} ${c.email} ${c.institutionNom}`
       .toLowerCase()
       .includes(contactSearch.toLowerCase())

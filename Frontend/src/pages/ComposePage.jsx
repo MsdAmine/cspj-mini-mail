@@ -119,6 +119,16 @@ export default function ComposePage() {
   const { user }   = useAuth();
   const { contacts, sendNewMessage, saveDraft, deleteDraft } = useMail();
 
+  const isAdmin = user?.role === 'Administrateur' || user?.role === 'Admin' || user?.role === 'Administrator';
+
+  // ── Client-side safeguard: filter out Administrator accounts for non-admin callers ──
+  const availableContacts = useMemo(() => {
+    if (isAdmin) return contacts;
+    return contacts.filter(
+      (c) => c.role !== 'Administrateur' && c.role !== 'Admin' && c.role !== 'Administrator'
+    );
+  }, [contacts, isAdmin]);
+
   // ── Draft being edited (passed via navigate state) ───────────────────────
   const incomingDraft = location.state?.draft ?? null;
 
@@ -160,7 +170,7 @@ export default function ComposePage() {
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   // ── Contact filtering ────────────────────────────────────────────────────
-  const filteredContacts = contacts.filter((c) =>
+  const filteredContacts = availableContacts.filter((c) =>
     `${c.nomComplet} ${c.email} ${c.institutionNom}`
       .toLowerCase()
       .includes(contactSearch.toLowerCase())
@@ -473,8 +483,8 @@ export default function ComposePage() {
               <div className="p-5 border-b border-slate-100 space-y-4 flex-shrink-0 bg-slate-50/30">
                 {/* Single Recipient Selector */}
                 {messageMode === "individuel" && (
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-2 tracking-wider">إلى *</label>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase text-slate-500 tracking-wider">إلى *</label>
                     <select
                       required
                       value={receiverId}
@@ -483,12 +493,26 @@ export default function ComposePage() {
                       disabled={isSending}
                     >
                       <option value="">اختر جهة اتصال...</option>
-                      {contacts.map((contact) => (
+                      {availableContacts.map((contact) => (
                         <option key={contact.id} value={contact.id}>
                           {contact.nomComplet} ({getRoleArabicLabel(contact.role)} — {contact.institutionNom})
                         </option>
                       ))}
                     </select>
+
+                    {/* Support note for non-admin users */}
+                    {!isAdmin && (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50/70 border border-indigo-100 rounded-xl text-indigo-800 text-[11px] leading-relaxed">
+                        <HelpCircle className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                        <span>
+                          لطلب المساعدة التقنية أو الإبلاغ عن مشكلة في المنصة، يرجى التوجه إلى قسم{" "}
+                          <Link to="/support" className="font-bold underline hover:text-indigo-950">
+                            الدعم الفني
+                          </Link>
+                          .
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
