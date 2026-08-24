@@ -55,7 +55,16 @@ export default function SearchFilterDrawer({ isOpen, onClose }) {
       api
         .get('/messages/institutions')
         .then((res) => {
-          setInstitutions(res.data || []);
+          const instList = res.data || res;
+          if (Array.isArray(instList)) {
+            setInstitutions(
+              instList.map((item) => ({
+                id: item.id || item.Id,
+                name: item.nom || item.Nom || item.libelle || item.Libelle || item.name || `مؤسسة #${item.id || item.Id}`,
+                isAssociation: Boolean(item.estAssociation ?? item.EstAssociation)
+              }))
+            );
+          }
         })
         .catch((err) => {
           console.error('Failed to load institutions for filter:', err);
@@ -185,19 +194,28 @@ export default function SearchFilterDrawer({ isOpen, onClose }) {
 
           {/* 3. Institution */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
-              <Building2 className="w-3.5 h-3.5 text-indigo-500" />
-              <span>المؤسسة أو الهيئة القضائية</span>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                <span>المؤسسة أو الهيئة القضائية</span>
+              </span>
+              {loadingInstitutions && (
+                <span className="text-[10px] text-indigo-500 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
+                  جارٍ التحميل...
+                </span>
+              )}
             </label>
             <select
               value={localInstitutionId}
+              disabled={loadingInstitutions}
               onChange={(e) => setLocalInstitutionId(e.target.value)}
-              className="w-full text-xs py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-700 cursor-pointer"
+              className="w-full text-xs py-2 px-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-slate-700 cursor-pointer disabled:opacity-50"
             >
               <option value="">جميع المؤسسات والهيئات</option>
               {institutions.map((inst) => (
                 <option key={inst.id} value={inst.id}>
-                  {inst.nom} {inst.estAssociation ? '(جمعية)' : ''}
+                  {inst.name} {inst.isAssociation ? '(جمعية)' : ''}
                 </option>
               ))}
             </select>
