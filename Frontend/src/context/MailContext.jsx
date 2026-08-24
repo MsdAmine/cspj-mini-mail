@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import api from '../services/api';
 
@@ -12,6 +12,23 @@ export const MailProvider = ({ children }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // ── Unread message count ───────────────────────────────────────────────
+  const refreshUnreadCount = useCallback(async () => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+    try {
+      const response = await api.get('/messages/unread-count');
+      setUnreadCount(response.data?.unreadCount ?? 0);
+    } catch {
+      // Graceful fallback when server is restarting or offline
+      setUnreadCount(0);
+    }
+  }, [user]);
+
   // ── Drafts (per-user localStorage) ──────────────────────────────────────
   const getDraftKey = (uid) => `cspj_drafts__${uid ?? 'guest'}`;
 
@@ -27,7 +44,8 @@ export const MailProvider = ({ children }) => {
   // Reload drafts when the logged-in user changes
   useEffect(() => {
     setDrafts(readDrafts(user?.id));
-  }, [user?.id]);
+    refreshUnreadCount();
+  }, [user?.id, refreshUnreadCount]);
 
   // Load threads depending on folder / search query
   const loadMailbox = async () => {
@@ -53,6 +71,7 @@ export const MailProvider = ({ children }) => {
       
       const response = await api.get(endpoint);
       setMessages(response.data);
+      refreshUnreadCount();
     } catch (err) {
       console.error("Erreur lors du chargement des discussions :", err);
     } finally {
@@ -80,7 +99,8 @@ export const MailProvider = ({ children }) => {
   useEffect(() => {
     loadMailbox();
     loadContacts();
-  }, [activeFolder, searchQuery, user]);
+    refreshUnreadCount();
+  }, [activeFolder, searchQuery, user, refreshUnreadCount]);
 
   // View thread details (also marks messages as read on the backend)
   const selectMessage = async (msg) => {
@@ -100,6 +120,7 @@ export const MailProvider = ({ children }) => {
         }
         return m;
       }));
+      refreshUnreadCount();
     } catch (err) {
       console.error("Erreur lors du chargement du fil de discussion :", err);
     }
@@ -259,6 +280,8 @@ export const MailProvider = ({ children }) => {
       deleteDraft,
       contacts,
       loading,
+      unreadCount,
+      refreshUnreadCount,
       refreshMailbox: loadMailbox
     }}>
       {children}
