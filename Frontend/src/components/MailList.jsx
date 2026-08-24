@@ -182,39 +182,38 @@ export default function MailList() {
     <div className="h-full flex flex-col bg-white/95 backdrop-blur-md overflow-hidden relative">
       {/* ── Contextual Top Bulk Actions Bar (Shown when items are selected) ── */}
       {selectedThreadIds.length > 0 ? (
-        <div className="px-4 py-3 bg-indigo-600 text-white flex items-center justify-between gap-2 flex-shrink-0 shadow-md animate-fade-in z-20">
-          <div className="flex items-center gap-2.5">
+        <div className="px-3.5 py-2.5 bg-indigo-600 text-white flex items-center justify-between gap-2 flex-shrink-0 shadow-md animate-fade-in z-20">
+          <div className="flex items-center gap-2 min-w-0">
             <button
               type="button"
               onClick={handleToggleSelectAll}
-              className="p-1 rounded-md hover:bg-white/20 transition-colors cursor-pointer text-white flex items-center justify-center"
+              className="p-1 rounded-md hover:bg-white/20 transition-colors cursor-pointer text-white flex items-center justify-center flex-shrink-0"
               title={isAllSelected ? "إلغاء تحديد الكل" : "تحديد الكل"}
             >
               {isAllSelected ? (
-                <CheckSquare size={16} className="text-white" />
+                <CheckSquare className="w-4 h-4 text-white" />
               ) : isPartiallySelected ? (
-                <MinusSquare size={16} className="text-white" />
+                <MinusSquare className="w-4 h-4 text-white" />
               ) : (
-                <Square size={16} className="text-white" />
+                <Square className="w-4 h-4 text-white" />
               )}
             </button>
-            <span className="text-xs font-bold whitespace-nowrap">
+            <span className="text-xs font-semibold px-2 py-0.5 bg-white/20 rounded-md whitespace-nowrap">
               {selectedThreadIds.length} محددة
             </span>
           </div>
 
-          {/* Bulk Action Buttons */}
-          <div className="flex items-center gap-1">
+          {/* Compact Icon-Only Action Buttons */}
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Mark as Read */}
             <button
               type="button"
               disabled={bulkLoading}
               onClick={() => handleBulkMarkRead(true)}
-              className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-medium"
-              title="تعيين كـ مقروء"
+              className="p-2 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer flex items-center justify-center"
+              title="تعليم كـ مقروء"
             >
-              <MailOpen size={15} />
-              <span className="hidden xl:inline text-[11px]">مقروء</span>
+              <CheckCheck className="w-4 h-4" />
             </button>
 
             {/* Mark as Unread */}
@@ -222,11 +221,10 @@ export default function MailList() {
               type="button"
               disabled={bulkLoading}
               onClick={() => handleBulkMarkRead(false)}
-              className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-medium"
-              title="تعيين كـ غير مقروء"
+              className="p-2 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer flex items-center justify-center"
+              title="تعليم كـ غير مقروء"
             >
-              <Mail size={15} />
-              <span className="hidden xl:inline text-[11px]">غير مقروء</span>
+              <Mail className="w-4 h-4" />
             </button>
 
             {/* Archive / Unarchive */}
@@ -234,13 +232,10 @@ export default function MailList() {
               type="button"
               disabled={bulkLoading}
               onClick={handleBulkArchive}
-              className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-medium"
-              title={activeFolder === "archived" ? "إلغاء الأرشفة" : "أرشفة"}
+              className="p-2 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer flex items-center justify-center"
+              title={activeFolder === "archived" ? "إلغاء أرشفة المحدد" : "أرشفة المحدد"}
             >
-              <Archive size={15} />
-              <span className="hidden xl:inline text-[11px]">
-                {activeFolder === "archived" ? "استعادة" : "أرشفة"}
-              </span>
+              <Archive className="w-4 h-4" />
             </button>
 
             {/* Delete button (with confirmation popover) */}
@@ -249,11 +244,10 @@ export default function MailList() {
                 type="button"
                 disabled={bulkLoading}
                 onClick={() => setIsDeleteConfirmOpen(!isDeleteConfirmOpen)}
-                className="p-1.5 rounded-lg hover:bg-rose-500 text-white transition-colors cursor-pointer flex items-center gap-1 text-xs font-medium"
+                className="p-2 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer flex items-center justify-center"
                 title="حذف المحدد"
               >
-                <Trash2 size={15} />
-                <span className="hidden xl:inline text-[11px]">حذف</span>
+                <Trash2 className="w-4 h-4 text-rose-300 hover:text-rose-200" />
               </button>
 
               {/* Confirmation Popover */}
@@ -290,7 +284,7 @@ export default function MailList() {
               )}
             </div>
 
-            <div className="w-[1px] h-4 bg-white/30 mx-1" />
+            <div className="w-[1px] h-4 bg-white/20 mx-0.5" />
 
             {/* Deselect button */}
             <button
@@ -299,10 +293,10 @@ export default function MailList() {
                 setSelectedThreadIds([]);
                 setIsDeleteConfirmOpen(false);
               }}
-              className="p-1.5 rounded-lg hover:bg-white/20 text-white transition-colors cursor-pointer"
+              className="p-2 rounded-lg hover:bg-white/10 text-white transition-colors cursor-pointer flex items-center justify-center"
               title="إلغاء التحديد"
             >
-              <X size={15} />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
