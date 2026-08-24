@@ -72,8 +72,9 @@ const TiptapEditor = ({
           if (node.type.name === 'heading') return 'عنوان...';
           return placeholder || 'اكتب رسالتك هنا...';
         },
-        includeChildren: true,
-        showOnlyCurrent: true,
+        showOnlyWhenEditable: true,
+        showOnlyCurrent: false,
+        includeChildren: false,
       }),
     ],
     content: content || '',
@@ -212,9 +213,7 @@ const TiptapEditor = ({
         .tiptap li p {
           margin: 0 !important;
         }
-        .ProseMirror p.is-editor-empty:first-child::before,
-        .ProseMirror p.is-empty::before,
-        .ProseMirror li.is-empty::before {
+        .ProseMirror p.is-editor-empty:first-child::before {
           color: #9ca3af;
           content: attr(data-placeholder);
           float: right;
