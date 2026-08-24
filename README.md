@@ -1,7 +1,20 @@
 # 📬 CSPJ Mini-Mail
 
-> **Plateforme de Messagerie Sécurisée & Gestion Institutionnelle**  
-> Solution complète de communication interne, d'échanges inter-associations/fonctionnaires et de support administratif, conçue avec **ASP.NET Core 10 (Web API)** et **React 19 (Vite + Tailwind CSS)**.
+<div align="center">
+
+![.NET 10](https://img.shields.io/badge/.NET-10.0-512BD4?style=for-the-badge&logo=dotnet&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Vite 8](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![SQL Server](https://img.shields.io/badge/SQL_Server-2022-CC292B?style=for-the-badge&logo=microsoft-sql-server&logoColor=white)
+![JWT & 2FA](https://img.shields.io/badge/Security-2FA_TOTP_%26_JWT-00C853?style=for-the-badge&logo=shield&logoColor=white)
+
+<br/>
+
+**Plateforme de Messagerie Sécurisée & Gestion Institutionnelle**  
+*Solution complète de communication interne, d'échanges inter-associations/fonctionnaires et de support administratif, conçue avec **ASP.NET Core 10 (Web API)** et **React 19 (Vite + Tailwind CSS)**.*
+
+</div>
 
 ---
 
@@ -17,21 +30,22 @@
 - [Installation & Démarrage](#-installation--démarrage)
   - [1. Configuration du Backend](#1-configuration-du-backend-aspnet-core)
   - [2. Configuration du Frontend](#2-configuration-du-frontend-react)
-- [Variables d'Environnement & Configuration](#-variables-denvironnement--configuration)
 - [Points d'Entrée de l'API (Endpoints)](#-points-dentrée-de-lapi-endpoints)
 - [Rôles et Permissions](#-rôles-et-permissions)
-- [Captures & Modules](#-captures--modules)
+- [Modules & Aperçu de l'Interface](#-modules--aperçu-de-linterface)
+- [Scripts & Commandes Utiles](#-scripts--commandes-utiles)
+- [Licence](#-licence)
 
 ---
 
 ## 🌟 À propos du projet
 
-**CSPJ Mini-Mail** est une application web conçue pour rationaliser et sécuriser les échanges administratifs et institutionnels entre :
-- Les **Administrateurs** du système
-- Les **Fonctionnaires**
-- Les **Associations** et structures partenaires
+**CSPJ Mini-Mail** est une application web moderne conçue pour rationaliser et sécuriser les flux de communication administratifs et institutionnels entre :
+- Les **Administrateurs** du système (supervision, gestion des comptes, paramétrages, logs d'audit)
+- Les **Fonctionnaires** (consultation, rédaction, échanges hiérarchiques et sectoriels)
+- Les **Associations** et structures partenaires (partage de documents, suivi des sollicitations)
 
-La plateforme garantit la confidentialité des communications, intègre un contrôle d'accès strict basé sur les rôles (RBAC), une double authentification forte (2FA TOTP), un système de tickets d'assistance ainsi qu'un suivi complet via des journaux d'audit.
+La plateforme garantit la stricte confidentialité des données échangées grâce au contrôle d'accès basé sur les rôles (RBAC), à l'authentification à deux facteurs (2FA TOTP), à l'assainissement systématique des contenus HTML et à une traçabilité intégrale via les journaux d'audit.
 
 ---
 
@@ -41,7 +55,7 @@ La plateforme garantit la confidentialité des communications, intègre un contr
 - **Authentification JWT Hybride :** Utilisation de jetons sécurisés stockés dans des cookies `HttpOnly` (`cspj_auth_token`) avec protection CSRF/XSS.
 - **Double Authentification (2FA / TOTP) :** Génération de secrets Base32 et QR Codes compatibles avec *Google Authenticator*, *Microsoft Authenticator*, etc.
 - **Réinitialisation de mot de passe sécurisée :** Envoi d'un code OTP par e-mail via SMTP avec jeton de réinitialisation éphémère.
-- **Limitation de débit (Rate Limiting) :** Protection contre les attaques par force brute (politique `totp-ops` de 5 requêtes/min max sur les endpoints d'authentification).
+- **Limitation de débit (Rate Limiting) :** Protection contre les attaques par force brute (politique `totp-ops` de 5 requêtes/min max sur les endpoints sensibles).
 - **En-têtes de sécurité renforcés :** CSP, HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`.
 
 ### 📨 2. Système de Messagerie Complète
@@ -71,10 +85,10 @@ La plateforme garantit la confidentialité des communications, intègre un contr
 
 ```mermaid
 graph TD
-    Client[Navigateur Web / Client React] -->|HTTPS / REST API / Cookies HttpOnly| API[Backend ASP.NET Core 10 Web API]
+    Client[Navigateur Web / Client React 19] -->|HTTPS / REST API / Cookies HttpOnly| API[Backend ASP.NET Core 10 Web API]
     API -->|Authentification / 2FA| TOTP[Moteur TOTP Otp.NET & JWT Bearer]
     API -->|ORM EF Core 10| DB[(Base de données SQL Server)]
-    API -->|Envoi d'e-mails / Alertes| SMTP[Serveur SMTP MailKit]
+    API -->|Notifications E-mails / Alertes| SMTP[Serveur SMTP MailKit]
     API -->|Stockage Sécurisé| FS[Système de Fichiers / Uploads Pièces Jointes]
 ```
 
@@ -98,7 +112,7 @@ graph TD
 - **Routage :** `react-router-dom` v7
 - **Styles :** [Tailwind CSS v4](https://tailwindcss.com/) + PostCSS + `@tailwindcss/typography`
 - **Composants & Icônes :** `lucide-react`
-- **Édition de Texte :** `@tiptap/react` + extensions (BulletList, Link, TextAlign, Underline, StarterKit)
+- **Édition de Texte :** `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-placeholder`, `@tiptap/extension-underline`, `@tiptap/extension-bullet-list`, `@tiptap/extension-text-align`
 - **Sécurité & Utilitaires :** `dompurify`, `qrcode.react`, `axios`
 
 ---
@@ -230,7 +244,7 @@ Avant de lancer le projet, assurez-vous d'avoir installé sur votre machine :
 
 2. Installez les dépendances npm :
    ```bash
-   npm install
+   npm install --legacy-peer-deps
    ```
 
 3. Vérifiez le fichier `.env` :
@@ -294,6 +308,38 @@ Avant de lancer le projet, assurez-vous d'avoir installé sur votre machine :
 | **Administrateur** | Accès complet : gestion des comptes, configuration des institutions, consultation des logs d'audit, traitement des tickets de support, messagerie globale. |
 | **Fonctionnaire** | Messagerie sécurisée, gestion des dossiers personnels, communication avec sa hiérarchie et ses associations de rattachement, ouverture de tickets de support. |
 | **Association** | Échanges avec les fonctionnaires affiliés et l'administration, consultation des informations partagées, support. |
+
+---
+
+## 🖥 Modules & Aperçu de l'Interface
+
+| Module | Description |
+| :--- | :--- |
+| **Boîte de Réception & Fils** | Consultation chronologique des conversations, filtrage par état, gestion des favoris et pièces jointes. |
+| **Rédaction (Compose)** | Éditeur riche Tiptap avec support RTL, mise en forme avancée, insertion de pièces jointes et panneau multi-destinataires. |
+| **Groupes & Diffusion** | Messagerie collective ciblée par structure associative ou groupe de travail institutionnel. |
+| **Tableau de Bord Administrateur** | Gestion centralisée des utilisateurs, activation de comptes, mapping d'institutions et suivi des journaux d'audit. |
+| **Espace Support & Tickets** | Soumission et suivi des tickets d'assistance avec messagerie intégrée entre utilisateurs et administrateurs. |
+
+---
+
+## 💻 Scripts & Commandes Utiles
+
+### Frontend
+```bash
+npm run dev      # Démarrer le serveur de développement Vite (http://localhost:5173)
+npm run build    # Compiler le bundle de production dans dist/
+npm run preview  # Prévisualiser la version de production localement
+npm run lint     # Analyser le code avec ESLint
+```
+
+### Backend
+```bash
+dotnet run                         # Lancer l'API en mode développement
+dotnet build                       # Compiler la solution backend
+dotnet ef migrations add <Nom>     # Créer une nouvelle migration EF Core
+dotnet ef database update          # Appliquer les migrations à la base SQL Server
+```
 
 ---
 
