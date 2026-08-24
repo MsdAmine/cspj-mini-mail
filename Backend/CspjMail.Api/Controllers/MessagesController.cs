@@ -859,17 +859,25 @@ namespace CspjMail.Api.Controllers
         [HttpGet("institutions")]
         public async Task<IActionResult> GetInstitutions()
         {
-            var institutions = await _context.Entreprises
-                .Select(e => new
-                {
-                    e.Id,
-                    e.Nom,
-                    e.EstAssociation
-                })
-                .OrderBy(e => e.Nom)
-                .ToListAsync();
+            try
+            {
+                var institutions = await _context.Entreprises
+                    .AsNoTracking()
+                    .Select(e => new
+                    {
+                        e.Id,
+                        e.Nom,
+                        e.EstAssociation
+                    })
+                    .OrderBy(e => e.Nom)
+                    .ToListAsync();
 
-            return Ok(institutions);
+                return Ok(institutions);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erreur lors de la récupération des institutions", details = ex.Message });
+            }
         }
 
         // ─── 9. GET: api/messages/assignable ──────────────────────────────────────
