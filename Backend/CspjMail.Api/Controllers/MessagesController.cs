@@ -740,26 +740,89 @@ namespace CspjMail.Api.Controllers
             }
         }
 
-        // ─── 8. GET: api/messages/search ──────────────────────────────────────────
+        // ─── 8. GET/POST: api/messages/search ────────────────────────────────────
         [HttpGet("search")]
-        public async Task<IActionResult> SearchMessages([FromQuery] string searchTerm)
+        public async Task<IActionResult> SearchMessages([FromQuery] MessageSearchFilterDto filter, [FromQuery] string? searchTerm = null)
         {
             try
             {
                 var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-                if (string.IsNullOrWhiteSpace(searchTerm)) return BadRequest("Search term cannot be empty.");
+                var queryTerm = (!string.IsNullOrWhiteSpace(filter.Query) ? filter.Query : searchTerm)?.Trim();
 
-                var normalizedTerm = searchTerm.ToLower();
-
-                var matchingThreads = await _context.Threads
+                var query = _context.Threads
                     .Where(t =>
+                        !t.Participants.Any(tp => tp.UserId == currentUserId && tp.IsDeletedForUser) &&
                         (t.Participants.Any(tp => tp.UserId == currentUserId) ||
-                         t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)) &&
-                        (t.Objet.ToLower().Contains(normalizedTerm) ||
-                         (t.TitreGroupe != null && t.TitreGroupe.ToLower().Contains(normalizedTerm)) ||
-                         t.Messages.Any(m => m.Corps.ToLower().Contains(normalizedTerm))))
+                         t.Messages.Any(m => m.ExpediteurId == currentUserId || m.DestinataireId == currentUserId)));
+
+                // 1. Text Query Filter
+                if (!string.IsNullOrWhiteSpace(queryTerm))
+                {
+                    var normalized = queryTerm.ToLower();
+                    query = query.Where(t =>
+                        t.Objet.ToLower().Contains(normalized) ||
+                        (t.TitreGroupe != null && t.TitreGroupe.ToLower().Contains(normalized)) ||
+                        t.Messages.Any(m => m.Corps.ToLower().Contains(normalized)) ||
+                        t.Participants.Any(tp =>
+                            (tp.Utilisateur.Prenom + " " + tp.Utilisateur.Nom).ToLower().Contains(normalized) ||
+                            tp.Utilisateur.Email.ToLower().Contains(normalized)));
+                }
+
+                // 2. Date Range Filter
+                if (filter.StartDate.HasValue)
+                {
+                    var startUtc = filter.StartDate.Value.Date;
+                    query = query.Where(t => t.DateCreation >= startUtc || t.Messages.Any(m => m.DateEnvoi >= startUtc));
+                }
+
+                if (filter.EndDate.HasValue)
+                {
+                    var endUtc = filter.EndDate.Value.Date.AddDays(1).AddTicks(-1);
+                    query = query.Where(t => t.DateCreation <= endUtc);
+                }
+
+                // 3. Institution Filter
+                if (filter.InstitutionId.HasValue && filter.InstitutionId.Value > 0)
+                {
+                    var instId = filter.InstitutionId.Value;
+                    query = query.Where(t =>
+                        t.Participants.Any(tp => tp.Utilisateur.EntrepriseId == instId) ||
+                        t.Messages.Any(m => m.Expediteur != null && m.Expediteur.EntrepriseId == instId));
+                }
+
+                // 4. Has Attachment Filter
+                if (filter.HasAttachment.HasValue)
+                {
+                    if (filter.HasAttachment.Value)
+                    {
+                        query = query.Where(t => t.Messages.Any(m => m.PiecesJointes.Any()));
+                    }
+                    else
+                    {
+                        query = query.Where(t => !t.Messages.Any(m => m.PiecesJointes.Any()));
+                    }
+                }
+
+                // 5. Read Status Filter
+                if (filter.IsRead.HasValue)
+                {
+                    if (filter.IsRead.Value)
+                    {
+                        // All incoming messages are read
+                        query = query.Where(t => !t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu &&
+                            (m.DestinataireId == currentUserId || t.Participants.Any(tp => tp.UserId == currentUserId))));
+                    }
+                    else
+                    {
+                        // Has unread incoming messages
+                        query = query.Where(t => t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu &&
+                            (m.DestinataireId == currentUserId || t.Participants.Any(tp => tp.UserId == currentUserId))));
+                    }
+                }
+
+                var matchingThreads = await query
                     .Select(t => new ThreadSummaryDto
                     {
                         ThreadId = t.Id,
@@ -773,7 +836,8 @@ namespace CspjMail.Api.Controllers
                         DernierExpediteurNom = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null && t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur != null
                             ? t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur.Prenom + " " + t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Expediteur.Nom
                             : "Inconnu",
-                        ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu),
+                        ADesMessagesNonLus = t.Messages.Any(m => m.ExpediteurId != currentUserId && !m.EstLu &&
+                            (m.DestinataireId == currentUserId || t.Participants.Any(tp => tp.UserId == currentUserId))),
                         EstArchive = t.EstArchive,
                         IsStarred = t.Participants.Where(tp => tp.UserId == currentUserId).Select(tp => (bool?)tp.IsStarred).FirstOrDefault() ?? false,
                         EstGroupe = t.EstGroupe,
@@ -789,6 +853,23 @@ namespace CspjMail.Api.Controllers
             {
                 return StatusCode(500, new { message = ex.Message, details = ex.InnerException?.Message });
             }
+        }
+
+        // ─── 8b. GET: api/messages/institutions ──────────────────────────────────
+        [HttpGet("institutions")]
+        public async Task<IActionResult> GetInstitutions()
+        {
+            var institutions = await _context.Entreprises
+                .Select(e => new
+                {
+                    e.Id,
+                    e.Nom,
+                    e.EstAssociation
+                })
+                .OrderBy(e => e.Nom)
+                .ToListAsync();
+
+            return Ok(institutions);
         }
 
         // ─── 9. GET: api/messages/assignable ──────────────────────────────────────

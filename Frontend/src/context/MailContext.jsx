@@ -5,16 +5,37 @@ import draftsApi from '../services/draftsApi';
 
 const MailContext = createContext();
 
+const defaultAdvancedFilters = {
+  startDate: '',
+  endDate: '',
+  institutionId: '',
+  hasAttachment: null,
+  isRead: null,
+};
+
 export const MailProvider = ({ children }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [activeFolder, setActiveFolder] = useState('inbox'); // 'inbox' | 'sent' | 'archived' | 'groups' | 'direct' | 'drafts'
   const [searchQuery, setSearchQuery] = useState('');
+  const [advancedFilters, setAdvancedFilters] = useState(defaultAdvancedFilters);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [drafts, setDrafts] = useState([]);
+
+  const hasActiveAdvancedFilters = Boolean(
+    advancedFilters.startDate ||
+    advancedFilters.endDate ||
+    advancedFilters.institutionId ||
+    advancedFilters.hasAttachment !== null ||
+    advancedFilters.isRead !== null
+  );
+
+  const clearAdvancedFilters = useCallback(() => {
+    setAdvancedFilters(defaultAdvancedFilters);
+  }, []);
 
   // ── Unread message count ───────────────────────────────────────────────
   const refreshUnreadCount = useCallback(async () => {
@@ -51,7 +72,7 @@ export const MailProvider = ({ children }) => {
     refreshUnreadCount();
   }, [user?.id, loadDrafts, refreshUnreadCount]);
 
-  // Load threads depending on folder / search query
+  // Load threads depending on folder / search query / advanced filters
   const loadMailbox = async () => {
     if (!user) return;
     if (activeFolder === 'drafts') {
@@ -61,8 +82,18 @@ export const MailProvider = ({ children }) => {
     setLoading(true);
     try {
       let endpoint = '/messages/inbox';
-      if (searchQuery.trim()) {
-        endpoint = `/messages/search?searchTerm=${encodeURIComponent(searchQuery)}`;
+      const isSearchActive = searchQuery.trim() || hasActiveAdvancedFilters;
+
+      if (isSearchActive) {
+        const params = new URLSearchParams();
+        if (searchQuery.trim()) params.append('query', searchQuery.trim());
+        if (advancedFilters.startDate) params.append('startDate', advancedFilters.startDate);
+        if (advancedFilters.endDate) params.append('endDate', advancedFilters.endDate);
+        if (advancedFilters.institutionId) params.append('institutionId', advancedFilters.institutionId);
+        if (advancedFilters.hasAttachment !== null) params.append('hasAttachment', advancedFilters.hasAttachment);
+        if (advancedFilters.isRead !== null) params.append('isRead', advancedFilters.isRead);
+
+        endpoint = `/messages/search?${params.toString()}`;
       } else if (activeFolder === 'sent') {
         endpoint = '/messages/sent';
       } else if (activeFolder === 'archived') {
@@ -104,7 +135,7 @@ export const MailProvider = ({ children }) => {
     loadMailbox();
     loadContacts();
     refreshUnreadCount();
-  }, [activeFolder, searchQuery, user, refreshUnreadCount]);
+  }, [activeFolder, searchQuery, advancedFilters, user, refreshUnreadCount]);
 
   // View thread details (also marks messages as read on the backend)
   const selectMessage = async (msg) => {
@@ -346,6 +377,10 @@ export const MailProvider = ({ children }) => {
       setSelectedMessage: selectMessage,
       searchQuery,
       setSearchQuery,
+      advancedFilters,
+      setAdvancedFilters,
+      clearAdvancedFilters,
+      hasActiveAdvancedFilters,
       sendNewMessage,
       createGroupThread,
       replyToThread,
