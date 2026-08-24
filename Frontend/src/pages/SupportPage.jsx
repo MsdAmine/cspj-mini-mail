@@ -247,13 +247,14 @@ export default function SupportPage() {
           {/* Filters Bar */}
           <div className="p-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-white">
             <div className="relative flex-1 min-w-[200px] max-w-md">
-              <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
+                dir="rtl"
                 placeholder="بحث برقم التذكرة أو الموضوع..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-3 pr-9 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-slate-800"
+                className="w-full pr-10 pl-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-slate-800 placeholder:text-slate-400 transition-all"
               />
             </div>
 
@@ -500,24 +501,27 @@ export default function SupportPage() {
                   هذه التذكرة مغلقة حالياً. يمكنك إعادة فتحها لإضافة رد جديد.
                 </div>
               ) : (
-                <form onSubmit={handleSendReply} className="flex gap-2 items-end">
-                  <textarea
-                    rows={2}
-                    placeholder="اكتب ردك أو توضيحك هنا..."
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendReply();
-                      }
-                    }}
-                    className="flex-1 p-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-none text-slate-800"
-                  />
+                <form onSubmit={handleSendReply} className="flex gap-2.5 items-center">
+                  <div className="relative flex-1">
+                    <textarea
+                      dir="rtl"
+                      rows={1}
+                      placeholder="اكتب ردك أو توضيحك هنا..."
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendReply();
+                        }
+                      }}
+                      className="w-full px-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 resize-none text-slate-800 placeholder:text-slate-400 transition-all leading-relaxed"
+                    />
+                  </div>
                   <button
                     type="submit"
                     disabled={sendingReply || !replyContent.trim()}
-                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs shrink-0 active:scale-95"
                   >
                     {sendingReply ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
@@ -573,10 +577,11 @@ export default function SupportPage() {
                 <input
                   type="text"
                   required
+                  dir="rtl"
                   placeholder="مثال: طلب صلاحية الولوج إلى مراسلات الدائرة..."
                   value={newSubject}
                   onChange={(e) => setNewSubject(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-slate-800"
+                  className="w-full px-4 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-slate-800 placeholder:text-slate-400"
                 />
               </div>
 
@@ -623,10 +628,11 @@ export default function SupportPage() {
                 <textarea
                   rows={4}
                   required
+                  dir="rtl"
                   placeholder="اشرح المشكلة بالتفصيل مع ذكر أي معلومات قد تساعد فريق الدعم..."
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  className="w-full p-3 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-slate-800 resize-none"
+                  className="w-full p-3.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 text-slate-800 placeholder:text-slate-400 resize-none"
                 />
               </div>
 

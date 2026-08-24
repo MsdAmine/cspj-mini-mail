@@ -293,15 +293,16 @@ export default function ComposePage() {
           </button>
         </div>
         <div className="relative">
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none flex items-center">
             <IconSearch />
           </span>
           <input
             type="text"
+            dir="rtl"
             placeholder="البحث عن جهة اتصال..."
             value={contactSearch}
             onChange={(e) => setContactSearch(e.target.value)}
-            className="w-full pr-9 pl-4 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-150"
+            className="w-full pr-10 pl-4 py-2 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-150"
             disabled={isSending}
           />
         </div>

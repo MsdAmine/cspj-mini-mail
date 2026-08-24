@@ -194,15 +194,15 @@ function CreateGroupModal({ onClose, onCreate, currentUser }) {
               </div>
             )}
 
-            {/* Search */}
             <div className="relative mb-2">
-              <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               <input
                 type="text"
+                dir="rtl"
                 placeholder="البحث عن جهة اتصال..."
                 value={contactSearch}
                 onChange={e => setContactSearch(e.target.value)}
-                className="w-full pr-8 pl-4 py-2 border border-slate-200/80 rounded-lg text-xs bg-slate-50/50 focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all duration-150"
+                className="w-full pr-10 pl-4 py-2 border border-slate-200/80 rounded-lg text-xs bg-slate-50/50 focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all duration-150 placeholder:text-slate-400"
                 disabled={loading}
               />
             </div>
@@ -494,13 +494,14 @@ export default function Groups() {
 
           {/* Search */}
           <div className="relative">
-            <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
+              dir="rtl"
               placeholder="البحث في المجموعات..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pr-8 pl-4 py-2 border border-slate-200/80 rounded-xl text-xs bg-slate-50/50 focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all duration-150"
+              className="w-full pr-10 pl-4 py-2 border border-slate-200/80 rounded-xl text-xs bg-slate-50/50 focus:bg-white focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 outline-none transition-all duration-150 placeholder:text-slate-400"
             />
           </div>
         </div>
@@ -744,11 +745,12 @@ export default function Groups() {
               <form onSubmit={handleReply} className="space-y-2.5">
                 <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-violet-500/20 focus-within:border-violet-400 transition-all duration-150">
                   <textarea
+                    dir="rtl"
                     value={replyBody}
                     onChange={e => setReplyBody(e.target.value)}
                     rows={2}
                     placeholder="اكتب ردك للمجموعة هنا..."
-                    className="w-full px-4 py-3 border-0 text-sm bg-transparent focus:outline-none resize-none"
+                    className="w-full px-4 py-3 border-0 text-sm bg-transparent focus:outline-none resize-none placeholder:text-slate-400 text-slate-800 leading-relaxed"
                     disabled={isReplying}
                   />
                 </div>
