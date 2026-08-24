@@ -5,6 +5,7 @@ import Underline from '@tiptap/extension-underline';
 import BulletList from '@tiptap/extension-bullet-list';
 import { ListItem } from '@tiptap/extension-list-item';
 import TextAlign from '@tiptap/extension-text-align';
+import Placeholder from '@tiptap/extension-placeholder';
 import { Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, Quote, Undo, Redo, Paperclip, X } from 'lucide-react';
 
 /**
@@ -47,7 +48,7 @@ const ToolbarButton = ({ onClick, isActive, icon: Icon, title, disabled = false 
 const TiptapEditor = ({
   content,
   onChange,
-  placeholder = 'Écrivez votre réponse...',
+  placeholder = 'اكتب رسالتك هنا...',
   attachments = [],
   onAttachmentsChange,
 }) => {
@@ -65,6 +66,14 @@ const TiptapEditor = ({
       ListItem,
       TextAlign.configure({
         types: ['heading', 'paragraph'],
+      }),
+      Placeholder.configure({
+        placeholder: ({ node }) => {
+          if (node.type.name === 'heading') return 'عنوان...';
+          return placeholder || 'اكتب رسالتك هنا...';
+        },
+        includeChildren: true,
+        showOnlyCurrent: true,
       }),
     ],
     content: content || '',
@@ -169,36 +178,48 @@ const TiptapEditor = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* ── Bulletproof list-style overrides ── */}
-      {/* Tailwind Preflight resets list-style and padding to none/0 globally.  */}
-      {/* This <style> tag re-applies browser-native bullets scoped to .tiptap.  */}
+      {/* ── Bulletproof list-style & placeholder overrides ── */}
       <style>{`
-        .tiptap.ProseMirror {
+        .tiptap.ProseMirror,
+        .ProseMirror {
           direction: rtl;
           text-align: right;
         }
-        .tiptap.ProseMirror p.is-editor-empty:first-child::before {
-          direction: rtl;
-          text-align: right;
-          float: right;
+        .ProseMirror ul,
+        .ProseMirror ol,
+        .tiptap ul,
+        .tiptap ol {
+          padding-right: 1.5rem !important;
+          padding-left: 0 !important;
+          margin-right: 0.5rem;
+          margin-top: 0.5rem !important;
+          margin-bottom: 0.5rem !important;
         }
+        .ProseMirror ul,
         .tiptap ul {
           list-style-type: disc !important;
-          padding-inline-start: 1.5rem !important;
-          margin-top: 0.5rem !important;
-          margin-bottom: 0.5rem !important;
         }
+        .ProseMirror ol,
         .tiptap ol {
           list-style-type: decimal !important;
-          padding-inline-start: 1.5rem !important;
-          margin-top: 0.5rem !important;
-          margin-bottom: 0.5rem !important;
         }
+        .ProseMirror li,
         .tiptap li {
           display: list-item !important;
+          margin-bottom: 0.25rem;
         }
+        .ProseMirror li p,
         .tiptap li p {
           margin: 0 !important;
+        }
+        .ProseMirror p.is-editor-empty:first-child::before,
+        .ProseMirror p.is-empty::before,
+        .ProseMirror li.is-empty::before {
+          color: #9ca3af;
+          content: attr(data-placeholder);
+          float: right;
+          height: 0;
+          pointer-events: none;
         }
         .tiptap pre {
           background-color: #1e293b;
@@ -317,13 +338,6 @@ const TiptapEditor = ({
       {/* ── Zone d'édition ── */}
       <div className="relative min-h-[120px] max-h-[300px] overflow-y-auto" dir="rtl">
         <EditorContent editor={editor} className="min-h-[120px] text-right" />
-
-        {/* Placeholder personnalisé */}
-        {editor.isEmpty && (
-          <div className="absolute top-3 right-4 rtl:right-4 ltr:left-4 pointer-events-none text-slate-400 text-sm text-right leading-relaxed select-none pe-4">
-            {placeholder}
-          </div>
-        )}
       </div>
 
       {/* ── Liste des pièces jointes (Dropzone style) ── */}
