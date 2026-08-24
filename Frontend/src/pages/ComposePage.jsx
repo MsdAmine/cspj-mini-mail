@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useMail } from "../context/MailContext";
 import { useAuth } from "../context/AuthContext";
 import TiptapEditor from "../components/TiptapEditor";
@@ -103,6 +103,12 @@ const IconInfo = () => (
 const IconError = () => (
   <svg className="w-4 h-4 flex-shrink-0 text-rose-500" fill="currentColor" viewBox="0 0 20 20">
     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+  </svg>
+);
+
+const IconHelp = () => (
+  <svg className="w-4 h-4 text-indigo-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
   </svg>
 );
 
@@ -503,7 +509,7 @@ export default function ComposePage() {
                     {/* Support note for non-admin users */}
                     {!isAdmin && (
                       <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50/70 border border-indigo-100 rounded-xl text-indigo-800 text-[11px] leading-relaxed">
-                        <HelpCircle className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                        <IconHelp />
                         <span>
                           لطلب المساعدة التقنية أو الإبلاغ عن مشكلة في المنصة، يرجى التوجه إلى قسم{" "}
                           <Link to="/support" className="font-bold underline hover:text-indigo-950">
