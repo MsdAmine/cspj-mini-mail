@@ -30,6 +30,8 @@ public partial class CspjMiniMailDbContext : DbContext
     /// </summary>
     public virtual DbSet<AssociationFonctionnaire> AssociationFonctionnaires { get; set; }
 
+    public virtual DbSet<Draft> Drafts { get; set; }
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
     }
@@ -179,6 +181,19 @@ public partial class CspjMiniMailDbContext : DbContext
                 .HasForeignKey(e => e.SenderId)
                 .OnDelete(DeleteBehavior.ClientNoAction)
                 .HasConstraintName("FK_TicketMessages_Sender");
+        });
+
+        modelBuilder.Entity<Draft>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.UpdatedAt).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.User)
+                .WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Drafts_Utilisateurs");
         });
 
         OnModelCreatingPartial(modelBuilder);
