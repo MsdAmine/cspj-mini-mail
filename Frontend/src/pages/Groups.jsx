@@ -4,7 +4,8 @@ import { useMail } from '../context/MailContext';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Send, Users, Plus, X, Search, ChevronRight, Lock } from 'lucide-react';
+import AttachmentPreviewModal from '../components/AttachmentPreviewModal';
+import { Send, Users, Plus, X, Search, ChevronRight, Lock, Eye, Download, FileText, Image as ImageIcon, File as FileIcon, Paperclip } from 'lucide-react';
 
 // ── Role → French label helper ────────────────────────────────────────────────
 const getRoleFrenchLabel = (role) => {
@@ -346,6 +347,7 @@ export default function Groups() {
   const [replyBody,      setReplyBody]      = useState('');
   const [isReplying,     setIsReplying]     = useState(false);
   const [search,         setSearch]         = useState('');
+  const [previewAttachment, setPreviewAttachment] = useState(null);
   const messagesEndRef = useRef(null);
 
   // ── Fetch groups list from API ────────────────────────────────────────────────
@@ -701,7 +703,8 @@ export default function Groups() {
                       {/* Attachments */}
                       {msg.piecesJointes?.length > 0 && (
                         <div className="mt-3 pt-3 border-t border-slate-100">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                            <Paperclip className="w-3 h-3" />
                             المرفقات ({msg.piecesJointes.length})
                           </p>
                           <div className="flex flex-wrap gap-2">
@@ -709,25 +712,60 @@ export default function Groups() {
                               const sizeKb = (file.tailleOctets / 1024).toFixed(1);
                               const sizeMb = (file.tailleOctets / (1024 * 1024)).toFixed(2);
                               const displaySize = file.tailleOctets >= 1024 * 1024 ? `${sizeMb} Mo` : `${sizeKb} Ko`;
+                              
+                              const ext = file.nomFichier?.split('.').pop()?.toLowerCase() || '';
+                              const isImg = ['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext) || file.typeContenu?.startsWith('image/');
+                              const isPdf = ext === 'pdf' || file.typeContenu === 'application/pdf';
+
                               const handleDownload = async (ev) => {
                                 ev.preventDefault();
+                                ev.stopPropagation();
                                 try {
                                   const res = await api.get(`/messages/attachments/download/${file.id}`, { responseType: 'blob' });
                                   const url = URL.createObjectURL(res.data);
                                   const a = document.createElement('a');
-                                  a.href = url; a.download = file.nomFichier;
-                                  document.body.appendChild(a); a.click(); a.remove();
+                                  a.href = url;
+                                  a.download = file.nomFichier;
+                                  document.body.appendChild(a);
+                                  a.click();
+                                  a.remove();
                                   URL.revokeObjectURL(url);
-                                } catch { alert('تعذّر تنزيل الملف.'); }
+                                } catch {
+                                  alert('تعذّر تنزيل الملف.');
+                                }
                               };
+
                               return (
-                                <button key={file.id} type="button" onClick={handleDownload}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-lg text-xs text-slate-700 font-medium hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700 active:scale-95 transition-all duration-150 cursor-pointer"
+                                <div
+                                  key={file.id}
+                                  onClick={() => setPreviewAttachment(file)}
+                                  className="group inline-flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200/80 rounded-xl text-xs text-slate-700 font-medium hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700 active:scale-95 transition-all duration-150 cursor-pointer select-none shadow-xs"
+                                  title={`معاينة ${file.nomFichier}`}
                                 >
-                                  <span>📎</span>
+                                  {isImg ? (
+                                    <ImageIcon className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                                  ) : isPdf ? (
+                                    <FileText className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
+                                  ) : (
+                                    <FileIcon className="w-3.5 h-3.5 text-violet-600 flex-shrink-0" />
+                                  )}
                                   <span className="max-w-[160px] truncate">{file.nomFichier}</span>
                                   <span className="text-slate-400 text-[10px] font-mono">{displaySize}</span>
-                                </button>
+                                  
+                                  <span className="text-violet-600 group-hover:underline text-[10px] font-semibold flex items-center gap-0.5 mr-0.5">
+                                    <Eye className="w-3 h-3" />
+                                  </span>
+
+                                  {/* Direct Download Icon */}
+                                  <button
+                                    type="button"
+                                    onClick={handleDownload}
+                                    className="p-1 text-slate-400 hover:text-violet-700 hover:bg-violet-100/80 rounded-md transition-colors cursor-pointer"
+                                    title={`تنزيل ${file.nomFichier}`}
+                                  >
+                                    <Download className="w-3 h-3" />
+                                  </button>
+                                </div>
                               );
                             })}
                           </div>
@@ -794,6 +832,12 @@ export default function Groups() {
           currentUser={user}
         />
       )}
+
+      {/* Attachment Preview Modal */}
+      <AttachmentPreviewModal
+        attachment={previewAttachment}
+        onClose={() => setPreviewAttachment(null)}
+      />
       </div>{/* end main groups content */}
     </div>
   );
