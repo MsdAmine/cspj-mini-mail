@@ -79,7 +79,7 @@ const TiptapEditor = ({
     },
     editorProps: {
       attributes: {
-        class: 'tiptap prose prose-sm max-w-none focus:outline-none min-h-[100px] px-3 py-2 text-right',
+        class: 'tiptap prose prose-sm max-w-none focus:outline-none min-h-[100px] px-4 py-3 text-right',
         dir: 'rtl',
       },
     },
@@ -320,7 +320,7 @@ const TiptapEditor = ({
 
         {/* Placeholder personnalisé */}
         {editor.isEmpty && (
-          <div className="absolute top-3 right-3 pointer-events-none text-slate-400 text-sm text-right">
+          <div className="absolute top-3 right-4 rtl:right-4 ltr:left-4 pointer-events-none text-slate-400 text-sm text-right leading-relaxed select-none pe-4">
             {placeholder}
           </div>
         )}
