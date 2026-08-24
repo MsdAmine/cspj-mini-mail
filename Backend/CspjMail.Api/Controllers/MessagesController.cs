@@ -883,8 +883,9 @@ namespace CspjMail.Api.Controllers
         // ─── 9. GET: api/messages/assignable ──────────────────────────────────────
         /// <summary>
         /// Returns the set of users the caller is allowed to add to a group:
-        /// - Admin or Fonctionnaire → every active user except self.
-        /// - Association           → only the Fonctionnaires explicitly assigned to them.
+        /// - Admin          → every active user except self.
+        /// - Fonctionnaire  → every active non-admin user except self.
+        /// - Association    → only the Fonctionnaires explicitly assigned to them.
         /// </summary>
         [HttpGet("assignable")]
         public async Task<IActionResult> GetAssignableUsers()
@@ -893,6 +894,9 @@ namespace CspjMail.Api.Controllers
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
             var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
+            var isAdmin = roleClaim.Equals("Administrateur", StringComparison.OrdinalIgnoreCase) ||
+                          roleClaim.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                          roleClaim.Equals("Administrator", StringComparison.OrdinalIgnoreCase);
 
             IQueryable<Utilisateur> query;
 
@@ -907,9 +911,18 @@ namespace CspjMail.Api.Controllers
                 query = _context.Utilisateurs
                     .Where(u => u.Actif && !u.IsDeleted && assignedIds.Contains(u.Id));
             }
+            else if (!isAdmin)
+            {
+                // Non-admin Fonctionnaire sees active non-admin users except self
+                query = _context.Utilisateurs
+                    .Where(u => u.Actif && !u.IsDeleted && u.Id != currentUserId &&
+                                u.Role != "Administrateur" &&
+                                u.Role != "Admin" &&
+                                u.Role != "Administrator");
+            }
             else
             {
-                // Admin and Fonctionnaire see everyone except themselves
+                // Admin sees everyone except self
                 query = _context.Utilisateurs
                     .Where(u => u.Actif && !u.IsDeleted && u.Id != currentUserId);
             }
@@ -936,8 +949,24 @@ namespace CspjMail.Api.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (!int.TryParse(userIdClaim, out int currentUserId)) return Unauthorized();
 
-            var contacts = await _context.Utilisateurs
-                .Where(u => u.Actif && !u.IsDeleted && u.Id != currentUserId)
+            var roleClaim = User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
+            var isAdmin = roleClaim.Equals("Administrateur", StringComparison.OrdinalIgnoreCase) ||
+                          roleClaim.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                          roleClaim.Equals("Administrator", StringComparison.OrdinalIgnoreCase);
+
+            var query = _context.Utilisateurs
+                .Where(u => u.Actif && !u.IsDeleted && u.Id != currentUserId);
+
+            // Filter out Administrator accounts when caller is NOT an Admin
+            if (!isAdmin)
+            {
+                query = query.Where(u =>
+                    u.Role != "Administrateur" &&
+                    u.Role != "Admin" &&
+                    u.Role != "Administrator");
+            }
+
+            var contacts = await query
                 .Include(u => u.Entreprise)
                 .Select(u => new ContactDto
                 {
