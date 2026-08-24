@@ -122,7 +122,17 @@ export default function ComposePage() {
   // ── Draft being edited (passed via navigate state) ───────────────────────
   const incomingDraft = location.state?.draft ?? null;
 
-  const [messageMode, setMessageMode] = useState(incomingDraft?.messageMode ?? "individuel");
+  const initialMode = incomingDraft
+    ? (incomingDraft.messageMode || (incomingDraft.recipientIds?.length > 1 ? "diffusion" : "individuel"))
+    : "individuel";
+
+  const initialReceiverId = incomingDraft?.receiverId 
+    ?? (incomingDraft?.recipientIds?.length === 1 ? String(incomingDraft.recipientIds[0]) : "");
+
+  const initialSelectedIds = incomingDraft?.selectedIds 
+    ?? (incomingDraft?.recipientIds ?? []);
+
+  const [messageMode, setMessageMode] = useState(initialMode);
   const [subject,      setSubject]     = useState(incomingDraft?.subject     ?? "");
   const [body,         setBody]        = useState(incomingDraft?.body        ?? "");
   const [attachments,  setAttachments] = useState([]);
@@ -131,10 +141,10 @@ export default function ComposePage() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   // Track the draftId of the currently open draft (so "save again" updates the same record)
-  const [currentDraftId, setCurrentDraftId] = useState(incomingDraft?.draftId ?? null);
+  const [currentDraftId, setCurrentDraftId] = useState(incomingDraft?.id ?? incomingDraft?.draftId ?? null);
 
-  const [receiverId,    setReceiverId]    = useState(incomingDraft?.receiverId    ?? "");
-  const [selectedIds,   setSelectedIds]   = useState(incomingDraft?.selectedIds   ?? []);
+  const [receiverId,    setReceiverId]    = useState(initialReceiverId);
+  const [selectedIds,   setSelectedIds]   = useState(initialSelectedIds);
   const [contactSearch, setContactSearch] = useState("");
 
   // ── Toast state ──────────────────────────────────────────────────────────
@@ -234,18 +244,22 @@ export default function ComposePage() {
   const handleSaveDraft = async () => {
     setIsSavingDraft(true);
     try {
+      const recipientIds = messageMode === "individuel" 
+        ? (receiverId ? [Number(receiverId)] : [])
+        : selectedIds.map(Number);
+
       const draftPayload = {
-        draftId: currentDraftId,   // null → creates new; string → updates existing
+        draftId: currentDraftId,
         messageMode,
         subject,
         body,
         receiverId,
         selectedIds,
-        // Store attachment names only (File objects can't be serialised)
+        recipientIds,
         attachmentNames: attachments.map(f => f.name),
       };
 
-      const newId = saveDraft(draftPayload);
+      const newId = await saveDraft(draftPayload);
       setCurrentDraftId(newId);
 
       showToast("تم حفظ المسودة بنجاح ✓", 'success');

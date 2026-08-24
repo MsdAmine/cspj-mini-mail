@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import api from '../services/api';
+import draftsApi from '../services/draftsApi';
 
 const MailContext = createContext();
 
@@ -13,6 +14,7 @@ export const MailProvider = ({ children }) => {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [drafts, setDrafts] = useState([]);
 
   // ── Unread message count ───────────────────────────────────────────────
   const refreshUnreadCount = useCallback(async () => {
@@ -29,23 +31,25 @@ export const MailProvider = ({ children }) => {
     }
   }, [user]);
 
-  // ── Drafts (per-user localStorage) ──────────────────────────────────────
-  const getDraftKey = (uid) => `cspj_drafts__${uid ?? 'guest'}`;
-
-  const readDrafts = (uid) => {
+  // ── Server-Side Drafts ──────────────────────────────────────────────────
+  const loadDrafts = useCallback(async () => {
+    if (!user) {
+      setDrafts([]);
+      return;
+    }
     try {
-      const raw = localStorage.getItem(getDraftKey(uid));
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
-  };
+      const data = await draftsApi.getDrafts();
+      setDrafts(data || []);
+    } catch {
+      // Fallback
+    }
+  }, [user]);
 
-  const [drafts, setDrafts] = useState(() => readDrafts(null));
-
-  // Reload drafts when the logged-in user changes
+  // Reload drafts & unread count when user changes
   useEffect(() => {
-    setDrafts(readDrafts(user?.id));
+    loadDrafts();
     refreshUnreadCount();
-  }, [user?.id, refreshUnreadCount]);
+  }, [user?.id, loadDrafts, refreshUnreadCount]);
 
   // Load threads depending on folder / search query
   const loadMailbox = async () => {
@@ -229,35 +233,51 @@ export const MailProvider = ({ children }) => {
   };
 
   /**
-   * Upsert a draft. Pass a `draftId` to update an existing one; omit to create new.
-   * Returns the draftId so ComposePage can track which draft is being edited.
+   * Upsert a draft via server-side API.
    */
-  const saveDraft = (draftData) => {
-    const uid = user?.id;
-    const existing = readDrafts(uid);
-    const isUpdate = draftData.draftId && existing.some(d => d.draftId === draftData.draftId);
+  const saveDraft = async (draftData) => {
+    if (!user) return null;
+    const isUpdate = draftData.draftId && !isNaN(Number(draftData.draftId));
+    try {
+      const recipientIds = draftData.recipientIds?.length 
+        ? draftData.recipientIds 
+        : (draftData.selectedIds?.length 
+            ? draftData.selectedIds 
+            : (draftData.receiverId ? [Number(draftData.receiverId)] : []));
 
-    const entry = {
-      ...draftData,
-      draftId: draftData.draftId || `draft_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      savedAt: new Date().toISOString(),
-    };
+      const payload = {
+        recipientIds,
+        subject: draftData.subject || '',
+        body: draftData.body || ''
+      };
 
-    const updated = isUpdate
-      ? existing.map(d => d.draftId === entry.draftId ? entry : d)
-      : [entry, ...existing];
-
-    localStorage.setItem(getDraftKey(uid), JSON.stringify(updated));
-    setDrafts(updated);
-    return entry.draftId;
+      if (isUpdate) {
+        const updated = await draftsApi.updateDraft(Number(draftData.draftId), payload);
+        setDrafts(prev => prev.map(d => (d.id === updated.id || d.draftId === updated.id) ? updated : d));
+        return updated.id;
+      } else {
+        const created = await draftsApi.createDraft(payload);
+        setDrafts(prev => [created, ...prev]);
+        return created.id;
+      }
+    } catch (err) {
+      console.error("Erreur lors de la sauvegarde du brouillon :", err);
+      throw err;
+    }
   };
 
-  /** Remove a draft by its draftId. */
-  const deleteDraft = (draftId) => {
-    const uid = user?.id;
-    const updated = readDrafts(uid).filter(d => d.draftId !== draftId);
-    localStorage.setItem(getDraftKey(uid), JSON.stringify(updated));
-    setDrafts(updated);
+  /** Remove a draft by its ID via server-side API. */
+  const deleteDraft = async (draftId) => {
+    if (!draftId) return;
+    try {
+      if (!isNaN(Number(draftId))) {
+        await draftsApi.deleteDraft(Number(draftId));
+      }
+      setDrafts(prev => prev.filter(d => String(d.id) !== String(draftId) && String(d.draftId) !== String(draftId)));
+    } catch (err) {
+      console.error("Erreur lors de la suppression du brouillon :", err);
+      throw err;
+    }
   };
 
   return (

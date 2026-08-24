@@ -122,9 +122,15 @@ function DraftToast({ message, onClose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Recipient avatar pill
 // ─────────────────────────────────────────────────────────────────────────────
-function RecipientPill({ draft }) {
-  const isMulti = draft.messageMode === 'diffusion';
-  const name = draft.receiverName || draft.selectedNames?.[0] || null;
+function RecipientPill({ draft, contacts = [] }) {
+  const isMulti = draft.recipientIds?.length > 1 || draft.messageMode === 'diffusion';
+
+  let name = draft.receiverName || draft.selectedNames?.[0] || null;
+  if (!name && draft.recipientIds && draft.recipientIds.length > 0) {
+    const matched = contacts.find(c => c.id === draft.recipientIds[0]);
+    if (matched) name = matched.nomComplet;
+  }
+
   const initials = name
     ? name.trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : null;
@@ -133,7 +139,7 @@ function RecipientPill({ draft }) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-violet-50 text-violet-700 border border-violet-200/80 leading-none">
         <span className="w-1.5 h-1.5 rounded-full bg-violet-500 flex-shrink-0" />
-        إرسال متعدد
+        إرسال متعدد ({draft.recipientIds?.length || 2})
       </span>
     );
   }
@@ -155,9 +161,10 @@ function RecipientPill({ draft }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Single draft card — glassmorphism
 // ─────────────────────────────────────────────────────────────────────────────
-function DraftCard({ draft, onEdit, onDelete }) {
-  const savedDate = new Date(draft.savedAt);
-  const isMulti = draft.messageMode === 'diffusion';
+function DraftCard({ draft, contacts, onEdit, onDelete }) {
+  const savedDate = new Date(draft.updatedAt || draft.savedAt || draft.createdAt || Date.now());
+  const isMulti = draft.recipientIds?.length > 1 || draft.messageMode === 'diffusion';
+  const draftId = draft.id || draft.draftId;
 
   const bodyPreview = draft.body
     ? draft.body.replace(/<[^>]*>?/gm, '').trim().slice(0, 110)
@@ -203,7 +210,7 @@ function DraftCard({ draft, onEdit, onDelete }) {
 
             <div className="flex flex-col gap-1.5 min-w-0">
               {/* Recipient pill */}
-              <RecipientPill draft={draft} />
+              <RecipientPill draft={draft} contacts={contacts} />
 
               {/* Metadata row: timestamp + type tag */}
               <div className="flex items-center gap-2 flex-wrap">
@@ -289,7 +296,7 @@ function DraftCard({ draft, onEdit, onDelete }) {
         <div className="flex items-center gap-3 justify-end">
           {/* Edit button */}
           <button
-            id={`draft-edit-${draft.draftId}`}
+            id={`draft-edit-${draftId}`}
             onClick={() => onEdit(draft)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
             style={{
@@ -316,8 +323,8 @@ function DraftCard({ draft, onEdit, onDelete }) {
 
           {/* Delete button */}
           <button
-            id={`draft-delete-${draft.draftId}`}
-            onClick={() => onDelete(draft.draftId)}
+            id={`draft-delete-${draftId}`}
+            onClick={() => onDelete(draftId)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer"
             style={{
               color: '#be123c',
@@ -403,7 +410,7 @@ function EmptyDrafts({ onCompose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function DraftsView() {
   const navigate = useNavigate();
-  const { drafts, deleteDraft } = useMail();
+  const { drafts, deleteDraft, contacts } = useMail();
 
   const [draftToDelete, setDraftToDelete]       = useState(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -418,13 +425,18 @@ export default function DraftsView() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleExecuteDelete = () => {
+  const handleExecuteDelete = async () => {
     if (draftToDelete) {
-      deleteDraft(draftToDelete);
-      setDraftToDelete(null);
-      setIsDeleteModalOpen(false);
-      setToast({ message: 'تم حذف المسودة بنجاح' });
-      setTimeout(() => setToast(null), 3000);
+      try {
+        await deleteDraft(draftToDelete);
+        setDraftToDelete(null);
+        setIsDeleteModalOpen(false);
+        setToast({ message: 'تم حذف المسودة بنجاح' });
+        setTimeout(() => setToast(null), 3000);
+      } catch {
+        setToast({ message: 'حدث خطأ أثناء حذف المسودة' });
+        setTimeout(() => setToast(null), 3000);
+      }
     }
   };
 
@@ -503,8 +515,9 @@ export default function DraftsView() {
               <div className="space-y-4">
                 {drafts.map((draft) => (
                   <DraftCard
-                    key={draft.draftId}
+                    key={draft.id || draft.draftId}
                     draft={draft}
+                    contacts={contacts}
                     onEdit={handleEdit}
                     onDelete={handleConfirmDelete}
                   />
