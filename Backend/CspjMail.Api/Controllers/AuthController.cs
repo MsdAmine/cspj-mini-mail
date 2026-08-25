@@ -111,30 +111,36 @@ namespace CspjMail.Api.Controllers
             }
 
             // ── TOTP verification via Otp.NET ────────────────────────────────────
-            var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
-            var totp        = new Totp(secretBytes);
+            // Development bypass: accept "123456" without real TOTP validation.
+            bool isDevBypass = _env.IsDevelopment() && dto.Code == "123456";
 
-            // VerificationWindow.RfcSpecifiedNetworkDelay allows ±1 time step (±30 s) for clock skew.
-            // We capture timeStepMatched to prevent replay within the same time window.
-            bool isValid = totp.VerifyTotp(
-                dto.Code ?? string.Empty,
-                out long timeStepMatched,
-                VerificationWindow.RfcSpecifiedNetworkDelay);
-
-            if (!isValid)
+            if (!isDevBypass)
             {
-                return Unauthorized("Invalid or expired 2FA code.");
-            }
+                var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
+                var totp        = new Totp(secretBytes);
 
-            // ── TOTP Replay Prevention ───────────────────────────────────────────
-            // A captured valid code must not be reusable within its ±90-second validity window.
-            var replayCacheKey = $"totp_used:{user.Id}:{timeStepMatched}";
-            if (_cache.TryGetValue(replayCacheKey, out _))
-            {
-                return Unauthorized("This 2FA code has already been used. Please wait for a new code.");
+                // VerificationWindow.RfcSpecifiedNetworkDelay allows ±1 time step (±30 s) for clock skew.
+                // We capture timeStepMatched to prevent replay within the same time window.
+                bool isValid = totp.VerifyTotp(
+                    dto.Code ?? string.Empty,
+                    out long timeStepMatched,
+                    VerificationWindow.RfcSpecifiedNetworkDelay);
+
+                if (!isValid)
+                {
+                    return Unauthorized("Invalid or expired 2FA code.");
+                }
+
+                // ── TOTP Replay Prevention ───────────────────────────────────────────
+                // A captured valid code must not be reusable within its ±90-second validity window.
+                var replayCacheKey = $"totp_used:{user.Id}:{timeStepMatched}";
+                if (_cache.TryGetValue(replayCacheKey, out _))
+                {
+                    return Unauthorized("This 2FA code has already been used. Please wait for a new code.");
+                }
+                // Mark the time step as consumed for the full ±90 s OtpNet tolerance window.
+                _cache.Set(replayCacheKey, true, TimeSpan.FromSeconds(90));
             }
-            // Mark the time step as consumed for the full ±90 s OtpNet tolerance window.
-            _cache.Set(replayCacheKey, true, TimeSpan.FromSeconds(90));
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtSettings  = _configuration.GetSection("Jwt");
@@ -323,27 +329,33 @@ namespace CspjMail.Api.Controllers
             }
 
             // ── Validate the TOTP code using the user's existing Authenticator secret ──
-            var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
-            var totp        = new Totp(secretBytes);
+            // Development bypass: accept "123456" without real TOTP validation.
+            bool isDevBypass = _env.IsDevelopment() && dto.OtpCode?.Trim() == "123456";
 
-            // Capture timeStepMatched to prevent replay within the ±90-second window.
-            bool isValid = totp.VerifyTotp(
-                dto.OtpCode?.Trim() ?? string.Empty,
-                out long timeStepMatched,
-                VerificationWindow.RfcSpecifiedNetworkDelay);
-
-            if (!isValid)
+            if (!isDevBypass)
             {
-                return Ok(new { success = false, error = "Code TOTP invalide ou expiré." });
-            }
+                var secretBytes = Base32Encoding.ToBytes(user.TwoFactorSecret);
+                var totp        = new Totp(secretBytes);
 
-            // ── TOTP Replay Prevention ───────────────────────────────────────────
-            var replayCacheKey = $"totp_used:{user.Id}:{timeStepMatched}";
-            if (_cache.TryGetValue(replayCacheKey, out _))
-            {
-                return Ok(new { success = false, error = "Ce code a déjà été utilisé. Veuillez attendre le prochain code." });
+                // Capture timeStepMatched to prevent replay within the ±90-second window.
+                bool isValid = totp.VerifyTotp(
+                    dto.OtpCode?.Trim() ?? string.Empty,
+                    out long timeStepMatched,
+                    VerificationWindow.RfcSpecifiedNetworkDelay);
+
+                if (!isValid)
+                {
+                    return Ok(new { success = false, error = "Code TOTP invalide ou expiré." });
+                }
+
+                // ── TOTP Replay Prevention ───────────────────────────────────────────
+                var replayCacheKey = $"totp_used:{user.Id}:{timeStepMatched}";
+                if (_cache.TryGetValue(replayCacheKey, out _))
+                {
+                    return Ok(new { success = false, error = "Ce code a déjà été utilisé. Veuillez attendre le prochain code." });
+                }
+                _cache.Set(replayCacheKey, true, TimeSpan.FromSeconds(90));
             }
-            _cache.Set(replayCacheKey, true, TimeSpan.FromSeconds(90));
 
             // ── Issue a short-lived (10 min) signed JWT that authorises the reset ─
             // SECURITY: Uses a distinct audience ("cspj-password-reset") so the global
