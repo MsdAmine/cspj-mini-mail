@@ -335,6 +335,10 @@ npm run lint     # Analyser le code avec ESLint
 
 ### Backend
 ```bash
+# Démarrage direct depuis la racine du projet :
+cd backend/CspjMail.Api && dotnet run
+
+# Ou depuis le dossier Backend/CspjMail.Api :
 dotnet run                         # Lancer l'API en mode développement
 dotnet build                       # Compiler la solution backend
 dotnet ef migrations add <Nom>     # Créer une nouvelle migration EF Core
