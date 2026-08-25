@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useMail } from "../context/MailContext";
 import { useAuth } from "../context/AuthContext";
@@ -135,45 +135,329 @@ export default function ComposePage() {
     );
   }, [contacts, isAdmin]);
 
-  // ── Draft being edited (passed via navigate state) ───────────────────────
+  // ── Draft being edited (passed via navigate state or recovered from local backup) ──
   const incomingDraft = location.state?.draft ?? null;
 
-  const initialMode = incomingDraft
-    ? (incomingDraft.messageMode || (incomingDraft.recipientIds?.length > 1 ? "diffusion" : "individuel"))
+  // Local storage recovery fallback if not editing an explicit incoming draft
+  const recoveredBackup = useMemo(() => {
+    if (incomingDraft) return null;
+    try {
+      const raw = localStorage.getItem('cspj_draft_backup');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Only recover if there's actual content and it's less than 24h old
+        const hasData = parsed.subject || parsed.body || parsed.receiverId || parsed.selectedIds?.length;
+        if (hasData) return parsed;
+      }
+    } catch {
+      // Ignore parse error
+    }
+    return null;
+  }, [incomingDraft]);
+
+  const activeInitialDraft = incomingDraft || recoveredBackup;
+
+  const initialMode = activeInitialDraft
+    ? (activeInitialDraft.messageMode || (activeInitialDraft.recipientIds?.length > 1 ? "diffusion" : "individuel"))
     : "individuel";
 
-  const initialReceiverId = incomingDraft?.receiverId 
-    ?? (incomingDraft?.recipientIds?.length === 1 ? String(incomingDraft.recipientIds[0]) : "");
+  const initialReceiverId = activeInitialDraft?.receiverId 
+    ?? (activeInitialDraft?.recipientIds?.length === 1 ? String(activeInitialDraft.recipientIds[0]) : "");
 
-  const initialSelectedIds = incomingDraft?.selectedIds 
-    ?? (incomingDraft?.recipientIds ?? []);
+  const initialSelectedIds = activeInitialDraft?.selectedIds 
+    ?? (activeInitialDraft?.recipientIds ?? []);
 
   const [messageMode, setMessageMode] = useState(initialMode);
-  const [subject,      setSubject]     = useState(incomingDraft?.subject     ?? "");
-  const [body,         setBody]        = useState(incomingDraft?.body        ?? "");
+  const [subject,      setSubject]     = useState(activeInitialDraft?.subject     ?? "");
+  const [body,         setBody]        = useState(activeInitialDraft?.body        ?? "");
   const [attachments,  setAttachments] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [isSending,    setIsSending]   = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
 
   // Track the draftId of the currently open draft (so "save again" updates the same record)
-  const [currentDraftId, setCurrentDraftId] = useState(incomingDraft?.id ?? incomingDraft?.draftId ?? null);
+  const [currentDraftId, setCurrentDraftId] = useState(activeInitialDraft?.id ?? activeInitialDraft?.draftId ?? null);
+
+  // ── Auto-save status state ('idle' | 'saving' | 'saved' | 'error') & timestamp ──
+  const [autoSaveStatus, setAutoSaveStatus] = useState(activeInitialDraft ? 'saved' : 'idle');
+  const [lastSavedTime, setLastSavedTime]   = useState(activeInitialDraft ? new Date() : null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [receiverId,    setReceiverId]    = useState(initialReceiverId);
   const [selectedIds,   setSelectedIds]   = useState(initialSelectedIds);
   const [contactSearch, setContactSearch] = useState("");
 
+  // ── Refs for stable event listener & async callback access ──────────────────
+  const isMountedRef         = useRef(true);
+  const isSentRef            = useRef(false);
+  const isSavingDraftRef     = useRef(false);
+  const currentDraftIdRef    = useRef(currentDraftId);
+  const autoSaveTimerRef     = useRef(null);
+  const hasUnsavedChangesRef = useRef(false);
+  const isInitialMountRef    = useRef(true);
+
+  // Keep current draft ID ref in sync
+  useEffect(() => {
+    currentDraftIdRef.current = currentDraftId;
+  }, [currentDraftId]);
+
+  // Keep hasUnsavedChanges ref in sync
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  // Compute clean serialized state payload for equality checking and background saves
+  const getCurrentPayload = useCallback(() => {
+    const recipientIds = messageMode === "individuel" 
+      ? (receiverId ? [Number(receiverId)] : [])
+      : selectedIds.map(Number);
+
+    return {
+      draftId: currentDraftIdRef.current,
+      messageMode,
+      receiverId,
+      selectedIds,
+      recipientIds,
+      subject: subject.trim(),
+      body: body.trim(),
+      attachmentNames: attachments.map(f => f.name),
+    };
+  }, [messageMode, receiverId, selectedIds, subject, body, attachments]);
+
+  // Track the last successfully saved payload string to avoid redundant auto-saves
+  const lastSavedPayloadStrRef = useRef(
+    JSON.stringify({
+      messageMode: initialMode,
+      receiverId: initialReceiverId,
+      selectedIds: initialSelectedIds,
+      subject: (activeInitialDraft?.subject ?? "").trim(),
+      body: (activeInitialDraft?.body ?? "").trim(),
+      attachmentNames: [],
+    })
+  );
+
   // ── Toast state ──────────────────────────────────────────────────────────
   const [toast, setToast] = useState(null); // { message, type }
   const toastTimerRef = useRef(null);
 
-  const showToast = (message, type = 'success', duration = 3000) => {
+  const showToast = useCallback((message, type = 'success', duration = 3000) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast({ message, type });
     toastTimerRef.current = setTimeout(() => setToast(null), duration);
-  };
+  }, []);
 
-  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
+  useEffect(() => {
+    isMountedRef.current = true;
+    if (recoveredBackup && !incomingDraft) {
+      showToast("تمت استعادة المسودة تلقائيًا من الحفظ المؤقت ✓", 'success', 4000);
+    }
+    return () => {
+      isMountedRef.current = false;
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, []);
+
+  // ── Perform Auto-Save Execution ──────────────────────────────────────────
+  const performAutoSave = useCallback(async () => {
+    if (isSentRef.current || !isMountedRef.current || isSavingDraftRef.current) return;
+
+    const payload = getCurrentPayload();
+    const cleanBodyText = (payload.body || '').replace(/<[^>]*>?/gm, '').trim();
+    const hasAnyContent = Boolean(
+      payload.subject ||
+      cleanBodyText ||
+      (payload.messageMode === 'individuel' ? payload.receiverId : payload.selectedIds.length > 0) ||
+      payload.attachmentNames.length > 0
+    );
+
+    if (!hasAnyContent) {
+      setHasUnsavedChanges(false);
+      hasUnsavedChangesRef.current = false;
+      return;
+    }
+
+    try {
+      isSavingDraftRef.current = true;
+      setAutoSaveStatus('saving');
+
+      const savedDraftId = await saveDraft({
+        draftId: currentDraftIdRef.current,
+        recipientIds: payload.recipientIds,
+        subject: payload.subject,
+        body: payload.body,
+      });
+
+      if (!isMountedRef.current || isSentRef.current) return;
+
+      if (savedDraftId) {
+        setCurrentDraftId(savedDraftId);
+        currentDraftIdRef.current = savedDraftId;
+      }
+
+      // Update baseline to current saved payload
+      lastSavedPayloadStrRef.current = JSON.stringify({
+        messageMode: payload.messageMode,
+        receiverId: payload.receiverId,
+        selectedIds: payload.selectedIds,
+        subject: payload.subject,
+        body: payload.body,
+        attachmentNames: payload.attachmentNames,
+      });
+
+      // Update local storage backup with confirmed draftId
+      localStorage.setItem('cspj_draft_backup', JSON.stringify({
+        ...payload,
+        draftId: savedDraftId || currentDraftIdRef.current,
+        updatedAt: Date.now(),
+      }));
+
+      setHasUnsavedChanges(false);
+      hasUnsavedChangesRef.current = false;
+      setAutoSaveStatus('saved');
+      setLastSavedTime(new Date());
+    } catch (err) {
+      if (isMountedRef.current) {
+        setAutoSaveStatus('error');
+      }
+    } finally {
+      isSavingDraftRef.current = false;
+    }
+  }, [getCurrentPayload, saveDraft]);
+
+  // ── Debounced Auto-Save (2.5 Seconds) Effect ─────────────────────────────
+  useEffect(() => {
+    // Skip auto-save trigger on first render
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+
+    if (isSentRef.current) return;
+
+    const payload = getCurrentPayload();
+    const currentPayloadStr = JSON.stringify({
+      messageMode: payload.messageMode,
+      receiverId: payload.receiverId,
+      selectedIds: payload.selectedIds,
+      subject: payload.subject,
+      body: payload.body,
+      attachmentNames: payload.attachmentNames,
+    });
+
+    const cleanBodyText = (payload.body || '').replace(/<[^>]*>?/gm, '').trim();
+    const hasAnyContent = Boolean(
+      payload.subject ||
+      cleanBodyText ||
+      (payload.messageMode === 'individuel' ? payload.receiverId : payload.selectedIds.length > 0) ||
+      payload.attachmentNames.length > 0
+    );
+
+    const isChanged = currentPayloadStr !== lastSavedPayloadStrRef.current;
+
+    if (!isChanged) {
+      return;
+    }
+
+    if (hasAnyContent) {
+      setHasUnsavedChanges(true);
+      hasUnsavedChangesRef.current = true;
+
+      // Keep local storage backup constantly updated on every change for instant recovery
+      localStorage.setItem('cspj_draft_backup', JSON.stringify({
+        ...payload,
+        draftId: currentDraftIdRef.current,
+        updatedAt: Date.now(),
+      }));
+
+      // Reset existing debounce timer and start 2500ms countdown
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      autoSaveTimerRef.current = setTimeout(() => {
+        performAutoSave();
+      }, 2500);
+    } else {
+      // Form was cleared
+      setHasUnsavedChanges(false);
+      hasUnsavedChangesRef.current = false;
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    }
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [messageMode, receiverId, selectedIds, subject, body, attachments, getCurrentPayload, performAutoSave]);
+
+  // ── Browser Tab / Window Closure & Visibility Protection ─────────────────
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChangesRef.current && !isSentRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    const handleVisibilityOrPageHide = () => {
+      if (isSentRef.current) return;
+
+      const payload = getCurrentPayload();
+      const cleanBodyText = (payload.body || '').replace(/<[^>]*>?/gm, '').trim();
+      const hasAnyContent = Boolean(
+        payload.subject ||
+        cleanBodyText ||
+        (payload.messageMode === 'individuel' ? payload.receiverId : payload.selectedIds.length > 0) ||
+        payload.attachmentNames.length > 0
+      );
+
+      if (!hasAnyContent) return;
+
+      // 1. Sync to local storage
+      try {
+        localStorage.setItem('cspj_draft_backup', JSON.stringify({
+          ...payload,
+          draftId: currentDraftIdRef.current,
+          updatedAt: Date.now(),
+        }));
+      } catch {
+        // Ignore quota / storage errors
+      }
+
+      // 2. Dispatch background keepalive fetch to server if there are unsaved changes
+      if (hasUnsavedChangesRef.current) {
+        try {
+          const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5182/api';
+          const draftId = currentDraftIdRef.current;
+          const url = draftId ? `${baseUrl}/drafts/${draftId}` : `${baseUrl}/drafts`;
+          const method = draftId ? 'PUT' : 'POST';
+          const saveDto = {
+            recipientIds: payload.recipientIds,
+            subject: payload.subject || '',
+            body: payload.body || '',
+          };
+
+          fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(saveDto),
+            credentials: 'include',
+            keepalive: true,
+          }).catch(() => {});
+        } catch {
+          // Ignore network errors on unload
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleVisibilityOrPageHide);
+    document.addEventListener('visibilitychange', handleVisibilityOrPageHide);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleVisibilityOrPageHide);
+      document.removeEventListener('visibilitychange', handleVisibilityOrPageHide);
+    };
+  }, [getCurrentPayload]);
 
   // ── Contact filtering ────────────────────────────────────────────────────
   const filteredContacts = availableContacts.filter((c) =>
@@ -232,6 +516,9 @@ export default function ComposePage() {
       }
     }
 
+    // Cancel pending auto-save countdown
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+
     setIsSending(true);
     try {
       await sendNewMessage({
@@ -243,21 +530,30 @@ export default function ComposePage() {
         attachments,
       });
 
-      // If this was a draft, remove it now that it's been sent
-      if (currentDraftId) {
-        deleteDraft(currentDraftId);
+      // Mark as sent so beforeunload and background sync do not trigger
+      isSentRef.current = true;
+      hasUnsavedChangesRef.current = false;
+      setHasUnsavedChanges(false);
+
+      // Clean up localStorage backup
+      localStorage.removeItem('cspj_draft_backup');
+
+      // If this was a draft or auto-saved draft, remove it from backend now that it's sent
+      const draftIdToDelete = currentDraftIdRef.current || currentDraftId;
+      if (draftIdToDelete) {
+        deleteDraft(draftIdToDelete).catch(() => {});
       }
 
       navigate('/dashboard');
     } catch (err) {
-      setErrorMessage(err.message || "حدث خطأ أثناء إرسال الرسالة.");
-    } finally {
       setIsSending(false);
+      setErrorMessage(err.message || "حدث خطأ أثناء إرسال الرسالة.");
     }
   };
 
-  // ── Save as Draft ────────────────────────────────────────────────────────
+  // ── Save as Draft (Manual) ───────────────────────────────────────────────
   const handleSaveDraft = async () => {
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     setIsSavingDraft(true);
     try {
       const recipientIds = messageMode === "individuel" 
@@ -265,7 +561,7 @@ export default function ComposePage() {
         : selectedIds.map(Number);
 
       const draftPayload = {
-        draftId: currentDraftId,
+        draftId: currentDraftIdRef.current || currentDraftId,
         messageMode,
         subject,
         body,
@@ -277,15 +573,38 @@ export default function ComposePage() {
 
       const newId = await saveDraft(draftPayload);
       setCurrentDraftId(newId);
+      currentDraftIdRef.current = newId;
+
+      lastSavedPayloadStrRef.current = JSON.stringify({
+        messageMode,
+        receiverId,
+        selectedIds,
+        subject: subject.trim(),
+        body: body.trim(),
+        attachmentNames: attachments.map(f => f.name),
+      });
+
+      localStorage.setItem('cspj_draft_backup', JSON.stringify({
+        ...draftPayload,
+        draftId: newId,
+        updatedAt: Date.now(),
+      }));
+
+      setHasUnsavedChanges(false);
+      hasUnsavedChangesRef.current = false;
+      setAutoSaveStatus('saved');
+      setLastSavedTime(new Date());
 
       showToast("تم حفظ المسودة بنجاح ✓", 'success');
 
       // Navigate after the toast is visible
-      setTimeout(() => navigate('/dashboard'), 1200);
+      setTimeout(() => {
+        if (isMountedRef.current) navigate('/dashboard');
+      }, 1200);
     } catch {
       showToast("حدث خطأ أثناء حفظ المسودة.", 'error');
     } finally {
-      setIsSavingDraft(false);
+      if (isMountedRef.current) setIsSavingDraft(false);
     }
   };
 
@@ -404,14 +723,27 @@ export default function ComposePage() {
             <h1 className="text-lg font-bold text-slate-900 tracking-tight">
               {isEditingDraft ? 'تحرير المسودة' : 'رسالة جديدة'}
             </h1>
-            {isEditingDraft && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+
+            {/* Auto-save status in header */}
+            {autoSaveStatus === 'saving' ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80 animate-pulse">
+                <svg className="animate-spin h-3 w-3 text-amber-600" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
+                حفظ المسودة...
+              </span>
+            ) : autoSaveStatus === 'saved' && lastSavedTime ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                <IconCheckCircle />
+                تم حفظ المسودة تلقائيًا ({lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+              </span>
+            ) : isEditingDraft ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80">
+                <IconDraft />
                 مسودة
               </span>
-            )}
+            ) : null}
           </div>
           <div className="flex items-center gap-3">
             {/* Save as Draft button */}
@@ -508,7 +840,7 @@ export default function ComposePage() {
 
                     {/* Support note for non-admin users */}
                     {!isAdmin && (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50/70 border border-indigo-100 rounded-xl text-indigo-800 text-[11px] leading-relaxed">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50/70 border border-indigo-100 rounded-xl text-indigo-800 text-[11px] leading-relaxed">
                         <IconHelp />
                         <span>
                           لطلب المساعدة التقنية أو الإبلاغ عن مشكلة في المنصة، يرجى التوجه إلى قسم{" "}
@@ -538,7 +870,7 @@ export default function ComposePage() {
               </div>
 
               {/* Tiptap Editor (Full Height) */}
-              <div className="flex-1 overflow-y-auto flex flex-col bg-white [&_.tiptap]:min-h-[400px]">
+              <div className="flex-1 overflow-y-auto flex flex-col bg-white [&_.tiptap]:min-h-[350px]">
                 <TiptapEditor
                   content={body}
                   onChange={setBody}
@@ -546,6 +878,45 @@ export default function ComposePage() {
                   attachments={attachments}
                   onAttachmentsChange={setAttachments}
                 />
+              </div>
+
+              {/* Editor Footer / Auto-save Status Bar */}
+              <div className="px-5 py-2.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  {autoSaveStatus === 'saving' ? (
+                    <div className="flex items-center gap-1.5 text-amber-700 font-semibold animate-pulse">
+                      <svg className="animate-spin h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>حفظ المسودة...</span>
+                    </div>
+                  ) : autoSaveStatus === 'saved' && lastSavedTime ? (
+                    <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                      <IconCheckCircle />
+                      <span>تم حفظ المسودة تلقائيًا ({lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+                    </div>
+                  ) : hasUnsavedChanges ? (
+                    <div className="flex items-center gap-1.5 text-slate-500">
+                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                      <span>تعديلات غير محفوظة (سيتم الحفظ تلقائيًا)...</span>
+                    </div>
+                  ) : autoSaveStatus === 'error' ? (
+                    <div className="flex items-center gap-1.5 text-rose-600 font-medium">
+                      <IconError />
+                      <span>تعذر حفظ المسودة تلقائيًا</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-slate-400">
+                      <IconDraft />
+                      <span>الحفظ التلقائي مفعّل</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="text-[11px] text-slate-400 font-mono">
+                  {currentDraftId ? `مسودة #${currentDraftId}` : 'مسودة جديدة'}
+                </div>
               </div>
             </div>
 
