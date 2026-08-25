@@ -63,30 +63,63 @@ builder.Services.AddRateLimiter(options =>
     };
 });
 
+// Register HTML Sanitizer Service
+builder.Services.AddSingleton<IHtmlSanitizerService, HtmlSanitizerService>();
+
 // Configure CORS
+var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? builder.Configuration["Cors:AllowedOrigins"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    ?? new[] { "http://localhost:5173", "http://localhost:5174", "http://localhost:3000" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:3000") // Default Vite and Create React App ports
+        policy.WithOrigins(configuredOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
     });
 });
 
+// Validate Database Connection String in Production
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!builder.Environment.IsDevelopment() && (string.IsNullOrWhiteSpace(connectionString) || connectionString.Contains("OVERRIDE_THIS_IN_ENV_OR_USER_SECRETS")))
+{
+    throw new InvalidOperationException("Production error: ConnectionStrings:DefaultConnection must be configured via environment variables or secure key vaults.");
+}
+
 // Register SQL Server Database Context
 builder.Services.AddDbContext<CspjMiniMailDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    options.UseSqlServer(connectionString)
            .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
 // Configure SmtpSettings
 builder.Services.Configure<SmtpSettings>(builder.Configuration.GetSection("SmtpSettings"));
 builder.Services.AddScoped<IEmailService, MailKitEmailService>();
 
-// Configure JWT Authentication
+// Configure JWT Authentication & Validate Signing Key
 var jwtSettings = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]!);
+var rawKey = jwtSettings["Key"];
+
+if (string.IsNullOrWhiteSpace(rawKey) || rawKey.Length < 32)
+{
+    throw new InvalidOperationException("Fatal security configuration error: 'Jwt:Key' must be at least 32 characters (256 bits) long.");
+}
+
+if (!builder.Environment.IsDevelopment() && rawKey.Contains("OVERRIDE_THIS_IN_ENV_OR_USER_SECRETS"))
+{
+    throw new InvalidOperationException("Production error: 'Jwt:Key' contains placeholder text. Set a cryptographically secure key via environment variables.");
+}
+
+var key = Encoding.UTF8.GetBytes(rawKey);
+var issuer = jwtSettings["Issuer"] ?? "CspjMailApi";
+var audience = jwtSettings["Audience"] ?? "CspjMailFrontend";
+
+var validAudiences = new List<string> { audience, "CspjMailFrontend", "CspjMailClient" }
+    .Where(s => !string.IsNullOrWhiteSpace(s))
+    .Distinct()
+    .ToList();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -101,8 +134,8 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
+        ValidIssuer = issuer,
+        ValidAudiences = validAudiences,
         IssuerSigningKey = new SymmetricSecurityKey(key)
     };
     options.Events = new JwtBearerEvents

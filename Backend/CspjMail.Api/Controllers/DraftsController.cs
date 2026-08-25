@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CspjMail.Api.DTOs;
 using CspjMail.Api.Models;
+using CspjMail.Api.Services;
 
 namespace CspjMail.Api.Controllers
 {
@@ -18,10 +19,12 @@ namespace CspjMail.Api.Controllers
     public class DraftsController : ControllerBase
     {
         private readonly CspjMiniMailDbContext _context;
+        private readonly IHtmlSanitizerService _sanitizer;
 
-        public DraftsController(CspjMiniMailDbContext context)
+        public DraftsController(CspjMiniMailDbContext context, IHtmlSanitizerService sanitizer)
         {
             _context = context;
+            _sanitizer = sanitizer;
         }
 
         private int? GetCurrentUserId()
@@ -39,15 +42,19 @@ namespace CspjMail.Api.Controllers
             if (string.IsNullOrWhiteSpace(raw)) return new List<int>();
             try
             {
-                return JsonSerializer.Deserialize<List<int>>(raw) ?? new List<int>();
+                return (JsonSerializer.Deserialize<List<int>>(raw) ?? new List<int>())
+                    .Where(id => id > 0)
+                    .Distinct()
+                    .ToList();
             }
             catch
             {
                 // Fallback to comma-separated
                 return raw.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                          .Select(s => int.TryParse(s.Trim(), out int id) ? id : (int?)null)
+                          .Select(s => int.TryParse(s.Trim(), out int id) && id > 0 ? (int?)id : null)
                           .Where(id => id.HasValue)
                           .Select(id => id!.Value)
+                          .Distinct()
                           .ToList();
             }
         }
@@ -124,14 +131,22 @@ namespace CspjMail.Api.Controllers
             var currentUserId = GetCurrentUserId();
             if (!currentUserId.HasValue) return Unauthorized();
 
+            var validRecipientIds = dto.RecipientIds?
+                .Where(id => id > 0)
+                .Distinct()
+                .ToList();
+
+            var sanitizedSubject = _sanitizer.SanitizePlainText(dto.Subject);
+            var sanitizedBody = _sanitizer.SanitizeHtml(dto.Body);
+
             var draft = new Draft
             {
                 UserId = currentUserId.Value,
-                RecipientIds = dto.RecipientIds != null && dto.RecipientIds.Any()
-                    ? JsonSerializer.Serialize(dto.RecipientIds)
+                RecipientIds = validRecipientIds != null && validRecipientIds.Any()
+                    ? JsonSerializer.Serialize(validRecipientIds)
                     : null,
-                Subject = dto.Subject,
-                Body = dto.Body,
+                Subject = sanitizedSubject,
+                Body = sanitizedBody,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -168,11 +183,16 @@ namespace CspjMail.Api.Controllers
                 return NotFound("Brouillon introuvable.");
             }
 
-            draft.RecipientIds = dto.RecipientIds != null && dto.RecipientIds.Any()
-                ? JsonSerializer.Serialize(dto.RecipientIds)
+            var validRecipientIds = dto.RecipientIds?
+                .Where(rid => rid > 0)
+                .Distinct()
+                .ToList();
+
+            draft.RecipientIds = validRecipientIds != null && validRecipientIds.Any()
+                ? JsonSerializer.Serialize(validRecipientIds)
                 : null;
-            draft.Subject = dto.Subject;
-            draft.Body = dto.Body;
+            draft.Subject = _sanitizer.SanitizePlainText(dto.Subject);
+            draft.Body = _sanitizer.SanitizeHtml(dto.Body);
             draft.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

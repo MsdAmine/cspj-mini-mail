@@ -239,20 +239,16 @@ namespace CspjMail.Api.Controllers
                 {
                     Id = t.Id,
                     Objet = t.Objet,
-                    Expediteur = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault() != null 
-                        ? t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Expediteur.Prenom + " " + t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Expediteur.Nom 
-                        : "Inconnu",
-                    ExpediteurEmail = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault() != null 
-                        ? t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Expediteur.Email 
-                        : "inconnu@cspj.ma",
-                    Destinataire = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault() != null 
-                        ? t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Destinataire.Prenom + " " + t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Destinataire.Nom 
-                        : "Inconnu",
-                    DestinataireEmail = t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault() != null 
-                        ? t.Messages.OrderBy(m => m.DateEnvoi).FirstOrDefault().Destinataire.Email 
-                        : "inconnu@cspj.ma",
+                    Expediteur = t.Messages.OrderBy(m => m.DateEnvoi).Select(m => m.Expediteur != null ? m.Expediteur.Prenom + " " + m.Expediteur.Nom : "Inconnu").FirstOrDefault() ?? "Inconnu",
+                    ExpediteurEmail = t.Messages.OrderBy(m => m.DateEnvoi).Select(m => m.Expediteur != null ? m.Expediteur.Email : "inconnu@cspj.ma").FirstOrDefault() ?? "inconnu@cspj.ma",
+                    Destinataire = t.EstGroupe && !string.IsNullOrEmpty(t.TitreGroupe)
+                        ? t.TitreGroupe
+                        : (t.Messages.OrderBy(m => m.DateEnvoi).Select(m => m.Destinataire != null ? m.Destinataire.Prenom + " " + m.Destinataire.Nom : "Inconnu").FirstOrDefault() ?? "Inconnu"),
+                    DestinataireEmail = t.EstGroupe
+                        ? "groupe@cspj.ma"
+                        : (t.Messages.OrderBy(m => m.DateEnvoi).Select(m => m.Destinataire != null ? m.Destinataire.Email : "inconnu@cspj.ma").FirstOrDefault() ?? "inconnu@cspj.ma"),
                     Date = t.DateCreation,
-                    StatutLecture = t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null && t.Messages.OrderByDescending(m => m.DateEnvoi).FirstOrDefault().EstLu ? "Lu" : "Non lu",
+                    StatutLecture = t.Messages.OrderByDescending(m => m.DateEnvoi).Select(m => (bool?)m.EstLu).FirstOrDefault() == true ? "Lu" : "Non lu",
                     StatutAcheminement = t.EstArchive ? "Clôturé" : "En cours",
                     HasAttachment = t.Messages.Any(m => m.PiecesJointes.Any()),
                     PieceJointeNom = t.Messages.SelectMany(m => m.PiecesJointes).Select(p => p.NomFichier).FirstOrDefault() ?? string.Empty

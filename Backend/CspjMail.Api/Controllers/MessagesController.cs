@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CspjMail.Api.Models;
 using CspjMail.Api.DTOs;
+using CspjMail.Api.Services;
 
 namespace CspjMail.Api.Controllers
 {
@@ -13,10 +14,12 @@ namespace CspjMail.Api.Controllers
     public class MessagesController : ControllerBase
     {
         private readonly CspjMiniMailDbContext _context;
+        private readonly IHtmlSanitizerService _sanitizer;
 
-        public MessagesController(CspjMiniMailDbContext context)
+        public MessagesController(CspjMiniMailDbContext context, IHtmlSanitizerService sanitizer)
         {
             _context = context;
+            _sanitizer = sanitizer;
         }
 
         // ─── Shared helpers ────────────────────────────────────────────────────────
@@ -149,6 +152,10 @@ namespace CspjMail.Api.Controllers
             if (isGroup && string.IsNullOrWhiteSpace(dto.TitreGroupe))
                 return BadRequest("Un nom de groupe est requis pour une discussion de groupe.");
 
+            var sanitizedObjet = _sanitizer.SanitizePlainText(dto.Objet);
+            var sanitizedCorps = _sanitizer.SanitizeHtml(dto.Corps);
+            var sanitizedTitreGroupe = isGroup ? _sanitizer.SanitizePlainText(dto.TitreGroupe) : null;
+
             // ════════════════════════════════════════════════════════════════════
             // BROADCAST PATH — create N independent 1-to-1 threads
             // ════════════════════════════════════════════════════════════════════
@@ -192,7 +199,7 @@ namespace CspjMail.Api.Controllers
                     // 1. Create thread
                     var broadcastThread = new Models.Thread
                     {
-                        Objet         = dto.Objet,
+                        Objet         = sanitizedObjet,
                         DateCreation  = DateTime.UtcNow,
                         EstArchive    = false,
                         EstGroupe     = false,
@@ -212,7 +219,7 @@ namespace CspjMail.Api.Controllers
                         ThreadId       = broadcastThread.Id,
                         ExpediteurId   = currentUserId,
                         DestinataireId = recipientId,
-                        Corps          = dto.Corps,
+                        Corps          = sanitizedCorps,
                         DateEnvoi      = DateTime.UtcNow,
                         EstLu          = false
                     };
@@ -263,11 +270,11 @@ namespace CspjMail.Api.Controllers
             // ── Create thread ────────────────────────────────────────────────────
             var newThread = new Models.Thread
             {
-                Objet = dto.Objet,
+                Objet = sanitizedObjet,
                 DateCreation = DateTime.UtcNow,
                 EstArchive = false,
                 EstGroupe = isGroup,
-                TitreGroupe = isGroup ? dto.TitreGroupe!.Trim() : null
+                TitreGroupe = sanitizedTitreGroupe
             };
 
             _context.Threads.Add(newThread);
@@ -295,7 +302,7 @@ namespace CspjMail.Api.Controllers
                 ThreadId = newThread.Id,
                 ExpediteurId = currentUserId,
                 DestinataireId = isGroup ? null : recipientIds[0],
-                Corps = dto.Corps,
+                Corps = sanitizedCorps,
                 DateEnvoi = DateTime.UtcNow,
                 EstLu = false
             };
@@ -376,7 +383,7 @@ namespace CspjMail.Api.Controllers
                 ThreadId = threadId,
                 ExpediteurId = currentUserId,
                 DestinataireId = replyDestinataireId,
-                Corps = dto.Corps,
+                Corps = _sanitizer.SanitizeHtml(dto.Corps),
                 DateEnvoi = DateTime.UtcNow,
                 EstLu = false
             };
@@ -622,9 +629,9 @@ namespace CspjMail.Api.Controllers
                         DernierMessageCorps = t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null
                             ? t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Corps
                             : string.Empty,
-                        DernierExpediteurNom = t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault() != null && t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Destinataire != null
-                            ? t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Destinataire.Prenom + " " + t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).FirstOrDefault()!.Destinataire.Nom
-                            : t.Participants.Where(tp => tp.UserId != currentUserId).Select(tp => tp.Utilisateur.Prenom + " " + tp.Utilisateur.Nom).FirstOrDefault() ?? "Inconnu",
+                        DernierExpediteurNom = t.Messages.Where(m => m.ExpediteurId == currentUserId).OrderByDescending(m => m.DateEnvoi).Select(m => m.Destinataire != null ? m.Destinataire.Prenom + " " + m.Destinataire.Nom : null).FirstOrDefault()
+                            ?? t.Participants.Where(tp => tp.UserId != currentUserId).Select(tp => tp.Utilisateur.Prenom + " " + tp.Utilisateur.Nom).FirstOrDefault() 
+                            ?? "Inconnu",
                         ADesMessagesNonLus = false,
                         EstArchive = t.EstArchive,
                         IsStarred = t.Participants.Where(tp => tp.UserId == currentUserId).Select(tp => (bool?)tp.IsStarred).FirstOrDefault() ?? false,
@@ -1232,7 +1239,7 @@ namespace CspjMail.Api.Controllers
                 ThreadId       = newThread.Id,
                 ExpediteurId   = currentUserId,
                 DestinataireId = null, // group message — no single recipient
-                Corps          = dto.Corps,
+                Corps          = _sanitizer.SanitizeHtml(dto.Corps),
                 DateEnvoi      = DateTime.UtcNow,
                 EstLu          = false
             };

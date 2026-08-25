@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using CspjMail.Api.Models;
 using CspjMail.Api.DTOs;
+using CspjMail.Api.Services;
 
 namespace CspjMail.Api.Controllers
 {
@@ -14,11 +15,13 @@ namespace CspjMail.Api.Controllers
     {
         private readonly CspjMiniMailDbContext _context;
         private readonly ILogger<SupportController> _logger;
+        private readonly IHtmlSanitizerService _sanitizer;
 
-        public SupportController(CspjMiniMailDbContext context, ILogger<SupportController> logger)
+        public SupportController(CspjMiniMailDbContext context, ILogger<SupportController> logger, IHtmlSanitizerService sanitizer)
         {
             _context = context;
             _logger = logger;
+            _sanitizer = sanitizer;
         }
 
         private int? GetCurrentUserId()
@@ -56,9 +59,9 @@ namespace CspjMail.Api.Controllers
             var ticket = new SupportTicket
             {
                 TicketNumber = ticketNumber,
-                Subject = dto.Subject.Trim(),
-                Category = string.IsNullOrWhiteSpace(dto.Category) ? "Other" : dto.Category.Trim(),
-                Priority = string.IsNullOrWhiteSpace(dto.Priority) ? "Normal" : dto.Priority.Trim(),
+                Subject = _sanitizer.SanitizePlainText(dto.Subject),
+                Category = string.IsNullOrWhiteSpace(dto.Category) ? "Other" : _sanitizer.SanitizePlainText(dto.Category),
+                Priority = string.IsNullOrWhiteSpace(dto.Priority) ? "Normal" : _sanitizer.SanitizePlainText(dto.Priority),
                 Status = "Open",
                 CreatedByUserId = currentUserId.Value,
                 CreatedAt = DateTime.UtcNow,
@@ -75,7 +78,7 @@ namespace CspjMail.Api.Controllers
                 {
                     TicketId = ticket.Id,
                     SenderId = currentUserId.Value,
-                    Content = dto.Message.Trim(),
+                    Content = _sanitizer.SanitizeHtml(dto.Message),
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.TicketMessages.Add(initialMsg);
@@ -284,7 +287,7 @@ namespace CspjMail.Api.Controllers
             {
                 TicketId = ticket.Id,
                 SenderId = currentUserId.Value,
-                Content = dto.Content.Trim(),
+                Content = _sanitizer.SanitizeHtml(dto.Content),
                 CreatedAt = DateTime.UtcNow
             };
 
