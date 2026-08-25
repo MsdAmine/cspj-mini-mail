@@ -60,7 +60,14 @@ export const MailProvider = ({ children }) => {
     }
     try {
       const data = await draftsApi.getDrafts();
-      setDrafts(data || []);
+      const draftsList = data || [];
+      setDrafts(draftsList);
+      // If server has no drafts, clear local draft backup
+      if (draftsList.length === 0) {
+        localStorage.removeItem('draft_backup');
+        localStorage.removeItem('draft_backup_time');
+        localStorage.removeItem('cspj_draft_backup');
+      }
     } catch {
       // Fallback
     }
@@ -311,6 +318,10 @@ export const MailProvider = ({ children }) => {
         await draftsApi.deleteDraft(Number(draftId));
       }
       setDrafts(prev => prev.filter(d => String(d.id) !== String(draftId) && String(d.draftId) !== String(draftId)));
+      // Always remove local draft backup when a draft is deleted
+      localStorage.removeItem('draft_backup');
+      localStorage.removeItem('draft_backup_time');
+      localStorage.removeItem('cspj_draft_backup');
     } catch (err) {
       console.error("Erreur lors de la suppression du brouillon :", err);
       throw err;
