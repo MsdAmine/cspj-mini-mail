@@ -284,7 +284,13 @@ export const MailProvider = ({ children }) => {
 
       if (isUpdate) {
         const updated = await draftsApi.updateDraft(Number(draftData.draftId), payload);
-        setDrafts(prev => prev.map(d => (d.id === updated.id || d.draftId === updated.id) ? updated : d));
+        setDrafts(prev => {
+          const exists = prev.some(d => d.id === updated.id || d.draftId === updated.id);
+          if (exists) {
+            return prev.map(d => (d.id === updated.id || d.draftId === updated.id) ? updated : d);
+          }
+          return [updated, ...prev];
+        });
         return updated.id;
       } else {
         const created = await draftsApi.createDraft(payload);
