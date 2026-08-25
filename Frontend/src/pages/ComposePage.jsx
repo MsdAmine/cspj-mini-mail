@@ -140,14 +140,19 @@ export default function ComposePage() {
 
   // Local storage recovery fallback if not editing an explicit incoming draft
   const recoveredBackup = useMemo(() => {
+    // If user opened an existing draft from Drafts folder, ignore localStorage completely
     if (incomingDraft) return null;
     try {
-      const raw = localStorage.getItem('cspj_draft_backup');
+      const raw = localStorage.getItem('draft_backup') || localStorage.getItem('cspj_draft_backup');
       if (raw) {
         const parsed = JSON.parse(raw);
-        // Only recover if there's actual content and it's less than 24h old
-        const hasData = parsed.subject || parsed.body || parsed.receiverId || parsed.selectedIds?.length;
-        if (hasData) return parsed;
+        const cleanBody = (parsed.body || '').replace(/<[^>]*>?/gm, '').trim();
+        const hasMeaningfulContent = Boolean(
+          (parsed.subject && parsed.subject.trim()) ||
+          cleanBody ||
+          (parsed.messageMode === 'individuel' ? parsed.receiverId : (parsed.selectedIds?.length > 0 || parsed.recipientIds?.length > 0))
+        );
+        if (hasMeaningfulContent) return parsed;
       }
     } catch {
       // Ignore parse error
@@ -192,7 +197,7 @@ export default function ComposePage() {
   const isSentRef            = useRef(false);
   const isSavingDraftRef     = useRef(false);
   const currentDraftIdRef    = useRef(currentDraftId);
-  const autoSaveTimerRef     = useRef(null);
+  const localBackupTimerRef  = useRef(null);
   const hasUnsavedChangesRef = useRef(false);
   const isInitialMountRef    = useRef(true);
 
@@ -254,12 +259,12 @@ export default function ComposePage() {
     return () => {
       isMountedRef.current = false;
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (localBackupTimerRef.current) clearTimeout(localBackupTimerRef.current);
     };
   }, []);
 
-  // ── Perform Auto-Save Execution ──────────────────────────────────────────
-  const performAutoSave = useCallback(async () => {
+  // ── Perform Server-Side Draft Save ───────────────────────────────────────
+  const performServerSave = useCallback(async () => {
     if (isSentRef.current || !isMountedRef.current || isSavingDraftRef.current) return;
 
     const payload = getCurrentPayload();
@@ -279,7 +284,6 @@ export default function ComposePage() {
 
     try {
       isSavingDraftRef.current = true;
-      setAutoSaveStatus('saving');
 
       const savedDraftId = await saveDraft({
         draftId: currentDraftIdRef.current,
@@ -305,18 +309,21 @@ export default function ComposePage() {
         attachmentNames: payload.attachmentNames,
       });
 
-      // Update local storage backup with confirmed draftId
-      localStorage.setItem('cspj_draft_backup', JSON.stringify({
+      // Sync local storage backup with confirmed server draftId
+      localStorage.setItem('draft_backup', JSON.stringify({
         ...payload,
         draftId: savedDraftId || currentDraftIdRef.current,
         updatedAt: Date.now(),
       }));
+      localStorage.setItem('draft_backup_time', Date.now().toString());
+      localStorage.removeItem('cspj_draft_backup');
 
       setHasUnsavedChanges(false);
       hasUnsavedChangesRef.current = false;
       setAutoSaveStatus('saved');
       setLastSavedTime(new Date());
-    } catch (err) {
+    } catch {
+      // Quiet background failure, keeps local backup safe
       if (isMountedRef.current) {
         setAutoSaveStatus('error');
       }
@@ -325,9 +332,9 @@ export default function ComposePage() {
     }
   }, [getCurrentPayload, saveDraft]);
 
-  // ── Debounced Auto-Save (2.5 Seconds) Effect ─────────────────────────────
+  // ── Local Storage Crash Backup (2s Debounce - Zero Server Hits) ──────────
   useEffect(() => {
-    // Skip auto-save trigger on first render
+    // Skip on initial mount
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false;
       return;
@@ -363,29 +370,41 @@ export default function ComposePage() {
       setHasUnsavedChanges(true);
       hasUnsavedChangesRef.current = true;
 
-      // Keep local storage backup constantly updated on every change for instant recovery
-      localStorage.setItem('cspj_draft_backup', JSON.stringify({
-        ...payload,
-        draftId: currentDraftIdRef.current,
-        updatedAt: Date.now(),
-      }));
-
-      // Reset existing debounce timer and start 2500ms countdown
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-      autoSaveTimerRef.current = setTimeout(() => {
-        performAutoSave();
-      }, 2500);
+      // Debounce saving to localStorage (2 seconds)
+      if (localBackupTimerRef.current) clearTimeout(localBackupTimerRef.current);
+      localBackupTimerRef.current = setTimeout(() => {
+        try {
+          localStorage.setItem('draft_backup', JSON.stringify({
+            ...payload,
+            draftId: currentDraftIdRef.current,
+            updatedAt: Date.now(),
+          }));
+          localStorage.setItem('draft_backup_time', Date.now().toString());
+        } catch {
+          // Ignore local storage quota errors
+        }
+      }, 2000);
     } else {
-      // Form was cleared
       setHasUnsavedChanges(false);
       hasUnsavedChangesRef.current = false;
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (localBackupTimerRef.current) clearTimeout(localBackupTimerRef.current);
     }
 
     return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+      if (localBackupTimerRef.current) clearTimeout(localBackupTimerRef.current);
     };
-  }, [messageMode, receiverId, selectedIds, subject, body, attachments, getCurrentPayload, performAutoSave]);
+  }, [messageMode, receiverId, selectedIds, subject, body, attachments, getCurrentPayload]);
+
+  // ── Periodic Server Sync (Every 60 Seconds) ──────────────────────────────
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      if (hasUnsavedChangesRef.current && !isSentRef.current && !isSavingDraftRef.current) {
+        performServerSave();
+      }
+    }, 60000);
+
+    return () => clearInterval(syncInterval);
+  }, [performServerSave]);
 
   // ── Browser Tab / Window Closure & Visibility Protection ─────────────────
   useEffect(() => {
@@ -413,11 +432,12 @@ export default function ComposePage() {
 
       // 1. Sync to local storage
       try {
-        localStorage.setItem('cspj_draft_backup', JSON.stringify({
+        localStorage.setItem('draft_backup', JSON.stringify({
           ...payload,
           draftId: currentDraftIdRef.current,
           updatedAt: Date.now(),
         }));
+        localStorage.setItem('draft_backup_time', Date.now().toString());
       } catch {
         // Ignore quota / storage errors
       }
@@ -516,8 +536,8 @@ export default function ComposePage() {
       }
     }
 
-    // Cancel pending auto-save countdown
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    // Cancel pending local backup debounce
+    if (localBackupTimerRef.current) clearTimeout(localBackupTimerRef.current);
 
     setIsSending(true);
     try {
@@ -536,6 +556,8 @@ export default function ComposePage() {
       setHasUnsavedChanges(false);
 
       // Clean up localStorage backup
+      localStorage.removeItem('draft_backup');
+      localStorage.removeItem('draft_backup_time');
       localStorage.removeItem('cspj_draft_backup');
 
       // If this was a draft or auto-saved draft, remove it from backend now that it's sent
@@ -553,7 +575,7 @@ export default function ComposePage() {
 
   // ── Save as Draft (Manual) ───────────────────────────────────────────────
   const handleSaveDraft = async () => {
-    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    if (localBackupTimerRef.current) clearTimeout(localBackupTimerRef.current);
     setIsSavingDraft(true);
     try {
       const recipientIds = messageMode === "individuel" 
@@ -584,11 +606,13 @@ export default function ComposePage() {
         attachmentNames: attachments.map(f => f.name),
       });
 
-      localStorage.setItem('cspj_draft_backup', JSON.stringify({
+      localStorage.setItem('draft_backup', JSON.stringify({
         ...draftPayload,
         draftId: newId,
         updatedAt: Date.now(),
       }));
+      localStorage.setItem('draft_backup_time', Date.now().toString());
+      localStorage.removeItem('cspj_draft_backup');
 
       setHasUnsavedChanges(false);
       hasUnsavedChangesRef.current = false;
@@ -725,15 +749,7 @@ export default function ComposePage() {
             </h1>
 
             {/* Auto-save status in header */}
-            {autoSaveStatus === 'saving' ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80 animate-pulse">
-                <svg className="animate-spin h-3 w-3 text-amber-600" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                حفظ المسودة...
-              </span>
-            ) : autoSaveStatus === 'saved' && lastSavedTime ? (
+            {lastSavedTime ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
                 <IconCheckCircle />
                 تم حفظ المسودة تلقائيًا ({lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
@@ -883,33 +899,20 @@ export default function ComposePage() {
               {/* Editor Footer / Auto-save Status Bar */}
               <div className="px-5 py-2.5 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  {autoSaveStatus === 'saving' ? (
-                    <div className="flex items-center gap-1.5 text-amber-700 font-semibold animate-pulse">
-                      <svg className="animate-spin h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      <span>حفظ المسودة...</span>
-                    </div>
-                  ) : autoSaveStatus === 'saved' && lastSavedTime ? (
+                  {lastSavedTime ? (
                     <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
                       <IconCheckCircle />
                       <span>تم حفظ المسودة تلقائيًا ({lastSavedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
                     </div>
-                  ) : hasUnsavedChanges ? (
-                    <div className="flex items-center gap-1.5 text-slate-500">
-                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                      <span>تعديلات غير محفوظة (سيتم الحفظ تلقائيًا)...</span>
-                    </div>
                   ) : autoSaveStatus === 'error' ? (
                     <div className="flex items-center gap-1.5 text-rose-600 font-medium">
                       <IconError />
-                      <span>تعذر حفظ المسودة تلقائيًا</span>
+                      <span>تعذر المزامنة مع الخادم (محفوظ محلياً)</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 text-slate-400">
                       <IconDraft />
-                      <span>الحفظ التلقائي مفعّل</span>
+                      <span>الحفظ التلقائي مفعّل (كل 60 ثانية)</span>
                     </div>
                   )}
                 </div>
