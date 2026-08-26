@@ -362,24 +362,45 @@ function EditUserModal({ user, onClose, onSaved }) {
 function UserAuditModal({ user, onClose }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
+    if (!user?.id) {
+      setLogs([]);
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setLogs([]);
+    setLoading(true);
+    setError('');
+
     const fetchUserLogs = async () => {
       try {
-        const res = await api.get('/admin/audit-logs');
-        const userLogs = (res.data || []).filter(l =>
-          l.utilisateur?.toLowerCase() === user.email?.toLowerCase() ||
-          l.description?.toLowerCase().includes(user.email?.toLowerCase())
-        );
-        setLogs(userLogs);
+        const res = await api.get(`/admin/users/${user.id}/activity`);
+        if (isMounted) {
+          setLogs(res.data || []);
+        }
       } catch (err) {
-        console.error("Erreur chargement logs:", err);
+        console.error("Erreur chargement logs utilisateur:", err);
+        if (isMounted) {
+          setError(err.response?.data?.message || err.response?.data || "Erreur lors du chargement de l'activité.");
+          setLogs([]);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+
     fetchUserLogs();
-  }, [user]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
@@ -398,6 +419,10 @@ function UserAuditModal({ user, onClose }) {
           {loading ? (
             <div className="flex justify-center py-8">
               <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-xs text-rose-500 font-medium">
+              {error}
             </div>
           ) : logs.length === 0 ? (
             <div className="text-center py-8 text-xs text-slate-400">

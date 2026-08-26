@@ -258,11 +258,72 @@ namespace CspjMail.Api.Controllers
             return Ok(result);
         }
 
-        // 3.6 GET: api/admin/audit-logs (Fetch audit logs)
+        // 3.6 GET: api/admin/audit-logs (Fetch audit logs, optionally filtered by userId)
         [HttpGet("audit-logs")]
-        public async Task<IActionResult> GetAuditLogs()
+        public async Task<IActionResult> GetAuditLogs([FromQuery] int? userId)
         {
+            var query = _context.AuditLogs.AsQueryable();
+
+            if (userId.HasValue)
+            {
+                if (userId.Value <= 0)
+                {
+                    return BadRequest("Identifiant d'utilisateur invalide.");
+                }
+
+                var targetUser = await _context.Utilisateurs.FirstOrDefaultAsync(u => u.Id == userId.Value);
+                if (targetUser == null)
+                {
+                    return NotFound("Utilisateur introuvable.");
+                }
+
+                var userEmail = targetUser.Email.ToLower();
+                var userIdPattern = $"ID: {userId.Value}";
+
+                query = query.Where(a =>
+                    a.Utilisateur.ToLower() == userEmail ||
+                    a.Description.ToLower().Contains(userEmail) ||
+                    a.Description.Contains(userIdPattern));
+            }
+
+            var logs = await query
+                .OrderByDescending(a => a.DateHeure)
+                .Select(a => new AuditLogDto
+                {
+                    Id = a.Id,
+                    DateHeure = a.DateHeure,
+                    TypeAction = a.TypeAction,
+                    Utilisateur = a.Utilisateur,
+                    Description = a.Description
+                })
+                .ToListAsync();
+
+            return Ok(logs);
+        }
+
+        // 3.6.1 GET: api/admin/users/{userId}/activity (Fetch activity logs scoped strictly to the specified user)
+        [HttpGet("users/{userId:int}/activity")]
+        public async Task<IActionResult> GetUserActivity(int userId)
+        {
+            if (userId <= 0)
+            {
+                return BadRequest("Identifiant d'utilisateur invalide.");
+            }
+
+            var targetUser = await _context.Utilisateurs.FirstOrDefaultAsync(u => u.Id == userId);
+            if (targetUser == null)
+            {
+                return NotFound("Utilisateur introuvable.");
+            }
+
+            var userEmail = targetUser.Email.ToLower();
+            var userIdPattern = $"ID: {userId}";
+
             var logs = await _context.AuditLogs
+                .Where(a =>
+                    a.Utilisateur.ToLower() == userEmail ||
+                    a.Description.ToLower().Contains(userEmail) ||
+                    a.Description.Contains(userIdPattern))
                 .OrderByDescending(a => a.DateHeure)
                 .Select(a => new AuditLogDto
                 {
