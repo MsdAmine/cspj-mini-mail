@@ -51,7 +51,7 @@ function StepIndicator({ current, isRTL }) {
 /* ─── OTP Input Row (always LTR) ─────────────────────────────────────────── */
 function OtpInput({ value, onChange, disabled }) {
   const inputsRef = useRef([]);
-  const digits = value.split('');
+  const digits = Array.from({ length: 6 }, (_, i) => (value && value[i]) || '');
 
   const handleKey = (e, idx) => {
     const { key } = e;
@@ -86,13 +86,19 @@ function OtpInput({ value, onChange, disabled }) {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (!pasted) return;
-    onChange(pasted.padEnd(6, '').slice(0, 6));
-    inputsRef.current[Math.min(pasted.length, 5)]?.focus();
+    onChange(pasted);
+    const targetIdx = Math.min(pasted.length, 5);
+    inputsRef.current[targetIdx]?.focus();
   };
 
   const handleChange = (e, idx) => {
     const val = e.target.value.replace(/\D/g, '');
-    if (!val) return;
+    if (!val) {
+      const next = [...digits];
+      next[idx] = '';
+      onChange(next.join(''));
+      return;
+    }
     const next = [...digits];
     next[idx] = val.slice(-1);
     onChange(next.join(''));
@@ -101,12 +107,17 @@ function OtpInput({ value, onChange, disabled }) {
 
   useEffect(() => {
     const firstEmpty = digits.findIndex(d => !d);
-    inputsRef.current[firstEmpty === -1 ? 5 : firstEmpty]?.focus();
+    const targetIdx = firstEmpty === -1 ? 0 : firstEmpty;
+    inputsRef.current[targetIdx]?.focus();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <div className="flex gap-2.5 justify-center" dir="ltr" style={{ direction: 'ltr' }}>
+    <div
+      className="flex flex-row gap-2.5 justify-center"
+      dir="ltr"
+      style={{ direction: 'ltr', flexDirection: 'row' }}
+    >
       {Array.from({ length: 6 }).map((_, idx) => (
         <input
           key={idx}
@@ -116,11 +127,12 @@ function OtpInput({ value, onChange, disabled }) {
           inputMode="numeric"
           maxLength={1}
           dir="ltr"
-          value={digits[idx] || ''}
+          value={digits[idx]}
           onChange={e => handleChange(e, idx)}
           onKeyDown={e => handleKey(e, idx)}
           onPaste={handlePaste}
           disabled={disabled}
+          style={{ direction: 'ltr', textAlign: 'center' }}
           className={`
             w-11 h-14 text-center text-xl font-bold rounded-xl border-2 transition-all duration-150
             bg-slate-50 text-slate-900 caret-transparent
