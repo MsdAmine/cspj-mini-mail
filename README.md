@@ -41,9 +41,9 @@
 ## 🌟 À propos du projet
 
 **CSPJ Mini-Mail** est une application web moderne conçue pour rationaliser et sécuriser les flux de communication administratifs et institutionnels entre :
-- Les **Administrateurs** du système (supervision, gestion des comptes, paramétrages, logs d'audit)
+- Les **Administrateurs** du système (supervision, gestion des comptes, réinitialisation de sécurité, cartographie institutionnelle, logs d'audit)
 - Les **Fonctionnaires** (consultation, rédaction, échanges hiérarchiques et sectoriels)
-- Les **Associations** et structures partenaires (partage de documents, suivi des sollicitations)
+- Les **Associations** et structures partenaires (partage de documents, suivi des sollicitations avec les fonctionnaires affiliés)
 
 La plateforme garantit la stricte confidentialité des données échangées grâce au contrôle d'accès basé sur les rôles (RBAC), à l'authentification à deux facteurs (2FA TOTP), à l'assainissement systématique des contenus HTML et à une traçabilité intégrale via les journaux d'audit.
 
@@ -53,29 +53,38 @@ La plateforme garantit la stricte confidentialité des données échangées grâ
 
 ### 🔒 1. Authentification & Sécurité Forte
 - **Authentification JWT Hybride :** Utilisation de jetons sécurisés stockés dans des cookies `HttpOnly` (`cspj_auth_token`) avec protection CSRF/XSS.
-- **Double Authentification (2FA / TOTP) :** Génération de secrets Base32 et QR Codes compatibles avec *Google Authenticator*, *Microsoft Authenticator*, etc.
-- **Réinitialisation de mot de passe sécurisée :** Envoi d'un code OTP par e-mail via SMTP avec jeton de réinitialisation éphémère.
+- **Double Authentification (2FA / TOTP) :** Configuration avec QR Code et codes TOTP compatibles avec *Google Authenticator*, *Microsoft Authenticator*, etc.
+- **Réinitialisation de mot de passe sécurisée :** Envoi d'un code OTP par e-mail via SMTP avec jeton de réinitialisation temporaire.
+- **Récupération Administrateur :** Réinitialisation administrative du mot de passe ou désactivation du 2FA en cas de perte de l'appareil par un utilisateur.
 - **Limitation de débit (Rate Limiting) :** Protection contre les attaques par force brute (politique `totp-ops` de 5 requêtes/min max sur les endpoints sensibles).
 - **En-têtes de sécurité renforcés :** CSP, HSTS, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`.
 
-### 📨 2. Système de Messagerie Complète
-- **Organisation par Dossiers :** Boîte de réception (*Inbox*), Messages envoyés (*Sent*), Brouillons (*Drafts*), Corbeille (*Trash*), Courrier indésirable (*Spam*), et Favoris (*Starred*).
-- **Fils de Discussion (Threading) :** Regroupement intelligent des échanges et des réponses par fil de discussion.
-- **Éditeur de Texte Enrichi (WYSIWYG) :** Intégration de *Tiptap* avec assainissement HTML côté serveur (*HtmlSanitizer*) et client (*DOMPurify*).
-- **Gestion des Pièces Jointes :**
+### 📨 2. Système de Messagerie & Fils de Discussion
+- **Organisation par Dossiers :** Boîte de réception (*Inbox*), Messages envoyés (*Sent*), Messages archivés (*Archive*), Favoris (*Starred*).
+- **Gestion des Brouillons Dédiée :** Sauvegarde, modification et suppression RESTful de brouillons (`/api/drafts`).
+- **Fils de Discussion (Threading) :** Regroupement intelligent des échanges, réponses imbriquées et suivi des participants.
+- **Actions Groupées (Bulk Actions) :** Marquage comme lu, archivage et suppression en masse de conversations.
+- **Recherche & Filtres Avancés :** Tiroir de filtrage multicritères (par mot-clé, date, expéditeur, statut de lecture, présence de pièces jointes).
+- **Éditeur de Texte Enrichi (WYSIWYG) :** Intégration de *Tiptap* avec assainissement HTML côté serveur (`HtmlSanitizerService`) et côté client (`DOMPurify`).
+- **Gestion & Prévisualisation des Pièces Jointes :**
   - Validation stricte des types MIME autorisés (PDF, Word, Excel, PowerPoint, Images, Texte brut).
   - Contrôle de taille maximale (10 Mo par fichier).
-  - Stockage sécurisé avec identifiants GUID uniques et en-têtes anti-mise en cache.
-- **Messagerie de Groupe & Diffusion :** Envoi ciblé aux associations ou aux fonctionnaires associés.
+  - Stockage sécurisé avec identifiants GUID uniques.
+  - **Visionneuse intégrée :** Prévisualisation directe dans le navigateur (PDF, images et documents Word `.docx` via `docx-preview`).
 
-### 👥 3. Administration & Gestion des Utilisateurs
-- **Gestion des comptes :** Création, modification, activation/désactivation, et suppression logique (*soft delete*).
-- **Cartographie Institutionnelle :** Affectation des utilisateurs à des entreprises/institutions et liaison des fonctionnaires aux associations.
-- **Journaux d'Audit (Audit Logs) :** Traçabilité exhaustive des actions administratives (créations, modifications de rôles, suppressions).
-- **Statistiques & Métriques :** Tableaux de bord de supervision de l'activité globale de la plateforme.
+### 👥 3. Groupes Institutionnels & Canaux de Diffusion
+- **Messagerie de Groupe :** Création de fils de discussion multi-utilisateurs.
+- **Administration des Groupes :** Supervision, retrait de membres, archivage global et transfert de propriété (*Owner transfer*).
 
-### 🎫 4. Système de Support & Billetterie
+### 🛠 4. Administration & Supervision Globale
+- **Gestion des comptes :** Création, mise à jour de profil, activation/désactivation et suppression logique (*soft delete*).
+- **Cartographie Institutionnelle :** Gestion complète (CRUD) des structures/entreprises et assignation Fonctionnaires ↔ Associations.
+- **Supervision des conversations :** Consultation de l'ensemble des flux de messagerie et statistiques globales.
+- **Journaux d'Audit (Audit Logs) :** Traçabilité exhaustive des actions administratives avec filtrage par utilisateur et journal d'activité individuel.
+
+### 🎫 5. Système de Support & Billetterie
 - **Création de tickets :** Signalement d'incidents avec catégories (technique, accès, demande de service) et priorités.
+- **Prise en charge (Claim) :** Attribution d'un ticket à un administrateur spécifique.
 - **Fils d'échange d'assistance :** Conversation interactive entre l'utilisateur et l'équipe administrative.
 - **Suivi des statuts :** `Ouvert` (*Open*), `En cours` (*In Progress*), `Résolu` (*Resolved*), `Fermé` (*Closed*).
 
@@ -89,7 +98,7 @@ graph TD
     API -->|Authentification / 2FA| TOTP[Moteur TOTP Otp.NET & JWT Bearer]
     API -->|ORM EF Core 10| DB[(Base de données SQL Server)]
     API -->|Notifications E-mails / Alertes| SMTP[Serveur SMTP MailKit]
-    API -->|Stockage Sécurisé| FS[Système de Fichiers / Uploads Pièces Jointes]
+    API -->|Stockage Sécurisé & Uploads| FS[Système de Fichiers / wwwroot / uploads]
 ```
 
 ---
@@ -100,10 +109,10 @@ graph TD
 - **Framework :** [.NET 10 / ASP.NET Core Web API](https://dotnet.microsoft.com/)
 - **Accès aux données :** Entity Framework Core 10 (SQL Server Provider, Migrations Code-First)
 - **Authentification & Sécurité :**
-  - `Microsoft.AspNetCore.Authentication.JwtBearer` (JWT Tokens)
+  - `Microsoft.AspNetCore.Authentication.JwtBearer` (JWT Tokens & Cookies HttpOnly)
   - `BCrypt.Net-Next` (Hachage sécurisé des mots de passe)
   - `Otp.NET` (Algorithme TOTP RFC 6238)
-  - `Ganss.Xss.HtmlSanitizer` (Nettoyage des contenus HTML)
+  - `HtmlSanitizerService` (Service sur-mesure de nettoyage HTML & filtrage XSS)
 - **Services E-mail :** `MailKit` & `MimeKit`
 - **Documentation API :** Swashbuckle Swagger / OpenAPI
 
@@ -112,7 +121,8 @@ graph TD
 - **Routage :** `react-router-dom` v7
 - **Styles :** [Tailwind CSS v4](https://tailwindcss.com/) + PostCSS + `@tailwindcss/typography`
 - **Composants & Icônes :** `lucide-react`
-- **Édition de Texte :** `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-placeholder`, `@tiptap/extension-underline`, `@tiptap/extension-bullet-list`, `@tiptap/extension-text-align`
+- **Édition de Texte :** `@tiptap/react`, `@tiptap/starter-kit`, `@tiptap/extension-placeholder`, `@tiptap/extension-underline`, `@tiptap/extension-bullet-list`, `@tiptap/extension-text-align`, `@tiptap/extension-link`
+- **Prévisualisation de documents :** `docx-preview` (rendu Word DOCX dans le navigateur)
 - **Sécurité & Utilitaires :** `dompurify`, `qrcode.react`, `axios`
 
 ---
@@ -123,27 +133,42 @@ graph TD
 cspj-mini-mail/
 ├── Backend/
 │   └── CspjMail.Api/
-│       ├── Configuration/        # Options et configuration typée (SmtpSettings, etc.)
+│       ├── Configuration/        # Options typées (SmtpSettings, etc.)
 │       ├── Controllers/          # Contrôleurs API REST
-│       │   ├── AdminController.cs
-│       │   ├── AuthController.cs
-│       │   ├── MessagesController.cs
-│       │   └── SupportController.cs
-│       ├── DTOs/                 # Objets de transfert de données (Requêtes / Réponses)
+│       │   ├── AdminController.cs      # Supervision, utilisateurs, groupes, institutions, logs
+│       │   ├── AuthController.cs       # Authentification, 2FA, OTP, profil
+│       │   ├── DraftsController.cs     # CRUD complet des brouillons
+│       │   ├── MessagesController.cs   # Messagerie, fils, pièces jointes, contacts
+│       │   └── SupportController.cs    # Tickets d'assistance, réponses, claim
+│       ├── DTOs/                 # Objets de transfert de données
 │       ├── Migrations/           # Migrations Entity Framework Core
-│       ├── Models/               # Entités de la base de données (Utilisateur, Message, etc.)
-│       ├── Services/             # Logique métier & services (MailKitEmailService, etc.)
-│       ├── wwwroot/uploads/      # Répertoire de stockage des pièces jointes
-│       ├── Program.cs            # Point d'entrée, pipeline middleware et injection de dépendances
+│       ├── Models/               # Entités EF Core (Utilisateur, Thread, Message, Draft, etc.)
+│       ├── Services/             # Logique métier (MailKitEmailService, HtmlSanitizerService)
+│       ├── wwwroot/uploads/      # Répertoire de stockage sécurisé des pièces jointes
+│       ├── Program.cs            # Pipeline middleware, DI et configuration de sécurité
 │       └── appsettings.json      # Configuration de l'application
 │
 ├── Frontend/
 │   ├── public/                   # Fichiers statiques publics
 │   ├── src/
 │   │   ├── assets/               # Images, logos, ressources graphiques
-│   │   ├── components/           # Composants réutilisables (Navbar, Sidebar, Modals, etc.)
-│   │   ├── context/              # Contextes React (AuthContext, etc.)
-│   │   ├── pages/                # Vues & Pages principales
+│   │   ├── components/           # Composants réutilisables & Vues modulaires
+│   │   │   ├── AttachmentPreviewModal.jsx  # Visionneuse de fichiers (PDF, DOCX, images)
+│   │   │   ├── CreateInstitutionModal.jsx  # Modale de création d'institution
+│   │   │   ├── DraftsView.jsx              # Liste et reprise des brouillons
+│   │   │   ├── Layout.jsx                  # Layout global de navigation
+│   │   │   ├── MailList.jsx                # Liste et lecture des fils de discussion
+│   │   │   ├── ManageGroups.jsx            # Administration des groupes
+│   │   │   ├── ManageInstitutions.jsx      # Administration des institutions
+│   │   │   ├── ManageLogs.jsx              # Consultation et filtrage des logs d'audit
+│   │   │   ├── ManageSupport.jsx           # Gestion et traitement des tickets de support
+│   │   │   ├── ManageUsers.jsx             # Gestion des utilisateurs et assignations
+│   │   │   ├── ProfileModal.jsx            # Modale d'aperçu de profil
+│   │   │   ├── SearchFilterDrawer.jsx      # Tiroir de recherche multicritères
+│   │   │   ├── Sidebar.jsx                 # Barre latérale de navigation
+│   │   │   └── TiptapEditor.jsx            # Éditeur riche WYSIWYG
+│   │   ├── context/              # Contextes React (AuthContext, MailContext, LogContext)
+│   │   ├── pages/                # Pages principales
 │   │   │   ├── AdminDashboardPage.jsx
 │   │   │   ├── ComposePage.jsx
 │   │   │   ├── CreateUserPage.jsx
@@ -154,13 +179,14 @@ cspj-mini-mail/
 │   │   │   ├── ProfilePage.jsx
 │   │   │   ├── ResetPassword.jsx
 │   │   │   └── SupportPage.jsx
-│   │   ├── services/             # Services d'appel API Axios
-│   │   ├── App.jsx               # Configuration des routes
-│   │   ├── main.jsx              # Montage de l'application React
-│   │   └── index.css             # Import Tailwind et styles globaux
+│   │   ├── services/             # Clients API Axios (api.js, draftsApi.js, emailService.js)
+│   │   ├── App.jsx               # Routage centralisé de l'application
+│   │   ├── main.jsx              # Montage React
+│   │   └── index.css             # Import Tailwind CSS et styles globaux
 │   ├── package.json              # Dépendances et scripts npm
 │   └── vite.config.js            # Configuration du serveur Vite
 │
+├── run-backend.ps1               # Script PowerShell de démarrage automatique du backend
 └── README.md                     # Documentation générale du projet
 ```
 
@@ -171,12 +197,12 @@ cspj-mini-mail/
 | Domaine | Implémentation |
 | :--- | :--- |
 | **Hachage des Mots de Passe** | BCrypt avec salage dynamique |
-| **Authentification à Deux Facteurs** | TOTP 6 chiffres standardisé (RFC 6238) |
-| **Protection contre les Injections XSS** | Double assainissement HTML (`HtmlSanitizer` + `DOMPurify`) |
+| **Authentification à Deux Facteurs** | TOTP 6 chiffres standardisé (RFC 6238) via `Otp.NET` |
+| **Protection contre les Injections XSS** | Double assainissement HTML (`HtmlSanitizerService` serveur + `DOMPurify` client) |
 | **Protection Brute-Force** | Rate Limiting ASP.NET Core sur les routes sensibles (5 req/min) |
 | **Sécurité des Pièces Jointes** | Whitelist stricte de types MIME, renommage GUID, limite 10 Mo |
 | **Isolation des Rôles (RBAC)** | Politiques strictes avec `[Authorize(Roles = "...")]` |
-| **Audit & Traçabilité** | Journalisation des actions critiques avec horodatage et IP |
+| **Audit & Traçabilité** | Journalisation des actions critiques avec horodatage, action et utilisateur |
 
 ---
 
@@ -231,7 +257,7 @@ Avant de lancer le projet, assurez-vous d'avoir installé sur votre machine :
    ```bash
    dotnet run
    ```
-   *L'API démarre par défaut sur `http://localhost:5182` (et Swagger est accessible sur `http://localhost:5182/swagger` en mode Développement).*
+   *L'API démarre par défaut sur `http://localhost:5182` (Swagger est accessible sur `http://localhost:5182/swagger` en mode Développement).*
 
 ---
 
@@ -239,7 +265,7 @@ Avant de lancer le projet, assurez-vous d'avoir installé sur votre machine :
 
 1. Naviguez dans le dossier `Frontend` :
    ```bash
-   cd ../../Frontend
+   cd Frontend
    ```
 
 2. Installez les dépendances npm :
@@ -262,42 +288,79 @@ Avant de lancer le projet, assurez-vous d'avoir installé sur votre machine :
 
 ## 📡 Points d'Entrée de l'API (Endpoints)
 
-### 🔑 Authentification (`/api/auth`)
-- `POST /api/auth/login` : Connexion initiale (vérification e-mail / mot de passe + vérification/génération 2FA).
-- `POST /api/auth/verify-2fa` : Validation du code TOTP et émission du jeton d'accès JWT.
-- `POST /api/auth/forgot-password` : Demande de réinitialisation de mot de passe par code e-mail.
-- `POST /api/auth/verify-reset-code` : Validation du code reçu par e-mail.
-- `POST /api/auth/reset-password` : Définition d'un nouveau mot de passe.
+### 🔑 Authentification & Compte (`/api/auth`)
+- `POST /api/auth/login` : Connexion initiale (vérification e-mail / mot de passe + vérification/initiation 2FA).
+- `POST /api/auth/verify-2fa` : Validation du code TOTP et émission du jeton d'accès JWT dans un cookie sécurisé.
 - `POST /api/auth/logout` : Révocation du cookie de session.
+- `GET /api/auth/me` : Récupération des informations de l'utilisateur connecté.
+- `PUT /api/auth/profile` : Mise à jour du profil (nom, prénom, téléphone, statut 2FA).
+- `POST /api/auth/change-password` : Modification du mot de passe utilisateur.
+- `POST /api/auth/forgot-password` : Demande d'envoi d'un code OTP par e-mail.
+- `POST /api/auth/verify-otp` : Validation du code OTP reçu par e-mail.
+- `POST /api/auth/reset-password-otp` : Définition d'un nouveau mot de passe avec le jeton OTP.
 
-### ✉️ Messagerie (`/api/messages`)
+### ✉️ Messagerie & Fils de Discussion (`/api/messages`)
 - `GET /api/messages/inbox` : Récupération des messages reçus.
 - `GET /api/messages/sent` : Récupération des messages envoyés.
-- `GET /api/messages/drafts` : Récupération des brouillons.
-- `GET /api/messages/trash` : Messages supprimés (corbeille).
-- `GET /api/messages/spam` : Messages marqués comme spam.
-- `GET /api/messages/thread/{threadId}` : Détails complets d'un fil de discussion.
-- `POST /api/messages/send` : Envoi d'un message avec pièces jointes (Multipart/form-data).
-- `POST /api/messages/save-draft` : Sauvegarde ou mise à jour d'un brouillon.
-- `PATCH /api/messages/{id}/star` : Marquer / Démarquer comme favori.
-- `PATCH /api/messages/{id}/trash` : Déplacer vers la corbeille.
-- `DELETE /api/messages/{id}/permanent` : Suppression définitive.
+- `GET /api/messages/archive` : Récupération des messages archivés.
+- `GET /api/messages/unread-count` : Nombre total de messages non lus.
+- `GET /api/messages/thread/{threadId}` : Détails complets d'un fil de discussion et de ses messages.
+- `POST /api/messages/thread` : Création et envoi d'un nouveau fil/message avec pièces jointes (`multipart/form-data`).
+- `POST /api/messages/thread/{threadId}/reply` : Réponse à un fil de discussion existant.
+- `PUT /api/messages/thread/{threadId}/star` : Marquer / Démarquer un fil comme favori.
+- `PUT /api/messages/thread/{threadId}/archive` : Archiver / Désarchiver un fil de discussion.
+- `DELETE /api/messages/thread/{threadId}` : Suppression d'un fil pour l'utilisateur.
+- `GET /api/messages/search` : Recherche avancée multicritères (mots-clés, expéditeur, dates, statut).
+- `GET /api/messages/contacts` : Liste des contacts directs pour l'autocomplétion.
+- `GET /api/messages/assignable` : Liste des utilisateurs éligibles pour l'envoi de messages.
+- `GET /api/messages/institutions` : Liste des institutions autorisées.
+- `GET /api/messages/direct` : Conversations directes entre utilisateurs.
+- `GET /api/messages/groups` : Liste des groupes auxquels l'utilisateur participe.
+- `POST /api/messages/groups/create` : Création d'une nouvelle discussion de groupe.
+- `GET /api/messages/attachments/download/{id}` : Téléchargement sécurisé d'une pièce jointe.
+- `POST /api/messages/bulk-read` : Marquage groupé de plusieurs fils comme lus.
+- `POST /api/messages/bulk-archive` : Archivage groupé de plusieurs fils.
+- `POST /api/messages/bulk-delete` : Suppression groupée de plusieurs fils.
+
+### 📝 Brouillons (`/api/drafts`)
+- `GET /api/drafts` : Récupération de tous les brouillons de l'utilisateur.
+- `GET /api/drafts/{id}` : Récupération d'un brouillon spécifique par son identifiant.
+- `POST /api/drafts` : Création et sauvegarde d'un nouveau brouillon.
+- `PUT /api/drafts/{id}` : Mise à jour d'un brouillon existant.
+- `DELETE /api/drafts/{id}` : Suppression définitive d'un brouillon.
 
 ### 🛠 Administration (`/api/admin`) *(Rôle: Administrateur)*
-- `GET /api/admin/users` : Liste de tous les utilisateurs du système.
-- `POST /api/admin/users` : Création d'un nouvel utilisateur.
-- `PUT /api/admin/users/{id}` : Mise à jour des informations d'un compte.
-- `PATCH /api/admin/users/{id}/toggle-status` : Activation / Désactivation d'un compte.
-- `DELETE /api/admin/users/{id}` : Suppression logique d'un utilisateur.
-- `GET /api/admin/audit-logs` : Consultation des journaux d'audit de sécurité.
-- `GET /api/admin/institutions` : Gestion des institutions et structures associatives.
+- `GET /api/admin/stats` : Statistiques globales du tableau de bord (utilisateurs, messages, tickets, etc.).
+- `GET /api/admin/users` : Liste complète des utilisateurs enregistrés.
+- `POST /api/admin/users` : Création d'un nouveau compte utilisateur.
+- `PUT /api/admin/users/{id}` : Mise à jour des informations d'un utilisateur.
+- `PUT /api/admin/users/{id}/status` : Activation ou désactivation d'un compte.
+- `DELETE /api/admin/users/{id}` : Suppression logique (*soft delete*) d'un compte.
+- `POST /api/admin/users/{id}/reset-password` : Réinitialisation administrative du mot de passe utilisateur.
+- `POST /api/admin/users/{userId}/reset-2fa` : Réinitialisation/désactivation du 2FA pour un utilisateur ayant perdu son accès.
+- `GET /api/admin/users/{id}/assignments` : Liste des fonctionnaires assignés à une association.
+- `PUT /api/admin/users/{id}/assignments` : Mise à jour des assignations Fonctionnaires ↔ Association.
+- `GET /api/admin/users/{id}/groups` : Groupes auxquels appartient un utilisateur spécifique.
+- `GET /api/admin/institutions` : Liste des institutions et entreprises.
+- `POST /api/admin/institutions` : Création d'une nouvelle structure institutionnelle.
+- `PUT /api/admin/institutions/{id}` : Mise à jour d'une institution.
+- `DELETE /api/admin/institutions/{id}` : Suppression d'une institution.
+- `GET /api/admin/threads` : Vue globale et supervision de tous les fils de discussion.
+- `GET /api/admin/groups` : Liste de tous les groupes créés sur la plateforme.
+- `DELETE /api/admin/groups/{id}` : Archivage global d'un groupe pour l'ensemble des membres.
+- `DELETE /api/admin/groups/{id}/members/{userId}` : Retrait forcé d'un membre d'un groupe.
+- `PUT /api/admin/groups/{id}/transfer-owner` : Transfert de la propriété d'un groupe à un autre membre.
+- `GET /api/admin/audit-logs` : Consultation des journaux d'audit de sécurité (avec filtre optionnel par `userId`).
+- `GET /api/admin/users/{userId}/activity` : Journal d'activité strictement ciblé sur un utilisateur.
+- `POST /api/admin/audit-logs` : Ajout manuel d'une entrée dans le journal d'audit.
 
 ### 🎫 Support & Assistance (`/api/support`)
-- `GET /api/support/tickets` : Liste des tickets de l'utilisateur (ou tous pour les administrateurs).
+- `GET /api/support/tickets` : Liste des tickets de l'utilisateur (ou ensemble des tickets pour les administrateurs).
 - `POST /api/support/tickets` : Création d'un nouveau ticket d'assistance.
-- `GET /api/support/tickets/{id}` : Consultation détaillée d'un ticket et de ses messages.
-- `POST /api/support/tickets/{id}/reply` : Réponse à un ticket existant.
-- `PATCH /api/support/tickets/{id}/status` : Modification de l'état du ticket.
+- `GET /api/support/tickets/{id}` : Détails d'un ticket et fil complet des échanges.
+- `POST /api/support/tickets/{id}/messages` : Envoi d'une réponse dans le fil d'un ticket.
+- `PUT /api/support/tickets/{id}/status` : Modification du statut du ticket (`Open`, `In Progress`, `Resolved`, `Closed`).
+- `PUT /api/support/tickets/{id}/claim` : Prise en charge d'un ticket par un administrateur.
 
 ---
 
@@ -305,9 +368,9 @@ Avant de lancer le projet, assurez-vous d'avoir installé sur votre machine :
 
 | Rôle | Périmètre d'Accès |
 | :--- | :--- |
-| **Administrateur** | Accès complet : gestion des comptes, configuration des institutions, consultation des logs d'audit, traitement des tickets de support, messagerie globale. |
-| **Fonctionnaire** | Messagerie sécurisée, gestion des dossiers personnels, communication avec sa hiérarchie et ses associations de rattachement, ouverture de tickets de support. |
-| **Association** | Échanges avec les fonctionnaires affiliés et l'administration, consultation des informations partagées, support. |
+| **Administrateur** | Accès complet : gestion des comptes, réinitialisation de sécurité (MDP/2FA), configuration des institutions, assignations Fonctionnaires-Associations, gestion des groupes, consultation des logs d'audit, traitement et prise en charge des tickets de support, supervision des flux de messagerie. |
+| **Fonctionnaire** | Messagerie sécurisée, gestion des dossiers personnels et brouillons, communication avec sa hiérarchie et ses associations de rattachement, participation aux groupes, ouverture et suivi de tickets de support. |
+| **Association** | Échanges avec les fonctionnaires affiliés et l'administration, participation aux groupes dédiés, gestion des pièces jointes, support. |
 
 ---
 
@@ -315,11 +378,13 @@ Avant de lancer le projet, assurez-vous d'avoir installé sur votre machine :
 
 | Module | Description |
 | :--- | :--- |
-| **Boîte de Réception & Fils** | Consultation chronologique des conversations, filtrage par état, gestion des favoris et pièces jointes. |
-| **Rédaction (Compose)** | Éditeur riche Tiptap avec support RTL, mise en forme avancée, insertion de pièces jointes et panneau multi-destinataires. |
-| **Groupes & Diffusion** | Messagerie collective ciblée par structure associative ou groupe de travail institutionnel. |
-| **Tableau de Bord Administrateur** | Gestion centralisée des utilisateurs, activation de comptes, mapping d'institutions et suivi des journaux d'audit. |
-| **Espace Support & Tickets** | Soumission et suivi des tickets d'assistance avec messagerie intégrée entre utilisateurs et administrateurs. |
+| **Boîte de Réception & Fils** | Consultation chronologique des conversations, filtrage par état, gestion des favoris, actions groupées et lecture fluide des fils. |
+| **Rédaction (Compose) & Brouillons** | Éditeur riche Tiptap, mise en forme avancée, insertion de pièces jointes, panneau multi-destinataires et sauvegarde automatique/manuelle des brouillons. |
+| **Visionneuse de Documents** | Modal de prévisualisation directe des documents PDF, images et fichiers Word `.docx` sans téléchargement obligatoire. |
+| **Groupes & Diffusion** | Messagerie collective ciblée par structure associative ou groupe de travail institutionnel avec panneau d'administration dédié. |
+| **Tableau de Bord Administrateur** | Supervision centralisée, métriques clés, gestion des utilisateurs, activation de comptes, mapping Fonctionnaires-Associations et institutions. |
+| **Espace Support & Tickets** | Soumission et suivi des tickets d'assistance avec messagerie intégrée et système de prise en charge (*Claim*) par les administrateurs. |
+| **Sécurité & Profil** | Gestion du profil utilisateur, modification de mot de passe et configuration/activation du 2FA TOTP avec QR Code. |
 
 ---
 
@@ -335,8 +400,8 @@ npm run lint     # Analyser le code avec ESLint
 
 ### Backend
 ```bash
-# Démarrage direct depuis la racine du projet :
-cd backend/CspjMail.Api && dotnet run
+# Démarrage direct depuis la racine du projet via PowerShell :
+.\run-backend.ps1
 
 # Ou depuis le dossier Backend/CspjMail.Api :
 dotnet run                         # Lancer l'API en mode développement
